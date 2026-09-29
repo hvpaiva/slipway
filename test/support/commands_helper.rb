@@ -11,6 +11,7 @@ module CommandsHelper
   CREATED = Time.utc(2026, 9, 29, 9, 0, 0)
   NOW = Time.utc(2026, 9, 29, 12, 0, 0)
   COMMITTED = Time.utc(2026, 9, 29, 11, 15, 0)
+  FETCHED = Time.utc(2026, 9, 29, 11, 48, 0)
   SHA = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
   COMMIT = Slipway::Git::Commit.new(sha: SHA, short: SHA[0, 7], time: COMMITTED, author: 'Ada Lovelace',
                                     email: 'ada@example.com', subject: 'initial commit')
@@ -37,12 +38,12 @@ module CommandsHelper
 
   # +status: nil+ leaves the directory out, so the project shows as Missing.
   def register(runtime, name, group: 'default', labels: {}, description: nil, status: CLEAN, commit: COMMIT,
-               remote: nil)
+               remote: nil, fetched_at: nil)
     path = "~/dev/#{name}"
     directory = Slipway::Paths.expand(path, home: runtime.paths.home)
     if status
       FileUtils.mkdir_p(directory)
-      runtime.git.add(directory, status:, commit: status.unborn? ? nil : commit, remote:)
+      runtime.git.add(directory, status:, commit: status.unborn? ? nil : commit, remote:, fetched_at:)
     end
     runtime.store.create(Slipway::Project.new(name:, group:, labels:, path:, description:))
   end

@@ -146,7 +146,7 @@ class GetFormatsTest < Minitest::Test
 
       assert_equal [1, '', "error: projects \"hldr\" not found\n"],
                    run_commands('get', 'projects', 'hldr', '-n', 'work', runtime:)
-      assert_equal [1, "NAME   BRANCH   STATUS   AGE\nhldr   main     Clean    3h\n",
+      assert_equal [1, "NAME   BRANCH   STATUS   FETCHED   AGE\nhldr   main     Clean    <never>   3h\n",
                     "error: projects \"nope\" not found\n"], run_commands('get', 'projects', 'hldr', 'nope', runtime:)
       assert_equal [1, '', "error: groups \"work\" not found\n"], run_commands('get', 'groups', 'work', runtime:)
     end

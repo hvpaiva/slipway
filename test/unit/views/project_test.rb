@@ -6,6 +6,7 @@ class ViewsProjectTest < Minitest::Test
   include OutputHelper
 
   NOW = CommandsHelper::NOW
+  FETCHED = CommandsHelper::FETCHED
   PROJECT = Slipway::Project.new(name: 'hldr', group: 'personal', labels: { 'lang' => 'rust', 'app' => 'web' },
                                  created_at: CommandsHelper::CREATED, path: '~/dev/hldr', description: 'Site')
   DIRTY_DESCRIBE = <<~TEXT
@@ -30,6 +31,7 @@ class ViewsProjectTest < Minitest::Test
       Conflicted:  0
       Stashes:     1
       Remote:      git@github.com:h/hldr.git
+      Last Fetch:  2026-09-29T11:48:00Z
     Last Commit:
       Hash:     a1b2c3d4e5f60718293a4b5c6d7e8f9012345678
       Author:   Ada Lovelace <ada@example.com>
@@ -40,10 +42,10 @@ class ViewsProjectTest < Minitest::Test
   def test_headers_add_group_first_wide_columns_and_labels_last
     view = Slipway::Views::Project
 
-    assert_equal %w[NAME BRANCH STATUS AGE], view.headers
-    assert_equal %w[GROUP NAME BRANCH STATUS AGE], view.headers(group: true)
-    assert_equal %w[NAME BRANCH STATUS AGE PATH HEAD LAST-COMMIT], view.headers(wide: true)
-    assert_equal %w[GROUP NAME BRANCH STATUS AGE PATH HEAD LAST-COMMIT LABELS],
+    assert_equal %w[NAME BRANCH STATUS FETCHED AGE], view.headers
+    assert_equal %w[GROUP NAME BRANCH STATUS FETCHED AGE], view.headers(group: true)
+    assert_equal %w[NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT], view.headers(wide: true)
+    assert_equal %w[GROUP NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT LABELS],
                  view.headers(wide: true, group: true, labels: true)
   end
 
@@ -51,8 +53,9 @@ class ViewsProjectTest < Minitest::Test
     inspection = inspected(CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT)
     view = Slipway::Views::Project
 
-    assert_equal %w[hldr main Clean 3h], view.row(inspection, now: NOW)
-    assert_equal ['personal', 'hldr', 'main', 'Clean', '3h', '~/dev/hldr', 'a1b2c3d', '45m', 'app=web,lang=rust'],
+    assert_equal %w[hldr main Clean 12m 3h], view.row(inspection, now: NOW)
+    assert_equal ['personal', 'hldr', 'main', 'Clean', '12m', '3h', '~/dev/hldr', 'a1b2c3d', '45m',
+                  'app=web,lang=rust'],
                  view.row(inspection, now: NOW, wide: true, group: true, labels: true)
   end
 
@@ -62,17 +65,27 @@ class ViewsProjectTest < Minitest::Test
     missing = Slipway::Inspection.failed(PROJECT.with(labels: {}), Slipway::Git::MissingPath.new('/x'))
     view = Slipway::Views::Project
 
-    assert_equal ['hldr', '(detached)', 'Detached', '3h'], view.row(detached, now: NOW)
-    assert_equal ['hldr', 'main', 'Unborn', '3h', '~/dev/hldr', nil, nil], view.row(unborn, now: NOW, wide: true)
-    assert_equal ['hldr', nil, 'Missing', '3h', '~/dev/hldr', nil, nil, nil],
+    assert_equal ['hldr', '(detached)', 'Detached', '12m', '3h'], view.row(detached, now: NOW)
+    assert_equal ['hldr', 'main', 'Unborn', '12m', '3h', '~/dev/hldr', nil, nil], view.row(unborn, now: NOW, wide: true)
+    assert_equal ['hldr', nil, 'Missing', nil, '3h', '~/dev/hldr', nil, nil, nil],
                  view.row(missing, now: NOW, wide: true, labels: true)
   end
 
-  def test_roles_paint_only_the_status_column
+  def test_fetched_reads_never_for_a_repository_no_fetch_has_reached
+    never = inspected(CommandsHelper::CLEAN, fetched_at: nil)
+    skewed = inspected(CommandsHelper::CLEAN, fetched_at: NOW + 3600)
+
+    assert_equal %w[hldr main Clean <never> 3h], Slipway::Views::Project.row(never, now: NOW)
+    assert_equal '<invalid>', Slipway::Views::Project.row(skewed, now: NOW)[3]
+  end
+
+  def test_roles_paint_the_status_column_and_mute_a_fetch_that_never_ran
     roles = Slipway::Views::Project::ROLES
 
     assert_equal :status_success, roles.call('STATUS', 'Clean')
     assert_equal :status_danger, roles.call('STATUS', 'Missing')
+    assert_equal :muted, roles.call('FETCHED', '<never>')
+    assert_nil roles.call('FETCHED', '3h')
     assert_nil roles.call('NAME', 'Clean')
   end
 
@@ -116,12 +129,20 @@ class ViewsProjectTest < Minitest::Test
     assert_includes rendered, "Last Commit:  <none>\n"
   end
 
+  def test_describe_mutes_a_fetch_that_never_ran
+    inspection = inspected(CommandsHelper::CLEAN, fetched_at: nil)
+
+    assert_includes render(Slipway::Views::Project.describe(inspection, now: NOW)), "  Last Fetch:  <never>\n"
+    assert_includes render(Slipway::Views::Project.describe(inspection, now: NOW), colored_context),
+                    "\e[36mLast Fetch\e[0m:  \e[90;3m<never>\e[0m\n"
+  end
+
   def test_object_merges_the_manifest_with_a_status_hash
     inspection = inspected(CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT, remote: 'r')
     expected = PROJECT.to_manifest.merge(
       'status' => { 'branch' => 'main', 'head' => 'a1b2c3d', 'upstream' => 'origin/main', 'ahead' => 0, 'behind' => 0,
                     'staged' => 0, 'unstaged' => 0, 'untracked' => 0, 'conflicted' => 0, 'stashes' => 0,
-                    'state' => 'Clean',
+                    'state' => 'Clean', 'lastFetch' => '2026-09-29T11:48:00Z',
                     'lastCommit' => { 'hash' => CommandsHelper::SHA, 'author' => 'Ada Lovelace',
                                       'email' => 'ada@example.com', 'date' => '2026-09-29T11:15:00Z',
                                       'subject' => 'initial commit' } }
@@ -133,7 +154,7 @@ class ViewsProjectTest < Minitest::Test
 
   def test_object_leaves_out_the_status_fields_git_could_not_answer
     inspection = Slipway::Inspection.failed(PROJECT, Slipway::Git::NotARepository.new('/x'))
-    unborn = inspected(CommandsHelper::UNBORN)
+    unborn = inspected(CommandsHelper::UNBORN, fetched_at: nil)
 
     assert_equal({ 'state' => 'NotARepo' }, Slipway::Views::Project.object(inspection).fetch('status'))
     assert_equal %w[branch staged unstaged untracked conflicted stashes state],
@@ -194,9 +215,9 @@ class ViewsProjectTest < Minitest::Test
 
   private
 
-  def inspected(status, commit: nil, remote: nil)
-    Slipway::Inspection.new(project: PROJECT, status:, commit:, remote:, state: Slipway::State.derive(status),
-                            error: nil)
+  def inspected(status, commit: nil, remote: nil, fetched_at: FETCHED)
+    Slipway::Inspection.new(project: PROJECT, status:, commit:, remote:, fetched_at:,
+                            state: Slipway::State.derive(status), error: nil)
   end
 
   def render(entries, context = plain_context) = Slipway::Output::Describe.new(context).render(entries)

@@ -26,6 +26,7 @@ class DescribeTest < Minitest::Test
       Conflicted:  0
       Stashes:     1
       Remote:      git@github.com:hvpaiva/hldr.git
+      Last Fetch:  2026-09-29T11:48:00Z
     Last Commit:
       Hash:     a1b2c3d4e5f60718293a4b5c6d7e8f9012345678
       Author:   Ada Lovelace <ada@example.com>
@@ -36,7 +37,7 @@ class DescribeTest < Minitest::Test
   def test_a_project_with_a_full_status_lists_every_section
     with_runtime do |runtime|
       register(runtime, 'hldr', labels: { 'lang' => 'rust' }, description: 'Site and CLI', status: DIRTY,
-                                remote: 'git@github.com:hvpaiva/hldr.git')
+                                remote: 'git@github.com:hvpaiva/hldr.git', fetched_at: FETCHED)
 
       assert_equal [0, FULL, ''], run_commands('describe', 'project', 'hldr', runtime:)
     end

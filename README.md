@@ -28,15 +28,15 @@ $ slipway create project notes --path '~/dev/notes' --label kind=docs
 project/notes created
 
 $ slipway get projects -A
-GROUP      NAME    BRANCH   STATUS   AGE
-default    notes   main     Ahead    0s
-personal   augur   main     Dirty    1s
-personal   hldr    main     Clean    1s
+GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
+default    notes   main     Ahead    2d        0s
+personal   augur   main     Dirty    <never>   1s
+personal   hldr    main     Clean    5h        1s
 
 $ slipway get projects -n personal -o wide
-NAME    BRANCH   STATUS   AGE   PATH          HEAD      LAST-COMMIT
-augur   main     Dirty    1s    ~/dev/augur   8f9cdbb   11h
-hldr    main     Clean    1s    ~/dev/hldr    e001395   32h
+NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT
+augur   main     Dirty    <never>   1s    ~/dev/augur   8f9cdbb   11h
+hldr    main     Clean    5h        1s    ~/dev/hldr    e001395   32h
 
 $ slipway describe project augur -n personal
 Name:         augur
@@ -59,6 +59,7 @@ Repository:
   Conflicted:  0
   Stashes:     0
   Remote:      <none>
+  Last Fetch:  <never>
 Last Commit:
   Hash:     8f9cdbbc5ff8982322347d8e6a76ea3ab8821b51
   Author:   Highlander <contact@hvpaiva.dev>
@@ -118,17 +119,17 @@ first, and `slipway delete group default` is refused.
 
 ```console
 $ slipway get projects -A -l lang=rust
-GROUP      NAME   BRANCH   STATUS   AGE
-personal   hldr   main     Clean    1s
+GROUP      NAME   BRANCH   STATUS   FETCHED   AGE
+personal   hldr   main     Clean    5h        1s
 ```
 
 Set-based:
 
 ```console
 $ slipway get projects -A -l 'lang in (rust,bash)'
-GROUP      NAME    BRANCH   STATUS   AGE
-personal   augur   main     Dirty    1s
-personal   hldr    main     Clean    1s
+GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
+personal   augur   main     Dirty    <never>   1s
+personal   hldr    main     Clean    5h        1s
 ```
 
 `key!=value`, `key notin (a,b)`, `key` (exists) and `!key` (does not exist) work as well, and
@@ -142,7 +143,11 @@ commit) to projects and DESCRIPTION to groups. `-o json` and `-o yaml` print the
 plus a `status` section, as one object when a single name is given and as a `kind: List`
 otherwise. `-o name` prints `project/hldr` lines. `--no-headers` drops the header row and
 `--show-labels` appends a LABELS column with `lang=rust` style pairs. AGE is the time since
-the resource was registered, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`).
+the resource was registered, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`). FETCHED is the
+time since the repository was last fetched, by slipway or by git itself and from any of its
+worktrees, and reads `<never>` when no fetch has run there or the last one failed: git empties
+`FETCH_HEAD` as a fetch starts, so a failed fetch leaves no time behind. `describe` shows the
+same time as `Last Fetch` and json and yaml as `status.lastFetch`.
 
 ### Status words
 
@@ -157,10 +162,10 @@ STATUS is one word per project, chosen in this order of precedence:
 | `Detached` | HEAD points at a commit rather than a branch. |
 | `Unborn` | The branch has no commits yet. |
 | `Dirty` | Staged, modified or untracked files are present. |
-| `Gone` | An upstream is configured but its ref no longer exists. |
-| `Diverged` | The branch is both ahead of and behind its upstream. |
+| `Gone` | An upstream is configured but its ref no longer exists, as of the last fetch (FETCHED). |
+| `Diverged` | The branch is both ahead of and behind its upstream, as of the last fetch (FETCHED). |
 | `Ahead` | Commits not yet pushed to the upstream. |
-| `Behind` | Commits on the upstream not yet pulled. |
+| `Behind` | Commits on the upstream not yet pulled, as of the last fetch (FETCHED). |
 | `Clean` | Nothing to do. |
 | `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
 

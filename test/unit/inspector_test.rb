@@ -18,13 +18,15 @@ class InspectorTest < Minitest::Test
     FileUtils.rm_rf(@home)
   end
 
-  def test_a_clean_repository_yields_status_commit_remote_and_state
-    project = repo('hldr', status: CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT, remote: 'git@x:y.git')
+  def test_a_clean_repository_yields_status_commit_remote_fetch_time_and_state
+    project = repo('hldr', status: CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT, remote: 'git@x:y.git',
+                           fetched_at: CommandsHelper::FETCHED)
 
     inspection = @inspector.examine(project)
 
-    assert_equal [CommandsHelper::CLEAN, CommandsHelper::COMMIT, 'git@x:y.git', 'Clean', nil],
-                 [inspection.status, inspection.commit, inspection.remote, inspection.state, inspection.error]
+    assert_equal [CommandsHelper::CLEAN, CommandsHelper::COMMIT, 'git@x:y.git', CommandsHelper::FETCHED, 'Clean', nil],
+                 [inspection.status, inspection.commit, inspection.remote, inspection.fetched_at, inspection.state,
+                  inspection.error]
     assert_same project, inspection.project
   end
 
@@ -120,8 +122,9 @@ class InspectorTest < Minitest::Test
     inspection = with_env(hermetic_env(@home)) { inspector.examine(project) }
 
     assert_equal 'Dirty', inspection.state
-    assert_equal ['main', 1, 'initial commit', nil], [inspection.status.branch, inspection.status.untracked,
-                                                      inspection.commit.subject, inspection.remote]
+    assert_equal ['main', 1, 'initial commit', nil, nil],
+                 [inspection.status.branch, inspection.status.untracked, inspection.commit.subject, inspection.remote,
+                  inspection.fetched_at]
   end
 
   def test_a_directory_inside_another_repository_is_not_a_repository_of_its_own
@@ -153,10 +156,10 @@ class InspectorTest < Minitest::Test
 
   private
 
-  def repo(name, status:, commit: nil, remote: nil)
+  def repo(name, status:, commit: nil, remote: nil, fetched_at: nil)
     directory = File.join(@home, 'dev', name)
     FileUtils.mkdir_p(directory)
-    @git.add(directory, status:, commit:, remote:)
+    @git.add(directory, status:, commit:, remote:, fetched_at:)
     Slipway::Project.new(name:, path: "~/dev/#{name}")
   end
 

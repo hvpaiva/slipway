@@ -97,7 +97,7 @@ class EditIntegrationTest < Minitest::Test
       assert_equal "# file will be reopened with the relevant failures.\n#\n" \
                    "# projects \"clean\" was not valid:\n# * \"spec.path\" must be a string\n#\nkind: Project\n",
                    rounds.last.lines[2..7].join
-      assert_equal '~/dev/moved', table(slipway!('get', 'projects', '-o', 'wide', env:)).last[4]
+      assert_equal '~/dev/moved', table(slipway!('get', 'projects', '-o', 'wide', env:)).last[5]
     end
   end
 

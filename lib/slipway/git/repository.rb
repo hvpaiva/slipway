@@ -22,7 +22,7 @@ module Slipway
       PORCELAIN_UNKNOWN = /\Aerror: unknown option .porcelain'$/
       USAGE_STATUS = 129
       FETCH_HEAD = 'FETCH_HEAD'
-      FETCH_HEAD_ARGS = ['rev-parse', '--git-path', FETCH_HEAD].freeze
+      COMMON_DIR_ARGS = %w[rev-parse --git-common-dir].freeze
       # `git config --get` exits 1 when the key is absent, which is an answer, not a failure.
       ABSENT_KEY_STATUS = 1
       UNBORN_MESSAGE = 'does not have any commits yet'
@@ -82,11 +82,11 @@ module Slipway
 
       # nil for a repository that was never fetched or whose last fetch failed: git empties
       # FETCH_HEAD before it contacts the remote and writes a line for each ref it fetched.
+      # Every worktree shares the remote-tracking refs, but git writes FETCH_HEAD in the worktree
+      # that ran the fetch, so the newest one dates them.
       def fetched_at(path)
-        head = File.stat(fetch_head(File.expand_path(path)))
-        head.mtime.utc unless head.zero?
-      rescue Errno::ENOENT
-        nil
+        head = fetch_heads(File.expand_path(path)).filter_map { File.stat(it) if File.file?(it) }.max_by(&:mtime)
+        head.mtime.utc if head && !head.zero?
       end
 
       private
@@ -107,13 +107,19 @@ module Slipway
                                                        timeout: @network_timeout, env: @network_environment)
       end
 
-      # A .git directory is read without a spawn, so listing projects costs no extra git process;
-      # a worktree or a separate git directory keeps FETCH_HEAD where rev-parse says.
-      def fetch_head(directory)
-        git_dir = File.join(directory, '.git')
-        return File.join(git_dir, FETCH_HEAD) if File.directory?(git_dir)
+      # base: keeps glob metacharacters in the repository path literal.
+      def fetch_heads(directory)
+        common = common_dir(directory)
+        worktrees = File.join(common, 'worktrees')
+        [File.join(common, FETCH_HEAD), *Dir.glob("*/#{FETCH_HEAD}", base: worktrees).map { File.join(worktrees, it) }]
+      end
 
-        File.expand_path(run(directory, *FETCH_HEAD_ARGS).out.chomp, directory)
+      # A .git directory is read without a spawn, so listing projects costs no extra git process.
+      def common_dir(directory)
+        git_dir = File.join(directory, '.git')
+        return git_dir if File.directory?(git_dir)
+
+        File.expand_path(run(directory, *COMMON_DIR_ARGS).out.chomp, directory)
       end
 
       def local_upstream?(path)

@@ -35,6 +35,7 @@ class DescribeIntegrationTest < Minitest::Test
       Conflicted:  0
       Stashes:     0
       Remote:      <none>
+      Last Fetch:  <never>
     #{LAST_COMMIT.chomp}
   TEXT
 
@@ -81,6 +82,7 @@ class DescribeIntegrationTest < Minitest::Test
       Conflicted:  0
       Stashes:     0
       Remote:      <none>
+      Last Fetch:  <never>
     Last Commit:  <none>
   TEXT
 
@@ -105,6 +107,7 @@ class DescribeIntegrationTest < Minitest::Test
       Conflicted:  0
       Stashes:     0
       Remote:      <home>/dev/behind-origin.git
+      Last Fetch:  <never>
     #{LAST_COMMIT.chomp}
   TEXT
 
