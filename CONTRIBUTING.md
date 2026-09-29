@@ -143,19 +143,22 @@ docker, it stops and tells you what to install.
 
 - Conventional Commits in English and the imperative: `feat: add the label verb`,
   `fix: prune the group directory after the last delete`, `docs:`, `test:`, `refactor:`,
-  `chore:`, `ci:`. An optional scope is allowed, as in `chore(deps): bump rubocop`.
-- One change per commit, with its tests and generated files. No `WIP`, `fixup!` or `squash!`
-  commits in a pull request.
+  `chore:`, `ci:`. An optional scope is allowed, as in `chore(deps): bump rubocop`. The subject
+  git writes for a revert, `Revert "<subject>"` (or `Reapply "<subject>"` for a revert of a
+  revert), is accepted when the quoted subject follows these rules.
+- One change per commit, with its tests and generated files. No `WIP`, `fixup!`, `amend!` or
+  `squash!` commits in a pull request, and no summary that starts with `wip`.
 - Commits are signed by their author (`git commit -S`, with an SSH or GPG key registered on
   GitHub as a signing key; GitHub's guide covers [signing commits with an SSH
   key](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-ssh-key)).
-- Attribution trailers for tools (`Co-Authored-By` lines naming an assistant, `Generated-by`,
-  `Generated-with`, `Assisted-by` and the like) are not accepted, in commits or in pull request
-  descriptions. Human co-authors are welcome.
+- Attribution trailers for tools (`Co-Authored-By` lines with an assistant's or a GitHub app's
+  address, `Generated-by`, `Generated-with`, `Assisted-by` and the like) are not accepted, in
+  commits or in pull request descriptions. Human co-authors are welcome.
 
 The `commits` job runs `bin/lint-commits` on every pull request over the commits it adds, its
 title and its body: the subject format, the WIP and fixup rule, and the attribution trailers
-are all checked there. The `main` ruleset on GitHub requires the rest: signed commits, a pull
+are all checked there. Merge commits are included but checked for attribution trailers only,
+because git writes their subject. The `main` ruleset on GitHub requires the rest: signed commits, a pull
 request for everyone including the maintainer, green required checks, and merge commits as the
 only merge method. Squash and rebase are disabled so your atomic commits land as you signed
 them; GitHub signs the merge commit. To check a branch before pushing it, run
@@ -308,6 +311,8 @@ Dependabot opens the pull requests described in `.github/dependabot.yml`: develo
 weekly and the pinned workflow actions monthly. They carry the `skip-changelog` label, because
 the gem has no runtime dependencies and neither kind of update changes what users install. They
 go through the same required checks as any other pull request and are merged by hand.
+Security updates, titled `chore(deps): [security] bump ...` or `ci: [security] bump ...`, pass
+the `commits` job as Dependabot writes them.
 
 - A RuboCop bump that introduces new offenses is fixed in the same pull request, in the code,
   never with a disable or a new exclusion.
