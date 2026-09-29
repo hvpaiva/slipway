@@ -72,6 +72,14 @@ class ContextTest < Minitest::Test
     assert_equal "still reported\n", @err.string
   end
 
+  def test_unbuffer_makes_every_write_reach_stdout_at_once
+    File.open(File::NULL, 'w') do |out|
+      Slipway::CLI::Context.new(out:, err: @err).unbuffer
+
+      assert_predicate out, :sync
+    end
+  end
+
   def test_with_color_shares_the_memory_of_closed_streams
     broken = Class.new(StringIO) { def write(*) = raise(Errno::EPIPE) }
     context = Slipway::CLI::Context.new(out: broken.new, err: @err)

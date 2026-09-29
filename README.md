@@ -96,6 +96,7 @@ bundle exec rake install
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
+| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `denied` or `failed`. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -168,6 +169,54 @@ STATUS is one word per project, chosen in this order of precedence:
 | `Behind` | Commits on the upstream not yet pulled, as of the last fetch (FETCHED). |
 | `Clean` | Nothing to do. |
 | `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
+
+`get` and `describe` never contact a remote, so the words that compare a branch with its
+upstream are as fresh as the last fetch. `slipway fetch` refreshes them.
+
+### Fetching
+
+```console
+$ slipway fetch -A
+project/notes fetched
+  origin/main 1c2d3e4..5f6a7b8
+project/augur skipped (NoRemote)
+  no upstream, no origin and no single remote to fetch from
+project/hldr unchanged
+3 projects: 1 fetched, 1 unchanged, 1 skipped
+```
+
+`slipway fetch` runs `git fetch` in the projects of the current group, in the projects named
+(`hldr` or `project/hldr`, so `slipway get projects -o name | xargs slipway fetch` works), in
+the ones `-l` selects, or with `-A` in every project. Git fetches from the remote of the
+checked-out branch, else from the only remote, else from origin, as a `git fetch` typed in the
+repository would: slipway passes no remote, and nothing from a manifest reaches git's arguments.
+Git updates the refs the remote's fetch refspecs name (remote-tracking refs by default), tags and
+`FETCH_HEAD`, never the checked-out branch or the working tree.
+`slipway fetch -A && slipway get projects -A` shows every STATUS as of now.
+
+Up to `parallel` projects (4 by default) fetch at once. Each prints one result, in the order the
+projects are listed, as soon as it and every project before it are done:
+
+| Result | Meaning |
+| --- | --- |
+| `fetched` | The remote moved refs. Up to five follow, as `origin/main a1b2c3d..e4f5a6b`, then `and N more`. |
+| `unchanged` | The remote answered and had nothing new. |
+| `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (`NoRemote`), or its branch tracks a local branch (`LocalUpstream`). |
+| `denied (AuthRequired)` | Git needed a password, a passphrase or a host key. Run the `git -C PATH fetch` printed below it once in a terminal to see what git needs. |
+| `failed (Reason)` | The fetch ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). |
+
+When more than one project ran, a count of the results closes the run on stderr. The exit
+status is 1 when any project was denied or failed, once every line has printed. `--prune` also
+removes the remote-tracking refs of branches deleted on the remote. `--dry-run=client` reads the
+repositories as `get` does and prints `fetched (dry run)` for each project a fetch would reach,
+without running `git fetch`.
+
+Git never prompts during a fetch: slipway sets `GIT_TERMINAL_PROMPT=0`, points `GIT_ASKPASS` and
+`SSH_ASKPASS` at `false`, and sets `SSH_ASKPASS_REQUIRE=force` so ssh never reads the terminal.
+Your ssh configuration, `SSH_AUTH_SOCK` and credential helpers are used as they are. Only the
+transports in `protocols` are allowed, a fetch that runs past `networkTimeout` is killed with
+every process it started, submodules are not fetched, and gc, automatic maintenance and bundle
+URIs are off. On Ctrl-C slipway stops the git processes it started and exits with status 130.
 
 ### Manifests
 

@@ -36,14 +36,15 @@ module CommandsHelper
                          git:, inspector: Slipway::Inspector.new(git:, clock:, home: paths.home), clock:, env:)
   end
 
-  # +status: nil+ leaves the directory out, so the project shows as Missing.
+  # +status: nil+ leaves the directory out, so the project shows as Missing. +fetch+ is what a
+  # fetch of the project returns or raises, as Git::Fake#add takes it.
   def register(runtime, name, group: 'default', labels: {}, description: nil, status: CLEAN, commit: COMMIT,
-               remote: nil, fetched_at: nil)
+               remote: nil, remotes: nil, fetched_at: nil, fetch: Slipway::Git::Fake::NOTHING_FETCHED)
     path = "~/dev/#{name}"
     directory = Slipway::Paths.expand(path, home: runtime.paths.home)
     if status
       FileUtils.mkdir_p(directory)
-      runtime.git.add(directory, status:, commit: status.unborn? ? nil : commit, remote:, fetched_at:)
+      runtime.git.add(directory, status:, commit: status.unborn? ? nil : commit, remote:, remotes:, fetched_at:, fetch:)
     end
     runtime.store.create(Slipway::Project.new(name:, group:, labels:, path:, description:))
   end

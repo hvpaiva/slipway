@@ -27,6 +27,12 @@ class SeamsTest < Minitest::Test
     end
   end
 
+  def test_every_result_role_fetch_paints_exists_in_both_themes
+    Slipway::CLI::Theme::PRESETS.each do |name, roles|
+      Slipway::Commands::Fetch::ROLES.each_value { assert_includes roles.keys, it, name }
+    end
+  end
+
   def test_config_group_setting_applies_the_names_rule
     setting = Slipway::Config::SETTINGS.find { it.key == 'group' }
 

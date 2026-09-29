@@ -39,6 +39,26 @@ class ScopeTest < Minitest::Test
     end
   end
 
+  def test_project_targets_take_bare_names_or_the_project_slash_name_form
+    with_scope do |scope|
+      assert_empty scope.project_targets([], verb: 'fetch')
+      assert_equal %w[a b], scope.project_targets(%w[a b], verb: 'fetch')
+      assert_equal %w[a b], scope.project_targets(%w[project/a proj/b], verb: 'fetch')
+    end
+  end
+
+  def test_project_targets_refuse_groups_mixed_forms_and_invalid_names
+    with_scope do |scope|
+      group = assert_raises(Slipway::CLI::UsageError) { scope.project_targets(%w[group/work], verb: 'sync') }
+      forms = assert_raises(Slipway::CLI::UsageError) { scope.project_targets(%w[a project/b], verb: 'fetch') }
+      bad = assert_raises(Slipway::CLI::UsageError) { scope.project_targets(%w[project/b/c], verb: 'fetch') }
+
+      assert_equal 'cannot sync a group', group.message
+      assert_equal 'a name in TYPE/NAME form cannot be combined with a bare name', forms.message
+      assert_equal "\"b/c\" is not a valid project name: #{Slipway::Names::RULE}", bad.message
+    end
+  end
+
   def test_target_wants_exactly_one_name
     with_scope do |scope|
       assert_equal [GROUPS, 'work'], scope.target(%w[group work])

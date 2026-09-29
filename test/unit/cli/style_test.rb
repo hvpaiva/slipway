@@ -93,6 +93,8 @@ class ThemeTest < Minitest::Test
     apply_created: '32', apply_configured: '33', apply_unchanged: '35',
     create_created: '32', delete_deleted: '31',
     label_labeled: '32', label_unlabeled: '33', label_not_labeled: '90;3',
+    result_changed: '32', result_unchanged: '35', result_skipped: '33', result_paused: '90;3',
+    result_denied: '31', result_failed: '31',
     dry_run: '36', error: '31', warning: '33'
   }.freeze
 

@@ -11,10 +11,10 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | --- | --- | --- |
 | Command layer | `cli/` | `Registry`, `Command`, `Option`, `Positional`, `Example` (the data model), `Globals` (the options every command accepts), `Parser` (OptionParser adapter), `Validator`, `Runner` (front controller), `HelpRenderer`, `Completer` and `CompletionScripts`, `Manpage`, `Builtins`, `Context`, `Style` and `Theme`, `UsageError`. It knows nothing about projects or git. |
 | Domain | `error.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `config.rb`, `paths.rb`, `editor.rb` | `Slipway::Error` (the base of every failure reported to the user), the one YAML writer, `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label selector grammar, XDG paths, the config file and the editor launcher. |
-| Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the questions slipway needs (status, last commit, remote, time of the last fetch) and fetches, the one network command, with its own timeout and a no-prompt environment; `Git::Status`, `Git::Commit` and `Git::FetchResult` parse the answers; `Git::Url` redacts the credentials in a URL; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
+| Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the questions slipway needs (status, last commit, remote, time of the last fetch, whether the branch tracks a local one, whether a fetch without a remote argument has one to use, the git directory its worktrees share) and fetches, the one network command, with its own timeout, a no-prompt environment and only the transports the `protocols` setting lists; `Git::Status`, `Git::Commit` and `Git::FetchResult` parse the answers; `Git::Url` redacts the credentials in a URL; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
 | Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
 | Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print. No I/O. |
-| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, which runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
+| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, which runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). `fetch` runs a `Pool` of its own, sized by the `parallel` setting, and prints each project's result through `each_ordered`, so the lines stream in the order listed; projects on one repository, such as a linked worktree and its main one, fetch one after the other, because they write the same refs. A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values and output; output paints through the command layer's `Context`. The command
@@ -30,7 +30,7 @@ that breaks these rules.
 
 `exe/slipway` calls `Slipway.run(ARGV)`. From there:
 
-1. `Commands.registry(factory)` builds the `CLI::Registry`: the eight verbs from
+1. `Commands.registry(factory)` builds the `CLI::Registry`: the nine verbs from
    `Commands::VERBS`, each built by its class's `self.command(factory)`, plus the builtins
    (`help`, `version`, `completion`, `man`, hidden `__complete`).
 2. `Runtime.color_defaults` peeks at `--config` in argv and reads the config file once, so the
@@ -84,10 +84,12 @@ README variable table to the same keys.
 
 **A verb.** Create `lib/slipway/commands/<verb>.rb` with a class under `Commands` inheriting
 `Base`. Define `self.command(factory)` returning a `CLI::Command` (set `section:` to one of
-`Basic Commands`, `Settings Commands`, `Other Commands`; pass `handler: new(factory)`) and
-`run(runtime, context, args, opts)`. Reuse `Options::TYPE`, `Options.name_positional(factory)`,
-`Options::DRY_RUN` and friends. Require the file in `commands.rb` and add the class to `VERBS`
-in help order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
+`Basic Commands`, `Repository Commands`, `Settings Commands`, `Other Commands`; pass
+`handler: new(factory)`) and `run(runtime, context, args, opts)`. Reuse `Options::TYPE`,
+`Options.name_positional(factory)`, `Options::DRY_RUN` and friends; a verb that acts on
+repositories takes `Options.project_positional(factory)` and reads it with
+`Scope#project_targets`. Require the file in `commands.rb` and add the class to `VERBS` in help
+order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
 `Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
 group. Print results through `result_line` (`project/hldr created`) and warnings through
 `Output.warning`, and raise `Slipway::Error` or `CLI::UsageError` rather than writing to
@@ -127,9 +129,9 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   in a subprocess (`Open3.capture3` with `unsetenv_others`) inside a throwaway HOME, seeds the
   registry through `apply -f -`, and reads kubectl tables back cell by cell. Repositories come
   from `GitFixtures#build_repo`, which builds real repositories in named states (`clean`,
-  `staged`, `unstaged`, `untracked`, `ahead`, `behind`, `diverged`, `detached`, `unborn`,
-  `conflicted`, `gone`, `stash`, `plain_dir`, and `stale`, `stale_untracked_overlap` and
-  `index_lock`, whose origin holds a commit only a fetch reveals) with a pinned environment and
+  `staged`, `unstaged`, `untracked`, `synced`, `ahead`, `behind`, `diverged`, `detached`,
+  `unborn`, `conflicted`, `gone`, `stash`, `plain_dir`, and `stale`, `stale_untracked_overlap`
+  and `index_lock`, whose origin holds a commit only a fetch reveals) with a pinned environment and
   dates, so the same recipe yields the same commit ids on every machine. The git adapter and
   the inspector are unit-tested against the same fixtures with the real `git`.
 - Golden tests under `test/golden` compare the help page of every command, the three completion

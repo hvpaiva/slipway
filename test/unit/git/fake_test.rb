@@ -111,6 +111,33 @@ class GitFakeTest < Minitest::Test
     assert_equal STATUS, @fake.status('/srv/a')
   end
 
+  def test_a_path_tracks_a_local_branch_when_its_fetch_raises_local_upstream
+    @fake.add('/srv/a', status: STATUS, fetch: Slipway::Git::LocalUpstream)
+    @fake.add('/srv/b', status: STATUS, fetch: Slipway::Git::LocalUpstream.new('/srv/b'))
+    @fake.add('/srv/c', status: STATUS, fetch: Slipway::Git::AuthRequired)
+    @fake.add('/srv/d', status: STATUS)
+
+    answers = %w[/srv/x/../a /srv/b /srv/c /srv/d].map { @fake.local_upstream?(it) }
+
+    assert_equal [true, true, false, false], answers
+    assert_equal %i[local_upstream?] * 4, @fake.calls.map(&:first)
+    assert_raises(Slipway::Git::MissingPath) { @fake.local_upstream?('/srv/nothing') }
+  end
+
+  def test_a_path_has_a_default_remote_from_its_upstream_its_origin_or_a_sole_remote
+    @fake.add('/srv/a', status: STATUS.with(upstream: 'origin/main'))
+    @fake.add('/srv/b', status: STATUS, remote: 'git@example.com:b.git')
+    @fake.add('/srv/c', status: STATUS, remotes: %w[github])
+    @fake.add('/srv/d', status: STATUS, remotes: %w[github gitlab])
+    @fake.add('/srv/e', status: STATUS)
+
+    answers = %w[/srv/x/../a /srv/b /srv/c /srv/d /srv/e].map { @fake.default_remote?(it) }
+
+    assert_equal [true, true, true, false, false], answers
+    assert_equal %i[default_remote?] * 5, @fake.calls.map(&:first)
+    assert_raises(Slipway::Git::MissingPath) { @fake.default_remote?('/srv/nothing') }
+  end
+
   def test_fetch_of_a_failing_or_unknown_path_raises_like_the_other_questions
     @fake.fail('/srv/plain', Slipway::Git::NotARepository)
 

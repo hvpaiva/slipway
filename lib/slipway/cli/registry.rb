@@ -2,7 +2,7 @@
 
 module Slipway
   module CLI
-    SECTION_ORDER = ['Basic Commands', 'Settings Commands', 'Other Commands'].freeze
+    SECTION_ORDER = ['Basic Commands', 'Repository Commands', 'Settings Commands', 'Other Commands'].freeze
 
     # +long+ has no dashes, and a nil +argument+ makes a boolean flag. An +optional+ option
     # takes its value only attached (--long=VALUE) and stores +implicit+ when it is omitted.

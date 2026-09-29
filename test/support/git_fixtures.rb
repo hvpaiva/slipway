@@ -7,7 +7,7 @@ module GitFixtures
   include GitEnv
 
   # Each state is built by the private method of the same name.
-  STATES = %w[clean staged unstaged untracked ahead behind diverged detached unborn conflicted gone stash
+  STATES = %w[clean staged unstaged untracked synced ahead behind diverged detached unborn conflicted gone stash
               plain_dir stale stale_untracked_overlap index_lock].freeze
 
   # States in which origin moved on without +dir+ knowing: a second clone, "<dir>-other", pushed
@@ -37,8 +37,8 @@ module GitFixtures
   end
   include Stale
 
-  # The tracking states (ahead, behind, diverged, gone and the stale ones) also create a bare
-  # origin next to +dir+, named "<dir>-origin.git".
+  # The tracking states (synced, ahead, behind, diverged, gone and the stale ones) also create a
+  # bare origin next to +dir+, named "<dir>-origin.git".
   def build_repo(dir, state)
     unless STATES.include?(state)
       raise ArgumentError, "unknown fixture state #{state.inspect} (known: #{STATES.join(', ')})"

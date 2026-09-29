@@ -18,6 +18,14 @@ module Slipway
         batch.inspections
       end
 
+      # Shared by the verbs that print one line per resource, so the name is neutralized whichever
+      # of them prints it.
+      def self.result_text(context, kind, name, verb_word, role, reason: nil, dry_run: false)
+        line = "#{kind.singular}/#{Output.plain(name)} #{context.paint(role, verb_word)}"
+        line = "#{line} (#{reason})" if reason
+        dry_run ? "#{line} #{context.paint(:dry_run, '(dry run)')}" : line
+      end
+
       def initialize(factory)
         @factory = factory
       end
@@ -32,9 +40,7 @@ module Slipway
       def scope(runtime, context, opts) = Scope.new(runtime, context, opts)
 
       def result_line(context, kind, name, verb_word, role, dry_run: false)
-        line = "#{kind.singular}/#{Output.plain(name)} #{context.paint(role, verb_word)}"
-        line = "#{line} #{context.paint(:dry_run, '(dry run)')}" if dry_run
-        context.puts(line)
+        context.puts(Base.result_text(context, kind, name, verb_word, role, dry_run:))
       end
     end
   end

@@ -15,6 +15,9 @@ Basic Commands:
   edit            Edit a resource from the default editor
   label           Update the labels on a resource
 
+Repository Commands:
+  fetch           Fetch from the remote of each project
+
 Settings Commands:
   config          Inspect the configuration in effect
   completion      Output shell completion code for the specified shell (bash, zsh, fish)

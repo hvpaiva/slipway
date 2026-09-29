@@ -101,8 +101,10 @@ class GitRepositoryFetchTest < Minitest::Test
 
     assert_equal "#{dir}: the current branch tracks a local branch, not a remote one", error.message
     assert_nil @repo.fetched_at(dir)
+    assert @repo.local_upstream?(dir)
     git!(dir, 'switch', '-q', 'main')
 
+    refute @repo.local_upstream?(dir)
     assert_instance_of Slipway::Git::FetchResult, @repo.fetch(dir, prune: false)
   end
 
@@ -139,7 +141,7 @@ class GitRepositoryFetchTest < Minitest::Test
              'SSH_ASKPASS_REQUIRE' => nil) do
       error = assert_raises(Slipway::Git::AuthRequired) { Slipway::Git::Repository.new.fetch(dir, prune: false) }
 
-      assert_equal "#{dir}: authentication required and prompts are disabled", error.message
+      assert_equal "#{dir}: git@example.invalid: Permission denied (publickey).", error.message
       assert_equal "Run 'git -C #{dir} fetch' once in a terminal to see what git needs.", error.hint
     end
     environment = File.readlines(recorded, chomp: true)
