@@ -1,0 +1,5 @@
+# Offline: only relative links and their heading anchors are checked, so the result depends
+# on the repository alone and a flaky site never fails a pull request.
+offline = true
+include_fragments = "anchor-only"
+no_progress = true

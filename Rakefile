@@ -8,18 +8,27 @@ require 'rubocop/rake_task'
 require 'tempfile'
 require 'yard'
 
-# Coverage gates for test:cov, two points under the measured 99.7% line and 98.2% branch coverage.
+# Coverage gates for test:cov, two points under the measured 99.7% line and 98.0% branch coverage.
 MINIMUM_LINE_COVERAGE = 97
 MINIMUM_BRANCH_COVERAGE = 96
+# Per-file gates, two points under the least covered files: lib/slipway/git/runner.rb at 95.9%
+# of lines and lib/slipway/commands/create.rb at 87.5% of branches.
+MINIMUM_LINE_COVERAGE_BY_FILE = 93
+MINIMUM_BRANCH_COVERAGE_BY_FILE = 85
 
-# Minitest joins the prelude into a single-quoted shell string, so it stays on one line without quotes of its own.
+# Minitest joins the prelude into a single-quoted shell string, so it stays on one line without
+# quotes of its own. Bundler loads version.rb through the gemspec before SimpleCov starts, so
+# that file would count as never run; skip leaves it out. Without merging, the gates judge this
+# run alone, never a result left in coverage/ by an earlier one.
 COVERAGE_PRELUDE = [
   'require "simplecov"',
   'SimpleCov.start do',
+  'merging false',
   'enable_coverage :branch',
   'cover "lib/**/*.rb"',
-  "coverage :line, minimum: #{MINIMUM_LINE_COVERAGE}",
-  "coverage :branch, minimum: #{MINIMUM_BRANCH_COVERAGE}",
+  'skip "lib/slipway/version.rb"',
+  "coverage(:line) { minimum #{MINIMUM_LINE_COVERAGE}; minimum #{MINIMUM_LINE_COVERAGE_BY_FILE}, per: :file }",
+  "coverage(:branch) { minimum #{MINIMUM_BRANCH_COVERAGE}; minimum #{MINIMUM_BRANCH_COVERAGE_BY_FILE}, per: :file }",
   'end'
 ].join('; ')
 
@@ -58,12 +67,16 @@ namespace :generate do
   end
 end
 
-desc 'Regenerate every generated file'
-task generate: %w[generate:man]
+def require_tool(tool)
+  return if system(tool, '--version', out: File::NULL, err: File::NULL)
+
+  abort "#{tool} is not installed; install it with your package manager (pacman, apt or brew)"
+end
 
 namespace :lint do
   desc 'Check the man pages with groff -ww'
   task :man do
+    require_tool('groff')
     pages = Dir['man/man1/*.1']
     if pages.empty?
       puts 'lint:man: no pages under man/man1; run rake generate:man first'
@@ -75,16 +88,15 @@ namespace :lint do
 
   desc 'Run shellcheck on bin/setup and the bash completion script'
   task :shell do
+    require_tool('shellcheck')
     sh 'shellcheck', '-s', 'bash', 'bin/setup'
     script, err, status = Open3.capture3(RbConfig.ruby, '-Ilib', 'exe/slipway', 'completion', 'bash')
-    if status.success?
-      Tempfile.create(['slipway-completion-', '.bash']) do |file|
-        file.write(script)
-        file.flush
-        sh 'shellcheck', '-s', 'bash', file.path
-      end
-    else
-      puts "lint:shell: skipping the completion script: #{err.lines.first&.strip}"
+    abort "lint:shell: slipway completion bash failed: #{err.lines.first&.strip}" unless status.success?
+
+    Tempfile.create(['slipway-completion-', '.bash']) do |file|
+      file.write(script)
+      file.flush
+      sh 'shellcheck', '-s', 'bash', file.path
     end
   end
 end

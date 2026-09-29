@@ -113,7 +113,6 @@ class ColorIntegrationTest < Minitest::Test
 
   private
 
-  # Runs the command with a pseudo-terminal as its stdout and returns everything it wrote.
   def in_terminal(env, *)
     reader, writer, pid = PTY.spawn(env, *COMMAND, *, unsetenv_others: true)
     writer.close

@@ -3,7 +3,6 @@
 require 'json'
 require 'test_helper'
 
-# `get` beyond the default table: name, json and yaml output, groups, empty results and errors.
 class GetFormatsTest < Minitest::Test
   include CommandsHelper
 

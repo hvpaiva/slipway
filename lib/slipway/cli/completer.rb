@@ -2,15 +2,13 @@
 
 module Slipway
   module CLI
-    # Backs the hidden `__complete WORDS...` command with cobra's directive protocol:
-    # one candidate per line, as `value` or `value<TAB>description`, then a final `:N`
-    # line where N is 4 (no file completion) or 0 (let the shell complete file names).
+    # Speaks cobra's __complete protocol: one candidate per line, as `value` or
+    # `value<TAB>description`, then a final `:N` line where N is 4 (no file completion) or 0
+    # (let the shell complete file names).
     #
-    # Candidates come from the registry. Subcommands carry their summary as the
-    # description and options their description; enum values have none. A completer
-    # proc on an Option or Positional may return an Array of values, a Hash of value to
-    # description, or the symbol FILES to request file completion with no candidates.
-    # Never raises: on any error only `:4` is printed.
+    # A completer proc on an Option or Positional may return an Array of values, a Hash of
+    # value to description, or FILES to request file completion. Never raises: on any error
+    # only `:4` is printed.
     class Completer
       FILES = :files
       NO_FILES_DIRECTIVE = 4
@@ -24,15 +22,12 @@ module Slipway
         @registry = registry
       end
 
-      # The registry handler: prints the candidates for +words+ and the directive line.
       def call(context, words, _opts)
         candidates, directive = safely { complete(words) }
         candidates.each { |value, description| context.puts(description ? "#{value}\t#{description}" : value) }
         context.puts(":#{directive}")
       end
 
-      # Returns [candidates, directive] for the last word of +words+, where every candidate
-      # is a [value, description or nil] pair.
       def complete(words)
         words = words.dup
         current = words.pop || ''
@@ -47,8 +42,7 @@ module Slipway
 
       private
 
-      # Where the replay of the typed words stands: the command reached, its positional
-      # arguments so far, an option still waiting for its value, and whether `--` was seen.
+      # +pending+ is an option still waiting for its value; +literal+ is set once `--` is seen.
       State = Struct.new(:command, :args, :pending, :literal)
       private_constant :State
 
@@ -58,7 +52,6 @@ module Slipway
         [[], NO_FILES_DIRECTIVE]
       end
 
-      # Returns nil when the words name a subcommand that does not exist.
       def replay(words)
         words.reduce(State.new(@registry.root, [], nil, false)) { |state, word| consume(state, word) or return nil }
       end
@@ -80,7 +73,6 @@ module Slipway
 
       def option_word?(word, state) = word.start_with?('-') && !state.literal
 
-      # Returns the Option still waiting for its value, or nil when the word carried one.
       # An optional-argument option only takes its value attached, so it never waits.
       def pending_option(word, state)
         name = option_name(word)
@@ -90,7 +82,7 @@ module Slipway
         option unless option.nil? || option.flag? || option.optional
       end
 
-      # The name a switch word refers to, or nil when the value is attached (`--x=v`, `-ov`).
+      # nil when the value is attached: `--x=v`, `-ov`.
       def option_name(word)
         case word
         when INLINE_VALUE then nil
@@ -104,7 +96,6 @@ module Slipway
 
       def options_of(command) = @registry.globals + command.options
 
-      # FILES, or every candidate as a [value, description] pair before prefix matching.
       def candidates_for(state, current)
         return values_of(state.pending, state.args) if state.pending
         return inline_value_candidates(state, current) if current.match?(INLINE_VALUE)
@@ -142,7 +133,6 @@ module Slipway
         state.pending && current == EQUALS ? '' : current
       end
 
-      # Keeps the candidates matching +prefix+ minus the values already typed on the line.
       def select(candidates, prefix, given)
         candidates.select { |value, _| value.start_with?(prefix) && !given.include?(value) }
       end

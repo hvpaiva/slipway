@@ -2,8 +2,6 @@
 
 module Slipway
   module Git
-    # What `git status` says about one working tree: branch and upstream position plus the
-    # counts of staged, unstaged, untracked and conflicted entries and of stashes.
     Status = Data.define(:branch, :head, :upstream, :ahead, :behind, :upstream_gone,
                          :staged, :unstaged, :untracked, :conflicted, :stashes) do
       # Parses the output of `git status --porcelain=v2 --branch --show-stash -z`.
@@ -14,20 +12,16 @@ module Slipway
         super
       end
 
-      # HEAD points at a commit rather than a branch.
       def detached? = branch.nil?
 
-      # The branch has no commits yet.
       def unborn? = head.nil?
 
-      # An upstream is configured but its ref no longer exists.
       def upstream_gone? = upstream_gone
 
-      # Nothing staged, modified, untracked or conflicted; stashes do not count.
+      # Stashes do not count.
       def clean? = staged.zero? && unstaged.zero? && untracked.zero? && conflicted.zero?
     end
 
-    # Reads one porcelain v2 document, NUL separated, into the fields of a Status.
     class Porcelain
       INITIAL = '(initial)'
       DETACHED = '(detached)'
@@ -46,7 +40,6 @@ module Slipway
         @counts = Hash.new(0)
       end
 
-      # The Status read from one porcelain document; +text+ is the raw NUL separated output.
       def parse(text)
         records = text.split("\0")
         until records.empty?
@@ -62,6 +55,7 @@ module Slipway
 
       def status
         Status.new(branch: @branch, head: @head, upstream: @upstream, ahead: @ahead, behind: @behind,
+                   # git omits branch.ab when the upstream is set but its ref is gone.
                    upstream_gone: !@upstream.nil? && !@position_seen,
                    staged: @counts[:staged], unstaged: @counts[:unstaged],
                    untracked: @counts[:untracked], conflicted: @counts[:conflicted], stashes: @stashes)

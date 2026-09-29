@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# The help page of the root and of every visible command, compared to test/fixtures/golden/help.
 class HelpGoldenTest < Minitest::Test
   include CliHelper
   include GoldenHelper
@@ -10,7 +9,6 @@ class HelpGoldenTest < Minitest::Test
   # Help never runs a verb, so the runtime factory is never called.
   REGISTRY = Slipway::Commands.registry(->(_context, _opts) { raise 'help does not build a runtime' })
 
-  # Every command path the registry exposes, the root first, groups before their children.
   def self.paths(command = REGISTRY.root, path = [])
     [path, *command.visible_subcommands.flat_map { paths(it, [*path, it.name]) }]
   end

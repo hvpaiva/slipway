@@ -11,15 +11,13 @@ module Slipway
       DAY = 24
       YEAR = 365
 
-      # Age of +from+ as seen at +to+, or nil when +from+ is unknown.
       def self.humanize(from, to)
         return nil if from.nil?
 
         format(to - from)
       end
 
-      # Formats a duration given in +seconds+. Anything two or more seconds in the future
-      # is reported as invalid; a little clock skew rounds to zero.
+      # Two or more seconds in the future is invalid; a little clock skew rounds to zero.
       def self.format(seconds)
         seconds = seconds.to_i
         return INVALID if seconds < -1
@@ -60,7 +58,6 @@ module Slipway
         "#{years}y"
       end
 
-      # Two units, the smaller one omitted when it is zero: "3h15m" but "3h".
       def self.pair(major, major_unit, minor, minor_unit)
         return "#{major}#{major_unit}" if minor.zero?
 

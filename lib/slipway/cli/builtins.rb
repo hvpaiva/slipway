@@ -4,23 +4,18 @@ require 'fileutils'
 
 module Slipway
   module CLI
-    # Commands every registry gets for free: help, version, completion, man and the hidden
-    # completion endpoint. They are ordinary registry entries.
     module Builtins
       MAN_DIR = File.expand_path('../../../man/man1', __dir__)
 
-      # The five builtins in the order they are listed; +man+ options are passed on to .man.
       def self.all(program:, version:, resolve:, **man)
         [help(program:, resolve:), version(program:, version:), completion(program:), man(program:, resolve:, **man),
          complete(resolve:)]
       end
 
-      # The one-line version report shared by `version` and `--version`.
       def self.version_line(program, version)
         "#{program} #{version} (ruby #{RUBY_VERSION}) [#{Gem::Platform.local}]"
       end
 
-      # `help [COMMAND...]`, which prints the same page as `COMMAND --help`.
       def self.help(program:, resolve:)
         Command.new(
           name: 'help', summary: 'Help about any command', section: 'Other Commands',
@@ -33,7 +28,6 @@ module Slipway
         )
       end
 
-      # `version`, which prints the program, Ruby and platform on one line.
       def self.version(program:, version:)
         Command.new(
           name: 'version', summary: "Print the version of #{program}", section: 'Other Commands',
@@ -43,7 +37,6 @@ module Slipway
         )
       end
 
-      # `completion SHELL`, which prints the script for bash, zsh or fish.
       def self.completion(program:)
         shells = CompletionScripts::SHELLS.join(', ')
         Command.new(
@@ -58,7 +51,7 @@ module Slipway
         )
       end
 
-      # One install example per shell, in the same form the script headers describe.
+      # Keep these paths in step with the install lines in the CompletionScripts headers.
       def self.completion_examples(program)
         [
           Example.new(comment: 'Install bash completions where bash-completion loads them',
@@ -71,9 +64,8 @@ module Slipway
         ]
       end
 
-      # `man [COMMAND...]`. +man_dir+ holds the bundled pages, +exec+ replaces the process
-      # and +paths+, called with the environment, answers man_install_dir and man_db_dir
-      # for a bare --install; all three are injectable so tests can observe the calls.
+      # +paths+ is called with the environment and answers man_install_dir and man_db_dir for
+      # a bare --install. +exec+ and +paths+ are injectable so tests can observe the calls.
       def self.man(program:, resolve:, man_dir: MAN_DIR, exec: Kernel.method(:exec), paths: nil)
         Command.new(
           name: 'man', section: 'Settings Commands', summary: 'Show the manual page of a command',
@@ -87,7 +79,6 @@ module Slipway
         )
       end
 
-      # The three ways to use `man`: read a page, install every page, find the directory.
       def self.man_examples
         [
           Example.new(comment: 'Read the page of a command', command: 'man get'),
@@ -96,7 +87,6 @@ module Slipway
         ]
       end
 
-      # `--path` and `--install[=DIR]`.
       def self.man_options
         [
           Option.new(long: 'path', description: 'Print the directory of the bundled pages and exit.'),
@@ -106,7 +96,6 @@ module Slipway
         ]
       end
 
-      # The hidden `__complete WORDS...` endpoint the shell scripts call.
       def self.complete(resolve:)
         Command.new(
           name: '__complete', summary: 'Print completion candidates for the given words', hidden: true, raw: true,
@@ -115,12 +104,10 @@ module Slipway
         )
       end
 
-      # The names of the visible subcommands under the command +given+ names, for completion.
       def self.subcommand_names(registry, given)
         registry.resolve(given).first.visible_subcommands.map(&:name)
       end
 
-      # `slipway help [COMMAND...]` renders the same page as `slipway COMMAND... --help`.
       # +resolve+ returns the registry when called, since the builtin is built before the
       # registry that holds it exists.
       class HelpCommand
@@ -128,7 +115,6 @@ module Slipway
           @resolve = resolve
         end
 
-        # The registry handler: prints the page for the command +words+ name, or the root page.
         def call(context, words, _opts)
           registry = @resolve.call
           renderer = HelpRenderer.new(registry, context.style)
@@ -137,8 +123,6 @@ module Slipway
         end
       end
 
-      # `slipway man [COMMAND...]` opens the bundled page with man(1); `--path` prints the
-      # page directory and `--install[=DIR]` copies the pages for man-db to find.
       class ManCommand
         # Any of these means the user configured the pager's look, so it is left alone.
         USER_PAGER_VARIABLES = %w[LESS_TERMCAP_md MANPAGER MANROFFOPT GROFF_NO_SGR].freeze
@@ -152,7 +136,6 @@ module Slipway
           @paths = paths
         end
 
-        # The registry handler: --path, --install, or the page for +args+.
         def call(context, args, opts)
           return context.puts(@man_dir) if opts[:path]
           return install(context, opts[:install]) if opts[:install]
@@ -182,7 +165,7 @@ module Slipway
         end
 
         # LESS_TERMCAP colors only take effect when groff stops emitting SGR itself, hence
-        # GROFF_NO_SGR; the palette follows the help page's header and flag roles.
+        # GROFF_NO_SGR.
         def pager_env(context)
           return {} unless context.color? && USER_PAGER_VARIABLES.none? { set?(context.env[it]) }
 

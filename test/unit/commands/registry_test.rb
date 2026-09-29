@@ -2,9 +2,10 @@
 
 require 'test_helper'
 
-# The full registry and the wiring of Slipway.run around it.
 class CommandsRegistryTest < Minitest::Test
   include CommandsHelper
+
+  LIB = File.expand_path('../../../lib', __dir__)
 
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
@@ -25,6 +26,25 @@ class CommandsRegistryTest < Minitest::Test
     assert_equal %w[get describe create apply delete edit label], sections.fetch('Basic Commands')
     assert_equal %w[config completion man], sections.fetch('Settings Commands')
     assert_equal %w[help version], sections.fetch('Other Commands')
+  end
+
+  def test_every_command_class_is_reachable_from_the_verbs
+    commands = Slipway::Commands::VERBS.map { it.command(->(_context, _opts) { raise 'unused' }) }
+    handlers = commands.flat_map { handler_classes(it) }
+    shipped = command_classes(Slipway::Commands::Base).select { it.name && defined_in_lib?(it.name) }
+
+    assert_empty(shipped.reject { handlers.include?(it) }.map(&:name))
+    assert_operator shipped.size, :>, 8
+    assert_includes handlers, Slipway::Commands::ConfigCommand::Path
+  end
+
+  def test_command_classes_reach_every_descendant_but_abstract_bases
+    base = Class.new
+    abstract = Class.new(base)
+    concrete = Class.new(abstract) { def self.command(_factory) = nil }
+    inherited = Class.new(concrete)
+
+    assert_equal [concrete, inherited], command_classes(base)
   end
 
   def test_run_dispatches_through_the_runtime_factory
@@ -76,6 +96,15 @@ class CommandsRegistryTest < Minitest::Test
   end
 
   private
+
+  def defined_in_lib?(name) = Object.const_source_location(name)&.first&.start_with?("#{LIB}/")
+
+  def descendants(klass) = klass.subclasses.flat_map { [it, *descendants(it)] }
+
+  # A class without `self.command` is an abstract base, never a registry entry.
+  def command_classes(base) = descendants(base).select { it.respond_to?(:command) }
+
+  def handler_classes(command) = [command.handler.class, *command.subcommands.flat_map { handler_classes(it) }]
 
   def write_config(env, text)
     path = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')

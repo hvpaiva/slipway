@@ -9,16 +9,10 @@ require_relative 'names'
 module Slipway
   Config = Data.define(:color, :theme, :editor, :group, :path, :exists)
 
-  # The settings in effect for one run: flag, then SLIPWAY_* variable, then the config
-  # file, then the built-in default. +path+ is the file consulted, +exists+ whether it was there.
   class Config
-    # Raised for a config file or variable that cannot be used; exits with status 1.
     class Error < Slipway::Error; end
 
-    # One key of the config file: how it is checked and where else its value may come from.
     Setting = Data.define(:key, :variable, :default, :description, :valid, :expectation) do
-      # Returns +value+ or raises Error naming +prefix+ (a path or a variable) and, for a
-      # file, the quoted key.
       def check(value, prefix, quoted:)
         return value if valid.call(value)
 
@@ -26,7 +20,6 @@ module Slipway
         raise Error, "#{prefix}: #{subject}#{expectation}"
       end
 
-      # The CONFIGURATION entry of the man page for this key.
       def documentation = [description, default && "Default: #{default}."].compact.join(' ')
     end
 
@@ -49,14 +42,11 @@ module Slipway
     ].freeze
 
     KEYS = SETTINGS.map(&:key).freeze
-    # The text of the man page's CONFIGURATION section, one entry per key.
     DOCUMENTATION = SETTINGS.to_h { [it.key, it.documentation] }.freeze
 
-    # Reads and validates the config file itself; +values+ holds only the keys it set.
     class Document
       Contents = Data.define(:values, :exists)
 
-      # A missing default file is an empty document; a missing explicit file is an error.
       def self.read(path, explicit:)
         text = File.read(path)
       rescue Errno::ENOENT
@@ -98,7 +88,6 @@ module Slipway
       end
     end
 
-    # Resolves every setting for +paths+' config file. +flags+ may carry :color and :group.
     def self.load(paths, env:, flags: {})
       path = paths.config_file
       contents = Document.read(path, explicit: paths.config_explicit?)
@@ -117,10 +106,8 @@ module Slipway
     end
     private_class_method :resolve
 
-    # True when the configuration file was present, whatever it held.
     def exists? = exists
 
-    # String keys in the documented order, as `config view` prints them.
     def to_h = KEYS.to_h { [it, public_send(it)] }
   end
 end

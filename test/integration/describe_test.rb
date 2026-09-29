@@ -124,7 +124,6 @@ class DescribeIntegrationTest < Minitest::Test
     Projects:     1
   TEXT
 
-  # A block with the sandbox's HOME in place of <home>.
   def expand(text, env) = text.gsub('<home>', env['HOME'])
 
   def test_a_project_prints_every_field_then_the_repository_and_its_last_commit

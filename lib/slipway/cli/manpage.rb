@@ -2,7 +2,6 @@
 
 module Slipway
   module CLI
-    # Escapes text for roff and spells the few man(7) macros the pages use.
     module Roff
       BULLET = /\A\s*\*\s+/
 
@@ -14,28 +13,22 @@ module Slipway
         value.to_s.gsub('\\', '\e').gsub('-', '\-').sub(/\A(?=[.'])/) { '\&' }
       end
 
-      # A macro argument, quoted only when it holds a space; double quotes become \(dq.
       def argument(value)
         escaped = text(value).gsub('"', '\(dq')
         escaped.include?(' ') ? %("#{escaped}") : escaped
       end
 
-      # A section heading: `.SH TITLE`.
       def heading(title) = ".SH #{argument(title)}"
 
-      # A subsection heading: `.SS TITLE`.
       def subheading(title) = ".SS #{argument(title)}"
 
-      # +value+ in bold, escaped.
       def bold(value) = "\\fB#{text(value)}\\fR"
 
-      # +value+ in italics, escaped.
       def italic(value) = "\\fI#{text(value)}\\fR"
 
-      # Paragraphs separated by blank lines become .PP breaks; the first follows the
-      # heading directly, since a paragraph macro right after .SH is a lint error. A line
-      # starting with `*` is a bullet item with a hanging indent, and leading spaces, which
-      # the terminal help keeps, are dropped because roff would break the line on them.
+      # The first paragraph follows the heading directly, since .PP right after .SH is a lint
+      # error. Leading spaces, which the terminal help keeps, are dropped because roff would
+      # break the line on them.
       def paragraphs(value)
         value.to_s.split(/\n{2,}/).flat_map.with_index do |paragraph, index|
           lines = paragraph.lines(chomp: true).flat_map { line(it) }
@@ -43,22 +36,19 @@ module Slipway
         end
       end
 
-      # One line of a paragraph: a bullet item as `.IP` plus its text, or the escaped text.
       def line(value)
         return [text(value.lstrip)] unless BULLET.match?(value)
 
         ['.IP \(bu 2', text(value.sub(BULLET, ''))]
       end
 
-      # A .TP entry; +indent+ (in ens) aligns a list of short labels in one column.
+      # +indent+ is in ens.
       def tagged(label, description, indent: nil) = [indent ? ".TP #{indent}" : '.TP', label, *paragraphs(description)]
 
-      # A cross reference for SEE ALSO: `.BR name (1)`.
       def reference(name) = ".BR #{text(name)} (1)"
     end
 
-    # Renders one man(1) page per visible command and group, plus the root page, from
-    # the registry. The date is passed in so the output is reproducible.
+    # The date is passed in so the output is reproducible.
     class Manpage
       SECTION = '1'
       MANUAL = 'Slipway Manual'
@@ -82,12 +72,16 @@ module Slipway
         'VISUAL' => 'Editor used by edit when SLIPWAY_EDITOR and the editor configuration key are unset.',
         'EDITOR' => 'Editor used by edit when VISUAL is unset as well.',
         'XDG_CONFIG_HOME' => 'Base of the configuration directory (default ~/.config).',
-        'XDG_DATA_HOME' => 'Base of the data directory (default ~/.local/share).'
+        'XDG_DATA_HOME' => 'Base of the data directory (default ~/.local/share).',
+        'TERM' => 'When dumb, disables color in auto mode.',
+        'MANPAGER' => 'When non-empty, slipway man leaves the pager palette alone.',
+        'MANROFFOPT' => 'Same as MANPAGER.',
+        'LESS_TERMCAP_md' => 'Same as MANPAGER.',
+        'GROFF_NO_SGR' => 'Same as MANPAGER.'
       }.freeze
 
-      # +source+ fills the fourth .TH field and defaults to "PROGRAM VERSION". +configuration+
-      # maps each config file key to its documentation for the root page's CONFIGURATION
-      # section; the caller supplies it because the keys belong to the settings loader.
+      # +source+ fills the fourth .TH field. +configuration+ maps each config file key to its
+      # documentation; the caller supplies it because the keys belong to the settings loader.
       def initialize(registry, date:, source: nil, environment: DEFAULT_ENVIRONMENT, configuration: {})
         @registry = registry
         @date = date
@@ -96,12 +90,10 @@ module Slipway
         @configuration = configuration
       end
 
-      # Every page keyed by file name: "slipway.1", "slipway-get.1", "slipway-config-view.1", ...
       def pages
         paths.to_h { |path| [file_name(path), page(path)] }
       end
 
-      # The page for the command reached through +path+; an empty path is the root page.
       def page(path)
         command, = @registry.resolve(path)
         lines = path.empty? ? root_page(command) : command_page(command, path)
@@ -166,7 +158,6 @@ module Slipway
         ['.SH SYNOPSIS', ".SY #{Roff.argument([@registry.program, *path].join(' '))}", *synopsis_args(command), '.YS']
       end
 
-      # Required options, then the positionals (or the command's own usage text), then [flags].
       def synopsis_args(command)
         required = command.options.select(&:required)
         options = required.flat_map { [".B #{Roff.text(it.switches.first)}", ".I #{it.argument}"] }
@@ -186,7 +177,6 @@ module Slipway
         positional.required ? ".I #{token}\\&" : ".RI [ #{token} ]\\&"
       end
 
-      # Subcommands under .SS headings per section when there is more than one section.
       def commands_section(command)
         sections = command.sections
         return [] if sections.empty?

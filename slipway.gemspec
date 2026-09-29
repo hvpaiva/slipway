@@ -26,9 +26,9 @@ Gem::Specification.new do |spec|
 
   # Only tracked files ship, so the gem has to be built from a git checkout.
   gemspec = File.basename(__FILE__)
-  development_only = %w[bin/ test/ .github/ Gemfile Rakefile .rubocop.yml .editorconfig .gitattributes
-                        .gitignore .yardopts mise.toml CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md
-                        ARCHITECTURE.md]
+  development_only = %w[bin/ rakelib/ test/ .github/ Gemfile Rakefile .rubocop.yml .editorconfig .gitattributes
+                        .gitignore .yardopts _typos.toml lychee.toml mise.toml CODE_OF_CONDUCT.md CONTRIBUTING.md
+                        SECURITY.md ARCHITECTURE.md]
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
     ls.readlines("\x0", chomp: true).reject { |f| f == gemspec || f.start_with?(*development_only) }
   end

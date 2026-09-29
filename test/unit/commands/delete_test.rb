@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# `delete`: projects and groups by name, resolution before removal, --ignore-not-found and the dry run.
 class DeleteTest < Minitest::Test
   include CommandsHelper
 

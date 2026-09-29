@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# The three completion scripts, compared to test/fixtures/golden/completion.
 class CompletionGoldenTest < Minitest::Test
   include CliHelper
   include GoldenHelper

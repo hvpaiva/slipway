@@ -4,10 +4,7 @@ require 'shellwords'
 require_relative 'error'
 
 module Slipway
-  # Opens text in the user's editor and returns what was saved.
   class Editor
-    # Raised when the editor cannot be started, exits unsuccessfully or leaves no file behind;
-    # exits with status 1.
     class Failed < Slipway::Error; end
 
     VARIABLE = 'SLIPWAY_EDITOR'
@@ -15,21 +12,19 @@ module Slipway
     DEFAULT = 'vi'
     TMPDIR_PREFIX = 'slipway-edit-'
 
-    # +preferred+ is the config file's editor, consulted after SLIPWAY_EDITOR and before VISUAL.
+    # +preferred+ is the config file's editor.
     def initialize(env:, preferred: nil)
       @env = env
       @preferred = preferred
     end
 
-    # The editor as an argv Array, so `code --wait` and quoted paths work without a shell.
+    # An argv Array, so `code --wait` and quoted paths work without a shell.
     def command
       Shellwords.split(command_line)
     rescue ArgumentError => e
       raise Failed, "editor #{command_line.inspect} is not a valid command line: #{e.message}"
     end
 
-    # Writes +text+ to a fresh temporary directory as +filename+, runs the editor on it and
-    # returns the file's content afterwards. The directory is removed on every path out.
     def edit(text, filename: 'resource.yaml')
       require 'tmpdir'
       Dir.mktmpdir(TMPDIR_PREFIX) do |dir|

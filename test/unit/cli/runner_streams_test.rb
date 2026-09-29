@@ -2,10 +2,7 @@
 
 require 'test_helper'
 
-# The Runner against streams that misbehave: a reader that went away, and color asked for
-# on a command line that fails before the parser reaches the flag.
 class RunnerStreamsTest < Minitest::Test
-  # A stream whose reader has gone away.
   class BrokenPipe < StringIO
     def write(*) = raise(Errno::EPIPE)
   end

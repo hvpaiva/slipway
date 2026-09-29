@@ -7,8 +7,6 @@ require 'rbconfig'
 require_relative 'git_fixtures'
 require_relative 'sandbox'
 
-# Runs the real executable in a hermetic environment rooted in a throwaway HOME, and gives
-# integration tests a vocabulary for seeding a registry and reading kubectl tables back.
 module IntegrationHelper
   include GitFixtures
   include Sandbox
@@ -16,7 +14,7 @@ module IntegrationHelper
   ROOT = File.expand_path('../..', __dir__)
   LIB = File.join(ROOT, 'lib')
   EXE = File.join(ROOT, 'exe', 'slipway')
-  # The interpreter that runs the suite, with warnings on: one on stderr fails the assertion.
+  # -w: a warning on stderr fails the assertion.
   COMMAND = [RbConfig.ruby, '-w', '-I', LIB, EXE].freeze
   # kubectl's HumanDuration: 4s, 2m10s, 3h, 2d5h, 2y319d, 9y.
   DURATION = /\d+(s|m|m\d+s|h|h\d+m|d|d\d+h|y|y\d+d)/
@@ -24,16 +22,14 @@ module IntegrationHelper
   # A fixed creationTimestamp, so json and yaml output is the same on every run.
   CREATED = '2026-09-01T09:00:00Z'
 
-  # Yields the environment of a fresh HOME: XDG directories inside it, PATH from the process so
-  # git is found, TERM=dumb, and git kept away from the developer's configuration.
   def with_home
     with_sandbox do |env|
       yield env.merge('GIT_CONFIG_GLOBAL' => '/dev/null', 'GIT_CONFIG_NOSYSTEM' => '1', 'LC_ALL' => 'C')
     end
   end
 
-  # Runs `slipway args...` and returns [status, stdout, stderr]. Only the keys of +env+ reach
-  # the process, so no SLIPWAY_* or color variable of the developer leaks in.
+  # Only the keys of +env+ reach the process, so no SLIPWAY_* or color variable of the
+  # developer leaks in.
   def slipway(*, env:, stdin: nil, chdir: nil)
     options = { unsetenv_others: true, stdin_data: stdin }
     options[:chdir] = chdir if chdir
@@ -41,7 +37,6 @@ module IntegrationHelper
     [status.exitstatus, out, err]
   end
 
-  # Runs a command that has to succeed quietly, as setup does, and returns its stdout.
   def slipway!(*args, env:, stdin: nil)
     status, out, err = slipway(*args, env:, stdin:)
 
@@ -49,14 +44,12 @@ module IntegrationHelper
     out
   end
 
-  # Builds a fixture repository in +state+ at ~/dev/<name> and returns that path as a user
-  # would type it. A nil state builds nothing, so the project shows as Missing.
+  # A nil state builds nothing, so the project shows as Missing.
   def repo(env, name, state = 'clean')
     build_repo(File.join(env['HOME'], 'dev', name), state) if state
     "~/dev/#{name}"
   end
 
-  # A Project or Group manifest as YAML text, ready for `apply -f -`.
   def manifest(kind, name, group: nil, labels: nil, created: CREATED, **spec)
     metadata = { 'name' => name }
     metadata['group'] = group if group
@@ -65,11 +58,9 @@ module IntegrationHelper
     Psych.safe_dump({ 'kind' => kind, 'metadata' => metadata, 'spec' => spec.transform_keys(&:to_s) })
   end
 
-  # Applies every manifest in one run and returns the result lines.
   def seed(env, *manifests) = slipway!('apply', '-f', '-', env:, stdin: manifests.join)
 
-  # Writes an executable script under ~/bin from +body+, which receives the file to edit as
-  # $1, and returns its path.
+  # +body+ receives the file to edit as $1.
   def editor_script(env, name, body)
     dir = File.join(env['HOME'], 'bin')
     FileUtils.mkdir_p(dir)
@@ -79,7 +70,6 @@ module IntegrationHelper
     path
   end
 
-  # Where the store keeps its manifests for +env+.
   def data_home(env) = File.join(env.fetch('XDG_DATA_HOME'), 'slipway')
 
   def config_file(env) = File.join(env.fetch('XDG_CONFIG_HOME'), 'slipway', 'config.yaml')
@@ -91,11 +81,10 @@ module IntegrationHelper
     path
   end
 
-  # The cells of a kubectl table, one Array per line; columns are three or more spaces apart.
   def table(text) = text.lines(chomp: true).map { it.split(/ {3,}/) }
 
-  # Asserts every cell of the table in +text+. An :age cell only has to read as a duration,
-  # since the registry is created moments before it is listed.
+  # An :age cell only has to read as a duration, since the registry is created moments before
+  # it is listed.
   def assert_table(expected, text)
     actual = table(text).each_with_index.map do |row, line|
       row.each_with_index.map { |cell, column| expected.dig(line, column) == :age && cell.match?(AGE) ? :age : cell }
@@ -104,6 +93,5 @@ module IntegrationHelper
     assert_equal expected, actual
   end
 
-  # Replaces the value of an `Age:` line with <age>, so a describe block can be compared whole.
   def scrub_age(text) = text.gsub(/^(\s*Age: +)\S+$/, '\1<age>')
 end

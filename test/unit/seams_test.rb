@@ -3,10 +3,20 @@
 require 'json'
 require 'test_helper'
 
-# Facts two modules must agree on: theme roles, variable names, the config documentation and
-# the shape a stored manifest takes when it is serialized.
 class SeamsTest < Minitest::Test
   include Sandbox
+
+  LIB = File.expand_path('../../lib', __dir__)
+  # Universal variables every program reads; the man page does not list them.
+  UNDOCUMENTED = %w[HOME PATH].freeze
+  # Set for the git child process to bound repository discovery, never read from the user.
+  CHILD_ONLY = [Slipway::Git::Runner::CEILING_VARIABLE].freeze
+  # Upper case, with the odd lower-case suffix such as LESS_TERMCAP_md.
+  NAME = /[A-Z][A-Za-z0-9_]+/
+  # env['X'], @env.fetch('X'), env.fetch 'X', ENV.key?('X'), context.env['X'], ...
+  READ = /\b(?:env|ENV)(?:\[|\.(?:fetch|key\?|include\?|has_key\?|member\?)\(?)\s*['"](#{NAME})['"]/
+  # FOO_VARIABLE = 'X' or FOO_VARIABLES = %w[X Y], and the bare VARIABLE constant.
+  NAMED = /^\s*(?:[A-Z0-9_]+_)?VARIABLES?\s*=\s*(?:['"](#{NAME})['"]|%w\[([^\]]*)\])/
 
   def test_every_state_role_exists_in_both_themes
     Slipway::CLI::Theme::NAMES.each do |name|
@@ -25,13 +35,24 @@ class SeamsTest < Minitest::Test
   end
 
   def test_manpage_environment_lists_every_variable_the_code_reads
-    expected = [Slipway::Paths::CONFIG_VARIABLE, Slipway::Paths::DATA_HOME_VARIABLE,
-                *Slipway::Config::SETTINGS.map(&:variable), Slipway::CLI::Runner::DEBUG_VARIABLE,
-                'NO_COLOR', *Slipway::CLI::Style::FORCE_VARIABLES,
-                Slipway::Editor::VARIABLE, *Slipway::Editor::FALLBACK_VARIABLES,
-                Slipway::Paths::XDG_CONFIG_HOME, Slipway::Paths::XDG_DATA_HOME]
+    expected = (variables_read_by_lib + Slipway::Config::SETTINGS.map(&:variable)).uniq - UNDOCUMENTED - CHILD_ONLY
 
-    assert_equal expected.uniq.sort, Slipway::CLI::Manpage::DEFAULT_ENVIRONMENT.keys.sort
+    assert_equal expected.sort, Slipway::CLI::Manpage::DEFAULT_ENVIRONMENT.keys.sort
+    assert_operator expected.size, :>, 15
+  end
+
+  def test_the_variable_scan_finds_reads_and_named_constants
+    source = <<~RUBY
+      NAME_VARIABLE = 'A_ONE'
+      OTHER_VARIABLES = %w[B_TWO C_THREE].freeze
+      XDG_DATA_HOME_VARIABLE = 'D_FOUR'
+      STATUS = 'STATUS'
+      HEADER = 'NAME'
+      x = env['E_five'] || @env.fetch("F_SIX", '') || ENV['G_SEVEN'] || context.env[name]
+      y = env.key?('H_EIGHT') || env.fetch 'I_NINE', nil
+    RUBY
+
+    assert_equal %w[A_ONE B_TWO C_THREE D_FOUR E_five F_SIX G_SEVEN H_EIGHT I_NINE], variables_in(source).sort
   end
 
   def test_runner_config_and_editor_read_the_same_variables
@@ -77,5 +98,15 @@ class SeamsTest < Minitest::Test
                    JSON.parse(Slipway::Output::Serializer.render('json', [item], single: false)))
       assert_equal project, Slipway::Manifest.parse_yaml(Slipway::Manifest.dump(project), source: 'dump')
     end
+  end
+
+  private
+
+  def variables_read_by_lib
+    Dir.glob('**/*.rb', base: LIB).flat_map { variables_in(File.read(File.join(LIB, it))) }.uniq
+  end
+
+  def variables_in(source)
+    [*source.scan(READ).flatten, *source.scan(NAMED).flat_map { |single, list| single ? [single] : list.split }]
   end
 end

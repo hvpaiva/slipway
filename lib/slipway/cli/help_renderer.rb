@@ -2,8 +2,8 @@
 
 module Slipway
   module CLI
-    # Renders kubectl-shaped help straight from the registry. Alignment is computed on
-    # plain text and color is applied afterwards, so ANSI escapes never skew columns.
+    # Alignment is computed on plain text and color applied afterwards, so ANSI escapes
+    # never skew columns.
     class HelpRenderer
       COMMAND_COLUMN = 16
       FLAG_COLUMN = 30
@@ -18,7 +18,6 @@ module Slipway
         @style = style
       end
 
-      # The page for the bare program: description, command sections, global options, usage.
       def root
         join([
                @registry.root.description,
@@ -29,7 +28,6 @@ module Slipway
              ])
       end
 
-      # The page for one command or group reached through +path+.
       def command(command, path)
         join([
                command.description,

@@ -2,13 +2,10 @@
 
 require 'fileutils'
 
-# Compares rendered text with a checked-in file. UPDATE_GOLDEN=1 rewrites the fixtures under
-# test/fixtures/golden and skips; otherwise a mismatch fails with a unified diff made in Ruby.
 module GoldenHelper
   FIXTURES = File.expand_path('../fixtures/golden', __dir__)
   UPDATE_VARIABLE = 'UPDATE_GOLDEN'
 
-  # +name+ is the fixture's path under test/fixtures/golden.
   def assert_golden(name, actual)
     path = File.join(FIXTURES, name)
     if update_golden?
@@ -21,8 +18,6 @@ module GoldenHelper
     assert_text_file(path, actual, regenerate: "rerun with #{UPDATE_VARIABLE}=1 if the change is intended")
   end
 
-  # Fails with a unified diff when +actual+ differs from the file at +path+; +regenerate+
-  # tells the reader how to refresh that file.
   def assert_text_file(path, actual, regenerate:)
     expected = File.read(path)
     return pass if expected == actual
@@ -35,8 +30,7 @@ module GoldenHelper
 
   def relative(path) = path.delete_prefix("#{File.expand_path('../..', __dir__)}/")
 
-  # A line-based unified diff with three lines of context, built on a longest common
-  # subsequence table so it reads the same on every machine.
+  # Built in Ruby rather than shelling out to diff, so it reads the same on every machine.
   module Diff
     CONTEXT = 3
     MARKS = { same: ' ', del: '-', add: '+' }.freeze
@@ -91,7 +85,6 @@ module GoldenHelper
       row
     end
 
-    # The ranges of edits worth printing: every change plus its context, merged when close.
     def hunks(edits)
       changed = edits.each_index.reject { edits[it].first == :same }
       changed.slice_when { |before, after| after - before > (CONTEXT * 2) + 1 }.map do |group|
@@ -107,7 +100,6 @@ module GoldenHelper
       header + body.join
     end
 
-    # "start,count" of one side of a hunk, counting every edit except +excluded+ ones.
     def position(slice, excluded, index)
       count = slice.count { it.first != excluded }
       "#{slice.first[index] + (count.zero? ? 0 : 1)},#{count}"

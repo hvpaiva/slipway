@@ -6,10 +6,8 @@ require_relative '../store'
 
 module Slipway
   module Commands
-    # `slipway apply -f FILE`: creates or updates resources from manifests, one result line each.
     class Apply < Base
-      # Every problem met during one apply, raised once after the successful documents; the
-      # front controller prints one `error:` line per problem.
+      # Raised once, after every document that could be applied was.
       class Failed < Error; end
 
       DESCRIPTION = "Apply a configuration to a resource by file name or stdin.\n\n" \
@@ -28,7 +26,6 @@ module Slipway
                                  description: 'The file that contains the manifests to apply; may be repeated. ' \
                                               "A directory reads its *.yaml and *.yml files, '-' reads stdin.")
 
-      # The registry entry for `apply`: repeatable -f completing file names, and --dry-run.
       def self.command(factory)
         CLI::Command.new(
           name: 'apply', summary: 'Apply a configuration to a resource by file name or stdin',
@@ -50,7 +47,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Applies every document of every -f source in order, then raises the collected problems.
       def run(runtime, context, _args, opts)
         dry_run = opts[:dry_run] == 'client'
         session = Session.new(runtime.store, default_group: scope(runtime, context, opts).group, dry_run:)
@@ -67,8 +63,7 @@ module Slipway
         raise Failed.new(problems: session.problems) unless session.problems.empty?
       end
 
-      # One run over every source in order. Each applied document is reported to the block
-      # as it happens; each failed one is remembered in +problems+ so the rest still run.
+      # A failed document is remembered in +problems+ so the rest still run.
       class Session
         STDIN_SOURCE = 'STDIN'
         EXTENSIONS = %w[.yaml .yml].freeze
@@ -84,7 +79,6 @@ module Slipway
           @dry_run_groups = []
         end
 
-        # Applies every document read from +name+: a file, a directory or `-`.
         def apply(name, &)
           read(name).each { |source, text| apply_stream(source, text, &) }
         rescue Error => e
@@ -113,7 +107,6 @@ module Slipway
           files.map { [it, File.read(it)] }
         end
 
-        # A document is named `<source>:<index>` only when the stream holds more than one.
         def apply_stream(source, text, &)
           documents = Manifest.load_documents(text, source:)
           documents.each_with_index do |document, index|

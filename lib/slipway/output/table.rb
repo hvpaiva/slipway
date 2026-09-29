@@ -2,17 +2,13 @@
 
 module Slipway
   module Output
-    # Renders rows the way kubectl prints resources: uppercase headers, left-aligned
-    # columns three spaces apart, no borders, and no trailing whitespace. Widths come from
-    # the plain text, so color never shifts a column. Cells are never wrapped.
+    # Widths come from the plain text, so color never shifts a column.
     class Table
       NONE = '<none>'
       GAP = '   '
 
-      # +headers+ names the columns. +roles+, when given, is called with the header and the
-      # plain cell text and may return a theme role that replaces the column color.
-      # +color_offset+ is how many leading columns to leave out of the color cycle, so a
-      # GROUP column prepended by -A does not recolor the columns that follow it.
+      # +roles+ is called with the header and the plain cell text and may return a theme role
+      # that replaces the column color. +color_offset+ leading columns stay out of the color cycle.
       def initialize(context, headers:, show_headers: true, roles: nil, color_offset: 0)
         @context = context
         @headers = headers
@@ -21,7 +17,6 @@ module Slipway
         @color_offset = color_offset
       end
 
-      # Every line of the table, each ending in a newline; empty when there is nothing to show.
       def render(rows)
         cells = rows.map { |row| @headers.each_index.map { text(row[it]) } }
         widths = column_widths(cells)
@@ -30,7 +25,6 @@ module Slipway
         lines.map { "#{it}\n" }.join
       end
 
-      # Renders and writes in one call, so callers hold no context of their own for one table.
       def print(rows) = @context.print(render(rows))
 
       private

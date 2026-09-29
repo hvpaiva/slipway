@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# The registry the get tests list: the default group holds a clean, a dirty, a missing and a
-# plain-directory project; work holds one ahead of its origin and one with a detached HEAD.
 module GetRegistry
   # The head commit every fixture repository starts from.
   HEAD = '5bbaee2'

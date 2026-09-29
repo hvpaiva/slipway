@@ -4,11 +4,10 @@ require_relative 'cli/errors'
 require_relative 'labels'
 
 module Slipway
-  # A kubectl label selector: comma-separated requirements that all have to hold for a match.
+  # A kubectl label selector.
   class Selector
-    # One requirement. +values+ is sorted and holds one value for =, != and none for existence checks.
+    # +values+ is sorted and holds one value for = and !=, none for existence checks.
     Requirement = Data.define(:key, :operator, :values) do
-      # True when +labels+ satisfies this requirement alone.
       def match?(labels)
         case operator
         when :equals, :in then labels.key?(key) && values.include?(labels[key])
@@ -18,7 +17,7 @@ module Slipway
         end
       end
 
-      # The normalized spelling, which also orders requirements of one key.
+      # Also the sort key among requirements of one key.
       def to_s
         case operator
         when :equals then "#{key}=#{values.first}"
@@ -31,7 +30,6 @@ module Slipway
       end
     end
 
-    # Recursive-descent parser over the token stream of one selector expression.
     class Parser
       TOKEN = /==|!=|[=!(),]|[^\s=!(),]+/
       SYMBOLS = %w[( ) , = == != !].freeze
@@ -44,7 +42,6 @@ module Slipway
         @position = 0
       end
 
-      # The requirements of the expression sorted by key, or UsageError at the first bad token.
       def parse
         return [] if @tokens.empty?
 
@@ -91,7 +88,7 @@ module Slipway
         fail!("expected a value, found #{peek.inspect}")
       end
 
-      # Every slot between the parentheses is a value; an empty slot, as in +()+ or +(a,)+, is the empty value.
+      # An empty slot, as in +()+ or +(a,)+, is the empty value.
       def set_values
         expect('(', "expected '(' after #{@tokens[@position - 1].inspect}")
         values = []
@@ -120,7 +117,6 @@ module Slipway
         token
       end
 
-      # Consumes +token+ when it is next, returning it; nil otherwise.
       def accept(token)
         return unless peek == token
 
@@ -136,17 +132,15 @@ module Slipway
       end
     end
 
-    # Parses +expression+; nil or a blank string selects everything.
+    # nil or a blank string selects everything.
     def self.parse(expression) = new(Parser.new(expression.to_s).parse)
 
     def initialize(requirements)
       @requirements = requirements.freeze
     end
 
-    # True when +labels+ satisfies every requirement.
     def match?(labels) = @requirements.all? { it.match?(labels) }
 
-    # The normalized form: requirements sorted by key, values sorted, == written as =.
     def to_s = @requirements.join(',')
   end
 end

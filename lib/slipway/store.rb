@@ -7,15 +7,12 @@ require_relative 'resources'
 require_relative 'manifest'
 
 module Slipway
-  # Manifests on disk, groups/<name>.yaml and projects/<group>/<name>.yaml under one root, written atomically.
   class Store
-    # A resource that is not on disk.
     class NotFound < Error
       # kubectl's form for every kind: `projects "hldr" not found`, `groups "work" not found`.
       def self.of(kind, name) = new("#{kind.plural} #{name.inspect} not found")
     end
 
-    # A create that would replace a resource already on disk.
     class Conflict < Error; end
 
     DEFAULT_GROUP = Resources::DEFAULT_GROUP
@@ -28,7 +25,6 @@ module Slipway
       @clock = clock
     end
 
-    # Every resource of +kind+ sorted by group then name; +group+ narrows projects to one group.
     # A file that does not hold a valid manifest raises, or is handed to the block and skipped.
     def list(kind, group: nil, &on_problem)
       files = kind.namespaced? ? project_files(group) : group_files
@@ -36,7 +32,7 @@ module Slipway
       kind.namespaced? ? resources.sort_by { [it.group, it.name] } : resources.sort_by(&:name)
     end
 
-    # The resource called +name+, or NotFound; a nil +group+ means the default group for projects.
+    # A nil +group+ means the default group for projects.
     def find(kind, name, group: nil)
       file = path_for(kind, name, group)
       raise NotFound.of(kind, name) unless File.file?(file)
@@ -44,13 +40,12 @@ module Slipway
       read(kind, file)
     end
 
-    # True when a manifest for +name+ is on disk; a nil +group+ means the default group for projects.
+    # A nil +group+ means the default group for projects.
     def exist?(kind, name, group: nil) = File.file?(path_for(kind, name, group))
 
-    # Sorted unique names, for completion.
+    # Unique because project names repeat across groups; completion wants each once.
     def names(kind, group: nil) = list(kind, group:).map(&:name).uniq.sort
 
-    # Writes a new resource, stamping created_at from the clock when it is nil; returns what was written.
     def create(resource)
       kind = Resources.of(resource)
       target = path_of(kind, resource)
@@ -62,7 +57,6 @@ module Slipway
       stamped
     end
 
-    # Writes the resource as given, replacing any previous version.
     def save(resource)
       kind = Resources.of(resource)
       target = path_of(kind, resource)
@@ -71,7 +65,7 @@ module Slipway
       resource
     end
 
-    # Removes a resource; removing a group also removes the registrations of its projects.
+    # Deleting a group also removes the registrations of its projects.
     def delete(kind, name, group: nil)
       file = path_for(kind, name, group)
       raise Error, PROTECTED_GROUP if !kind.namespaced? && name == DEFAULT_GROUP
@@ -81,11 +75,8 @@ module Slipway
       kind.namespaced? ? prune(File.dirname(file)) : FileUtils.rm_rf(File.join(root, 'projects', name))
     end
 
-    # How many projects the group called +group_name+ holds.
     def project_count(group_name) = project_files(group_name).size
 
-    # True when a project may be created in +name+: the default group is created on demand,
-    # any other has to be on disk already.
     def group_available?(name)
       Names.validate!(name, what: 'group name')
       name == DEFAULT_GROUP || File.file?(group_file(name))
@@ -93,7 +84,6 @@ module Slipway
 
     private
 
-    # Returns +name+ once that group exists, creating the default group when it is missing.
     def ensure_group!(name)
       raise NotFound.of(Resources::GROUPS, name) unless group_available?(name)
 
@@ -164,6 +154,7 @@ module Slipway
       Tempfile.create([".#{File.basename(target)}.", '.tmp'], directory) do |tmp|
         tmp.write(Manifest.dump(resource))
         tmp.fsync
+        # Tempfile creates the file 0600; a manifest gets the mode File.write would give it.
         tmp.chmod(0o666 & ~File.umask)
         File.rename(tmp.path, target)
       end

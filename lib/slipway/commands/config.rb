@@ -5,14 +5,12 @@ require_relative '../yaml'
 
 module Slipway
   module Commands
-    # `slipway config view|path`: the settings in effect and the file they were read from.
     # Named apart from Slipway::Config, the settings it displays.
     module ConfigCommand
       DESCRIPTION = 'Inspect the configuration that slipway resolved from flags, environment variables and ' \
                     'the configuration file.'
       NOT_FOUND = ' (not found)'
 
-      # The `config` group with its two subcommands.
       def self.command(factory)
         CLI::Command.new(
           name: 'config', summary: 'Inspect the configuration in effect', section: 'Settings Commands',
@@ -20,14 +18,12 @@ module Slipway
         )
       end
 
-      # `slipway config view`: every setting as YAML, headed by the path of the configuration file.
       class View < Base
         DESCRIPTION = "Display the configuration in effect.\n\n" \
                       'Prints every setting as YAML after applying the precedence flag, then SLIPWAY_* ' \
                       'environment variable, then configuration file, then built-in default. The first line ' \
                       'names the configuration file that was consulted and says so when it does not exist.'
 
-        # The registry entry for `config view`.
         def self.command(factory)
           CLI::Command.new(
             name: 'view', summary: 'Display the configuration in effect', description: DESCRIPTION,
@@ -40,7 +36,6 @@ module Slipway
           )
         end
 
-        # Prints the file consulted as a comment, then the settings as YAML.
         def run(runtime, context, _args, _opts)
           config = runtime.config
           comment = "# #{config.path}"
@@ -50,13 +45,11 @@ module Slipway
         end
       end
 
-      # `slipway config path`: the configuration file slipway reads, whether or not it exists.
       class Path < Base
         DESCRIPTION = "Display the path of the configuration file.\n\n" \
                       'Prints the file that --config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml ' \
                       'resolves to, whether or not it exists.'
 
-        # The registry entry for `config path`.
         def self.command(factory)
           CLI::Command.new(
             name: 'path', summary: 'Display the path of the configuration file', description: DESCRIPTION,
@@ -65,7 +58,6 @@ module Slipway
           )
         end
 
-        # Prints the resolved configuration file path.
         def run(runtime, context, _args, _opts) = context.puts(runtime.config.path)
       end
     end

@@ -3,7 +3,6 @@
 require 'test_helper'
 require 'stringio'
 
-# `apply`: manifests from files, directories and stdin, the three outcomes, collected errors and the dry run.
 class ApplyTest < Minitest::Test
   include CommandsHelper
 

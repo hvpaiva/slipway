@@ -2,9 +2,8 @@
 
 require 'stringio'
 
-# A small registry that exercises every feature of the command layer: verbs with enums,
-# a repeatable and a required option, a nested group and a raw command. Handlers record
-# their calls, and can be told to fail, so tests can inspect dispatch and error handling.
+# Exercises every feature of the command layer: verbs with enums, a repeatable and a required
+# option, a nested group and a raw command.
 class FixtureRegistry
   Call = Data.define(:name, :args, :opts, :context)
 
@@ -16,7 +15,7 @@ class FixtureRegistry
   PROJECT_NAMES = %w[alpha beta].freeze
 
   attr_reader :calls, :registry
-  # An exception instance or class raised by every handler once set.
+  # An exception instance or class; once set, every handler raises it.
   attr_accessor :failure
 
   def initialize
@@ -25,7 +24,6 @@ class FixtureRegistry
                                            globals: Slipway::CLI::Globals::ALL, commands: [get, create, config, raw])
   end
 
-  # Runs +argv+ through the Runner with StringIO streams and returns [status, out, err].
   def run(*argv, env: {}, tty: false, err_tty: false, color: nil, theme: nil)
     out = StringIO.new
     err = StringIO.new

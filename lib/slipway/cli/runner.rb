@@ -11,9 +11,7 @@ require_relative 'builtins'
 
 module Slipway
   module CLI
-    # Front controller: parses the global prefix, walks the command tree, parses the
-    # command's options, validates against the registry and dispatches. Returns the exit
-    # status and never lets an exception escape as a backtrace.
+    # Returns the exit status and never lets an exception escape as a backtrace.
     class Runner
       SIGINT_STATUS = 130
       EPIPE_STATUS = 0
@@ -33,9 +31,8 @@ module Slipway
         @default_theme = theme
       end
 
-      # Runs one command line and returns its exit status. The Context drops output once a
-      # stream's reader is gone, so a broken pipe reaching here comes from a handler writing
-      # past the Context; it ends the run quietly.
+      # The Context drops output once a stream's reader is gone, so a broken pipe reaching here
+      # comes from a handler writing past the Context; it ends the run quietly.
       def run(argv)
         execute(argv.dup)
       rescue Errno::EPIPE
@@ -44,9 +41,8 @@ module Slipway
 
       private
 
-      # Maps every failure to its exit status. Color is settled first, from `--color` typed
-      # anywhere on the line or from the environment, so even an error in the parse that
-      # follows is painted the way the user asked.
+      # Color is settled first, from `--color` typed anywhere on the line or from the
+      # environment, so even an error in the parse that follows is painted the way the user asked.
       def execute(argv)
         @flag_color = flag_color(argv)
         colorize({})
@@ -79,8 +75,8 @@ module Slipway
         invoke(command, path, args, opts)
       end
 
-      # Consumes `[GLOBALS] WORD` repeatedly until a leaf command is reached, so global
-      # flags may appear before the verb and between a group and its subcommand.
+      # Globals are parsed before every word, so they may appear before the verb and between a
+      # group and its subcommand.
       def walk(argv, values)
         command = @registry.root
         path = []
@@ -116,8 +112,7 @@ module Slipway
         Parser.new(@registry.globals + command.options, values).defaults.freeze
       end
 
-      # The last `--color` or `--color=WHEN` before `--`, taken as typed; the Validator
-      # reports an unknown value once the parse reaches it.
+      # Taken as typed; the Validator reports an invalid value once the parse reaches it.
       def flag_color(argv)
         argv.take_while { it != '--' }.reverse_each do |word|
           return Globals::COLOR.implicit if word == COLOR_FLAG
@@ -138,8 +133,7 @@ module Slipway
         @theme ||= Theme.fetch(environment(THEME_VARIABLE, Theme::NAMES) || @default_theme || Theme::DEFAULT_NAME)
       end
 
-      # The variable's value when set and, given +allowed+, one of those values; an invalid
-      # value is reported the way the configuration file reports the same key.
+      # An invalid value is reported the way the configuration file reports the same key.
       def environment(name, allowed = nil)
         value = @context.env[name]
         return nil if value.to_s.empty?
@@ -148,7 +142,6 @@ module Slipway
         raise Slipway::Error, "#{name}: must be one of #{allowed.join(', ')}"
       end
 
-      # A handler may raise UsageError without a hint; the hint then points at its own help.
       def invoke(command, path, args, opts)
         command.handler.call(@context, args, opts)
         0

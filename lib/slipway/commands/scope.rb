@@ -8,10 +8,8 @@ require_relative '../store'
 
 module Slipway
   module Commands
-    # Which resources a verb addresses: the type and names typed as `TYPE NAME...` or
-    # `TYPE/NAME...`, the group in effect, the -A flag and the label selector, resolved from
-    # the runtime and the parsed options. Names typed on the command line are checked here,
-    # so a bad one is a usage error rather than a failure deep in the store.
+    # Names typed on the command line are checked here, so a bad one is a usage error rather
+    # than a failure deep in the store.
     class Scope
       NONE = 'No resources found.'
       NONE_IN = 'No resources found in '
@@ -28,11 +26,9 @@ module Slipway
         @opts = opts
       end
 
-      # The Kind named by +word+, or Slipway::Error listing the kinds that exist.
       def kind(word) = Resources.resolve(word)
 
-      # The [kind, names] the positional +words+ address: `TYPE NAME...`, or `TYPE/NAME...`
-      # as `get -o name` prints it. Every name is validated.
+      # `TYPE/NAME...` is the form `get -o name` prints.
       def targets(words)
         type, *names = words
         kind, names = type.include?('/') ? slashed(words) : [kind(type), names]
@@ -40,7 +36,6 @@ module Slipway
         [kind, names]
       end
 
-      # The [kind, name] of a verb that takes exactly one resource.
       def target(words)
         kind, names = targets(words)
         raise CLI::UsageError, NAME_MISSING if names.empty?
@@ -49,22 +44,18 @@ module Slipway
         [kind, names.first]
       end
 
-      # The -n flag, else the configured group; a flag value that is not a name is a usage error.
       def group
         flag = @opts[:group]
         as_usage_error { Names.validate!(flag, what: 'group name') } unless flag.nil?
         @runtime.group_for(@opts)
       end
 
-      # True when -A asks for every group.
       def all_groups? = @opts[:all_groups] == true
 
-      # The label selector of -l, which selects everything when the flag is absent.
       def selector = Selector.parse(@opts[:selector])
 
-      # Yields the resources +names+ address, or every resource of +kind+ in scope that the
-      # selector matches when no name was given. As in kubectl, the resources that exist are
-      # shown before the names that do not are reported, one `error:` line each.
+      # As in kubectl, the resources that exist are shown before the names that do not are
+      # reported, one `error:` line each.
       def select(kind, names)
         return yield(listed(kind)) if names.empty?
 
@@ -74,8 +65,6 @@ module Slipway
         raise Error.new(problems: missing) unless missing.empty?
       end
 
-      # Prints kubectl's notice for an empty selection on stderr, muted, with the group name
-      # in the string role.
       def report_none(kind)
         return @context.warn(@context.paint_err(:muted, NONE)) if all_groups? || !kind.namespaced?
 
@@ -85,7 +74,6 @@ module Slipway
 
       private
 
-      # `TYPE/NAME` words: one kind for all of them, every word in that form.
       def slashed(words)
         pairs = words.map do |word|
           type, name = word.split('/', 2)

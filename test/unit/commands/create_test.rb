@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# `create`: projects and groups from flags, the dry run, and every refusal.
 class CreateTest < Minitest::Test
   include CommandsHelper
 

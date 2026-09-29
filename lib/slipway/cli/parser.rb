@@ -4,8 +4,6 @@ require 'optparse'
 
 module Slipway
   module CLI
-    # Builds an OptionParser from registry Options and writes parsed values into a Hash
-    # keyed by Option#key. The global prefix and the command share one Hash.
     class Parser
       def initialize(options, values)
         @options = options
@@ -18,7 +16,6 @@ module Slipway
       # Interleaves options and positionals: `slipway get projects -o json alpha`.
       def permute!(argv) = parser.permute!(argv)
 
-      # Fills in registry defaults for options that were not given.
       def defaults
         @options.each { |opt| @values[opt.key] = opt.default unless @values.key?(opt.key) }
         @values

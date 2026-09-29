@@ -2,12 +2,9 @@
 
 module Slipway
   module Git
-    # The one place that spawns git: runs `git -C <path> ...` with a hardened environment,
-    # kills the whole process group when the deadline passes, and returns UTF-8 output.
+    # The one place that spawns git.
     class Runner
-      # Exit status plus both streams of one finished git process.
       Result = Data.define(:status, :out, :err) do
-        # True when git exited with status zero.
         def success? = status.zero?
       end
 
@@ -40,8 +37,8 @@ module Slipway
         @timeout = timeout
       end
 
-      # Runs `git -C path args...` and returns a Result whatever git's exit status is. Raises
-      # NotInstalled when the binary cannot be started and Timeout when the deadline passes.
+      # Returns a Result whatever git's exit status is. Raises NotInstalled when the binary
+      # cannot be started and Timeout when the deadline passes.
       # A git still running when the block unwinds for any other reason, such as an
       # interrupt, is killed with its process group instead of outliving the command.
       def run(path, *)

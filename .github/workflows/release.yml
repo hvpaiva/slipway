@@ -1,7 +1,6 @@
-# Publishes a tagged version to rubygems.org through trusted publishing (OIDC, no API key)
-# and creates the GitHub release with the matching CHANGELOG.md section and the .gem file.
-# A manual run defaults to a dry run: it verifies and builds, then stops. Publishing needs
-# a tag ref, so a manual run from a branch never publishes, whatever dry_run says.
+# The verify job runs outside any environment; only the publish job enters the release
+# environment, and only when there is something to publish. Publishing needs a tag ref, so a
+# manual run from a branch never publishes, whatever dry_run says.
 name: Release
 
 on:
@@ -18,66 +17,123 @@ permissions:
   contents: read
 
 jobs:
+  # A reusable workflow call resolves before any step runs, so no runtime checkout can
+  # change what "./" loads. zizmor prefers the "$/" self-repository form, which actionlint
+  # 1.7.12 does not accept yet; switch once it does.
+  ci:
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+
+  verify:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+      publish: ${{ steps.decide.outputs.publish }}
+    steps:
+      # fetch-depth 0 brings every branch, so origin/main and origin/hotfix/* are available to
+      # the ancestry check.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # hotfix/* branches carry fixes to the latest release (CONTRIBUTING.md, "Hotfixes and yanking").
+      - name: Require the tagged commit to be on main or a hotfix branch
+        if: github.ref_type == 'tag'
+        run: |
+          mapfile -t hotfixes < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin/hotfix/)
+          for branch in origin/main "${hotfixes[@]}"; do
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$branch"; then
+              echo "$GITHUB_REF_NAME ($GITHUB_SHA) is on $branch"
+              exit 0
+            fi
+          done
+          echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) is on neither main nor a hotfix/* branch"
+          exit 1
+      # No bundler cache in this workflow: a cache written by another run must never feed a
+      # release. BUNDLE_FROZEN installs exactly Gemfile.lock.
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+      - name: Install the bundle
+        env:
+          BUNDLE_FROZEN: 'true'
+        run: bundle install
+      # rake release:verify writes version= to GITHUB_OUTPUT; a run from a branch has no tag to compare.
+      - name: Verify the tag against Slipway::VERSION and CHANGELOG.md
+        id: verify
+        run: bundle exec rake release:verify
+      # Building here, even on a dry run, catches a gemspec that no longer packages.
+      - run: gem build slipway.gemspec
+      - name: Decide whether this run publishes
+        id: decide
+        env:
+          PUBLISH: ${{ github.ref_type == 'tag' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run) }}
+          VERSION: ${{ steps.verify.outputs.version }}
+        run: |
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "slipway $VERSION verified and built (publish: $PUBLISH)"
+
   publish:
+    needs: verify
+    if: needs.verify.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # The rubygems.org trusted publisher is bound to this workflow file and this environment.
+    # The rubygems.org trusted publisher is bound to this workflow file and this environment,
+    # which only v* tags may enter.
     environment: release
     permissions:
-      # id-token mints the OIDC token for rubygems.org; contents lets rake release and
-      # gh release create write to the repository.
+      # id-token mints the OIDC token for rubygems.org. contents stays read: rake release finds
+      # the tag already present and has nothing to push.
       id-token: write
-      contents: write
-    env:
-      PUBLISH: ${{ github.ref_type == 'tag' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run) }}
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The suite runs here too; shell tests skip when a shell is missing.
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
-        with:
-          bundler-cache: true
-      # The tag must be "v" + Slipway::VERSION and CHANGELOG.md must have a dated heading
-      # for that version. A manual run from a branch skips the tag comparison.
-      - name: Verify the tag against Slipway::VERSION and CHANGELOG.md
-        id: verify
+      - name: Install the bundle
         env:
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          ruby -Ilib -e '
-            require "slipway/version"
-            version = Slipway::VERSION
-            if ENV["REF_TYPE"] == "tag" && ENV["REF_NAME"] != "v#{version}"
-              puts "::error::tag #{ENV["REF_NAME"]} does not match Slipway::VERSION #{version}"
-              exit 1
-            end
-            unless File.read("CHANGELOG.md").include?("## [#{version}] - ")
-              puts "::error::CHANGELOG.md has no \"## [#{version}] - YYYY-MM-DD\" heading"
-              exit 1
-            end
-            File.write(ENV.fetch("GITHUB_OUTPUT"), "version=#{version}\n", mode: "a")
-            puts "releasing slipway #{version} (publish: #{ENV["PUBLISH"]})"
-          '
-      # Nothing ships that the CI workflow would have rejected.
-      - run: bundle exec rake test rubocop
-      # Building always, even on a dry run, catches a gemspec that no longer packages.
-      - run: gem build slipway.gemspec
+          BUNDLE_FROZEN: 'true'
+        run: bundle install
       # release-gem runs "bundle exec rake release": build into pkg/, skip tagging because
-      # the tag already exists, then push pkg/*.gem with the OIDC credential.
+      # the tag already exists, then push pkg/*.gem with the OIDC credential. await-release is
+      # off because it runs "gem exec rubygems-await", an unpinned download executed while the
+      # rubygems.org credential is on disk, and nothing after this step waits for the index.
+      # attestations is off for the same reason: RubyGems 4.0.20 has no
+      # send_push_request_with_attestation, so the action signs through "gem exec sigstore-cli",
+      # whose dependencies float, with the push key in its environment. It can come back once
+      # RubyGems signs natively.
       - name: Publish to rubygems.org
-        if: env.PUBLISH == 'true'
         uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
-      # The release notes are the CHANGELOG.md section for this version, from its heading up
-      # to the next "## " heading or the link references at the end of the file. The attached
-      # .gem is the file that was just pushed.
+        with:
+          await-release: false
+          attestations: false
+
+  # A job of its own because rubygems.org refuses a version it already has: rerunning publish
+  # after a failure here could never get past the push.
+  github-release:
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # gh release create
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+      # RubyGems builds reproducibly (every timestamp is pinned to SOURCE_DATE_EPOCH, 1980 unless
+      # set), so the gem rebuilt from the tag is byte for byte the one publish pushed.
+      - run: gem build slipway.gemspec
+      # gh uploads the gem to a draft and publishes after, which immutable releases require.
       - name: Create the GitHub release
-        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.verify.outputs.version }}
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
           ruby -e '
             lines = File.readlines("CHANGELOG.md")
@@ -85,4 +141,4 @@ jobs:
             body = lines[(start + 1)..].take_while { |line| !line.start_with?("## ") && !line.match?(/\A\[[^\]]+\]: /) }
             File.write("notes.md", "#{body.join.strip}\n")
           ' "$VERSION"
-          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md "pkg/slipway-$VERSION.gem"
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md "slipway-$VERSION.gem"

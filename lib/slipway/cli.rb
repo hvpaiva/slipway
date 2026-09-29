@@ -17,8 +17,6 @@ require_relative 'cli/builtins'
 require_relative 'cli/runner'
 
 module Slipway
-  # The command layer: a data-driven registry, an OptionParser-backed front controller,
-  # a kubectl-style help renderer and a registry-driven completer.
   module CLI
   end
 end

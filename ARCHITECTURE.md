@@ -17,8 +17,13 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a thread pool and preserves order. |
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
-the git values and output; output paints through the command layer's `Context`; the command
-layer and the domain depend on nothing else in the gem.
+the git values and output; output paints through the command layer's `Context`. The command
+layer and the domain (with the git adapter) sit at the bottom: neither requires commands, views,
+the runtime or the inspector. The command layer requires one domain file, the one allowed edge:
+`cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a `Slipway::Error`. The domain
+may use the command layer: `labels.rb` and `selector.rb` raise `CLI::UsageError`, and
+`config.rb` validates against `CLI::Theme` and `CLI::Style`. `test/unit/conventions_test.rb`
+reads every `require_relative` under `lib/` and fails on an edge that breaks these rules.
 
 ## One invocation
 
@@ -59,8 +64,12 @@ options, subcommands, handler. The same object feeds
 
 Nothing about a verb is written twice. Help text, option descriptions and examples live in the
 verb's class (`DESCRIPTION`, `self.examples`, shared options in `Commands::Options`), and the
-man page environment section is built from `Config::SETTINGS` and a list in `Manpage`, which
-`test/unit/seams_test.rb` compares against the variables the code reads.
+man page environment section is built from `Config::SETTINGS` and
+`Manpage::DEFAULT_ENVIRONMENT`. `test/unit/seams_test.rb` derives the list of variables the
+code reads by scanning `lib/` and compares it with that section, so a new `env['X']` fails the
+test until it is documented. `HOME` and `PATH` are the only variables read without a line in
+the section; the test names them in an explicit allowlist. `test/unit/readme_test.rb` holds the
+README variable table to the same keys.
 
 ## Adding things
 
@@ -69,9 +78,11 @@ man page environment section is built from `Config::SETTINGS` and a list in `Man
 `Basic Commands`, `Settings Commands`, `Other Commands`; pass `handler: new(factory)`) and
 `run(runtime, context, args, opts)`. Reuse `Options::TYPE`, `Options.name_positional(factory)`,
 `Options::DRY_RUN` and friends. Require the file in `commands.rb` and add the class to `VERBS`
-in help order; `test/unit/commands/registry_test.rb` asserts that order. Print results through
-`result_line` (`project/hldr created`) and raise `Slipway::Error` or `CLI::UsageError` rather
-than writing to stderr. Run `rake generate` so the new man page lands in `man/man1`.
+in help order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
+`Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
+group. Print results through `result_line` (`project/hldr created`) and raise
+`Slipway::Error` or `CLI::UsageError` rather than writing to stderr. Run `rake generate` so the
+new man page and help fixture land in `man/man1` and `test/fixtures/golden`.
 
 **An option.** Add a `CLI::Option` (`long:`, optional `short:`, `argument:` for a value,
 `enum:` for a closed set, `default:`, `repeatable:`, `required:`, `optional:` plus `implicit:`
@@ -112,17 +123,44 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   unit-tested against the same fixtures with the real `git`.
 - Golden tests under `test/golden` compare the help page of every command, the three completion
   scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`;
-  `UPDATE_GOLDEN=1` rewrites the fixtures after an intended change. `ShellHarness` also drives
+  `rake generate` refreshes both after an intended change. `ShellHarness` also drives
   the completion scripts inside real shells (bash always; zsh and fish when installed, or
   unconditionally when `SLIPWAY_REQUIRE_SHELLS` is set, which the CI `completions` job does)
   against a stub program that answers `__complete` from a `FixtureRegistry`.
 
+Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the
+single git spawner and YAML writer, no direct stdout or stderr, no runtime dependencies, the
+files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of `CHANGELOG.md`) and
+`test/unit/readme_test.rb` (the README tables against the code). Tests for the development
+code live under `test/unit/dev` and never run git or `gh`: the release and GitHub tests hand
+the code a fake command runner.
+
 ## Generated artifacts
 
-`man/man1/*.1` are the only generated files in the tree. `bin/generate-man` (`rake generate`)
-renders them from the registry with the date of the newest `## [x.y.z] - YYYY-MM-DD` heading in
-`CHANGELOG.md`, or `SOURCE_DATE_EPOCH` when there is none, so a rebuild is byte-identical.
-`rake lint:man` runs groff over them; CI regenerates and diffs them. `slipway man` reads the
-pages from the gem's own `man/man1`, so they must be committed and shipped, and
-`.gitattributes` marks them `linguist-generated`. The completion scripts are rendered at run
-time by `slipway completion`, and the `rake lint:shell` task runs ShellCheck over the bash one.
+Two kinds of generated text are committed: the man pages under `man/man1` and the golden
+fixtures under `test/fixtures/golden` (the help page of every command and the three completion
+scripts). One command refreshes both: `rake generate` renders the pages through
+`bin/generate-man`, lints them with groff, rewrites the fixtures from the current output,
+removes fixtures that no longer belong to a command, and prints `git status` for both
+directories so the diff is reviewed before it is committed.
+
+The page date is the date of the newest `## [x.y.z] - YYYY-MM-DD` heading in `CHANGELOG.md` (a
+trailing ` [YANKED]` is allowed) and is empty while there is none, so a rebuild is
+byte-identical and only a release moves the date. The golden manpage test reads the date through
+`rakelib/support/changelog.rb`, the same rule `bin/generate-man` applies, so the test and the
+generator cannot disagree. `rake generate:check` renders into a temporary directory and fails
+when `man/man1` differs; CI runs it. `slipway man` reads the pages from the gem's own
+`man/man1`, so they must be committed and shipped, and `.gitattributes` marks them
+`linguist-generated`. The completion scripts are rendered at run time by `slipway completion`,
+and the `rake lint:shell` task runs ShellCheck over the bash one.
+
+## Development code
+
+The Rakefile keeps the test, RuboCop, audit and documentation tasks. Everything else a
+maintainer runs lives in `rakelib/`: `check.rake`, `generate.rake`, `package.rake`,
+`shells.rake`, `release.rake` and `github.rake`, which Rake loads on its own, and plain Ruby
+under `rakelib/support/` that the tasks and the scripts in `bin/` share (`changelog.rb` parses
+and cuts the changelog, `release.rb` runs the release flow behind an injectable command runner,
+`commits.rb` holds the commit rules `bin/lint-commits` applies, `github.rb` wraps `gh api`).
+`rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
+of it ships in the gem.

@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'optparse'
+require_relative '../rakelib/support/release'
+
+options = { dry_run: false, push: false, branch: 'main' }
+parser = OptionParser.new do |opts|
+  opts.banner = 'usage: bin/release VERSION [--dry-run] [--push] [--branch NAME]'
+  opts.on('--dry-run', 'Validate and print the diff of version.rb and CHANGELOG.md, writing nothing') do
+    options[:dry_run] = true
+  end
+  opts.on('--push', 'After opening the pull request, wait for the checks, merge, tag and watch the release') do
+    options[:push] = true
+  end
+  opts.on('--branch NAME', 'Release from NAME instead of main, for a hotfix') { options[:branch] = it }
+end
+
+begin
+  version, *extra = parser.parse(ARGV)
+  raise OptionParser::InvalidArgument, 'exactly one VERSION is required' if version.nil? || !extra.empty?
+  raise OptionParser::InvalidOption, '--dry-run and --push exclude each other' if options[:dry_run] && options[:push]
+rescue OptionParser::ParseError => e
+  warn "bin/release: #{e.message}\n#{parser}"
+  exit 2
+end
+
+root = File.expand_path('..', __dir__)
+begin
+  Release.new(version, root:, runner: CommandRunner.new(chdir: root), **options).run
+rescue Release::Error => e
+  warn "bin/release: #{e.message}"
+  exit 1
+end

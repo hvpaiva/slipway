@@ -1,8 +1,48 @@
 #!/usr/bin/env bash
-# Installs the development dependencies for a fresh checkout.
 
 cd "$(dirname "$0")/.." || exit 1
 
 bundle install || exit 1
 
-printf '\nReady. Run "bundle exec rake" for the tests and RuboCop, or "bundle exec rake -T" to list every task.\n'
+printf '\nTools:\n'
+
+wanted_ruby=$(sed -n 's/^ruby = "\(.*\)"$/\1/p' mise.toml)
+current_ruby=$(ruby -e 'print RUBY_VERSION')
+if [ "$current_ruby" = "$wanted_ruby" ]; then
+  printf '  ruby        %s, as pinned in mise.toml\n' "$current_ruby"
+else
+  printf '  ruby        %s, while mise.toml pins %s; the gem supports >= 3.4, CI runs 3.4 and 4.0\n' \
+    "$current_ruby" "$wanted_ruby"
+fi
+
+git_version=$(git --version 2>/dev/null | sed -n 's/^git version \([0-9]*\.[0-9]*\).*/\1/p')
+git_major=${git_version%%.*}
+git_minor=${git_version#*.}
+if [ -z "$git_version" ]; then
+  printf '  git         missing: slipway and its tests need git 2.35 or later\n'
+  exit 1
+elif [ "$git_major" -lt 2 ] || { [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 35 ]; }; then
+  printf '  git         %s is too old: slipway and its tests need git 2.35 or later\n' "$git_version"
+  exit 1
+fi
+printf '  git         %s\n' "$git_version"
+
+report() {
+  local tool=$1 without=$2
+  if command -v "$tool" >/dev/null 2>&1; then
+    printf '  %-11s found\n' "$tool"
+  else
+    printf '  %-11s missing: %s\n' "$tool" "$without"
+  fi
+}
+
+report shellcheck 'rake lint:shell, rake package:check and rake check fail'
+report groff 'rake lint:man and rake check fail'
+report zsh 'the zsh completion tests skip; rake test:shells falls back to docker'
+report fish 'the fish completion tests skip; rake test:shells falls back to docker'
+report docker 'rake test:shells fails unless zsh and fish are installed'
+report gh 'bin/release and rake github:setup fail'
+report typos 'spelling is checked only by CI (lint job)'
+
+printf '\nReady. Run "bundle exec rake" for the tests and RuboCop, "bundle exec rake check" for what CI runs,\n'
+printf 'or "bundle exec rake -T" to list every task.\n'

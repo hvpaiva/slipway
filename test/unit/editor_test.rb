@@ -102,7 +102,6 @@ class EditorTest < Minitest::Test
 
   def editor(env, preferred: nil) = Slipway::Editor.new(env:, preferred:)
 
-  # Yields an executable shell script and the path of a log file it may write through FAKE_EDITOR_LOG.
   def with_fake_editor(body)
     Dir.mktmpdir('slipway-fake-editor-') do |dir|
       script = File.join(dir, 'fake-editor')

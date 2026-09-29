@@ -5,7 +5,6 @@ require 'test_helper'
 class BaseTest < Minitest::Test
   include CommandsHelper
 
-  # A verb that reports what it received and prints one result line.
   class Echo < Slipway::Commands::Base
     def self.command(factory)
       Slipway::CLI::Command.new(name: 'echo', summary: 'Echo', section: 'Basic Commands',

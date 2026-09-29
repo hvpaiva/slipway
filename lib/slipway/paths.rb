@@ -1,54 +1,48 @@
 # frozen_string_literal: true
 
 module Slipway
-  # Where Slipway reads and writes files, following the XDG Base Directory Specification.
-  # Reads only the environment Hash it is given, so tests never touch ENV.
+  # Follows the XDG Base Directory Specification. Reads only the environment Hash it is
+  # given, so tests never touch ENV.
   class Paths
     CONFIG_VARIABLE = 'SLIPWAY_CONFIG'
     DATA_HOME_VARIABLE = 'SLIPWAY_DATA_HOME'
     HOME_VARIABLE = 'HOME'
-    XDG_CONFIG_HOME = 'XDG_CONFIG_HOME'
-    XDG_DATA_HOME = 'XDG_DATA_HOME'
+    XDG_CONFIG_HOME_VARIABLE = 'XDG_CONFIG_HOME'
+    XDG_DATA_HOME_VARIABLE = 'XDG_DATA_HOME'
     APP = 'slipway'
     CONFIG_FILE = 'config.yaml'
     MAN_SECTION = File.join('man', 'man1').freeze
     TILDE = %r{\A~(?=/|\z)}
 
-    # Defaults relative to HOME, applied when the XDG variable is unset, empty or relative.
     XDG_DEFAULTS = {
-      XDG_CONFIG_HOME => '.config',
-      XDG_DATA_HOME => File.join('.local', 'share')
+      XDG_CONFIG_HOME_VARIABLE => '.config',
+      XDG_DATA_HOME_VARIABLE => File.join('.local', 'share')
     }.freeze
 
-    # Replaces a leading `~` or `~/` in +value+ with +home+ and leaves every other value as
-    # written: `~user` forms and relative paths are not interpreted.
+    # Only a bare `~` or `~/` is expanded; `~user` forms and relative paths stay as written.
     def self.expand(value, home:) = value&.sub(TILDE, home)
 
-    # +config+ is the value of the --config flag, which outranks every variable.
     def initialize(env, config: nil)
       @env = env
       @config_flag = present(config)
     end
 
-    # HOME from the environment, or the home directory Ruby started with.
     def home = present(@env[HOME_VARIABLE]) || Dir.home
 
-    # --config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml.
     def config_file
-      @config_flag || expand(present(@env[CONFIG_VARIABLE])) || File.join(xdg(XDG_CONFIG_HOME), APP, CONFIG_FILE)
+      @config_flag || expand(present(@env[CONFIG_VARIABLE])) ||
+        File.join(xdg(XDG_CONFIG_HOME_VARIABLE), APP, CONFIG_FILE)
     end
 
-    # True when the user named the file; a missing explicit file is an error, a missing default is not.
+    # A missing explicit file is an error, a missing default is not.
     def config_explicit? = !(@config_flag || present(@env[CONFIG_VARIABLE])).nil?
 
-    # SLIPWAY_DATA_HOME, then $XDG_DATA_HOME/slipway; the root of the manifest store.
-    def data_home = expand(present(@env[DATA_HOME_VARIABLE])) || File.join(xdg(XDG_DATA_HOME), APP)
+    def data_home = expand(present(@env[DATA_HOME_VARIABLE])) || File.join(xdg(XDG_DATA_HOME_VARIABLE), APP)
 
-    # Where `slipway man --install` copies the pages: $XDG_DATA_HOME/man/man1.
-    def man_install_dir = File.join(xdg(XDG_DATA_HOME), MAN_SECTION)
+    def man_install_dir = File.join(xdg(XDG_DATA_HOME_VARIABLE), MAN_SECTION)
 
     # The one user directory man-db searches on its own, when ~/.local/bin is on PATH.
-    def man_db_dir = File.join(home, XDG_DEFAULTS.fetch(XDG_DATA_HOME), MAN_SECTION)
+    def man_db_dir = File.join(home, XDG_DEFAULTS.fetch(XDG_DATA_HOME_VARIABLE), MAN_SECTION)
 
     private
 

@@ -2,7 +2,6 @@
 
 module Slipway
   module CLI
-    # Paints text with the SGR codes of a Theme, or returns it untouched when color is off.
     class Style
       MODES = %w[auto always never].freeze
       DEFAULT_MODE = 'auto'
@@ -10,9 +9,6 @@ module Slipway
 
       attr_reader :theme
 
-      # Resolves a color mode for one stream. An explicit +always+ or +never+ wins; in
-      # +auto+, NO_COLOR disables, then FORCE_COLOR or CLICOLOR_FORCE enables, then
-      # TERM=dumb disables, and otherwise the stream's tty flag decides.
       def self.for(mode, tty:, env:, theme: Theme.default)
         new(enabled: enabled?(mode, tty:, env:), theme:)
       end
@@ -37,7 +33,6 @@ module Slipway
 
       private_class_method :enabled?, :auto?, :set?
 
-      # A Style that paints nothing, for streams whose color has not been decided yet.
       def self.disabled = new(enabled: false, theme: Theme.default)
 
       def initialize(enabled:, theme:)
@@ -45,15 +40,12 @@ module Slipway
         @theme = theme
       end
 
-      # True when paint wraps text in escape sequences.
       def enabled? = @enabled
 
-      # Wraps +text+ in the SGR sequence of a single-valued role.
       def paint(role, text)
         wrap(theme.sgr(role), text)
       end
 
-      # Paints with the +index+-th color of a list role, such as a table column.
       def paint_cycle(role, index, text)
         wrap(theme.sgr_at(role, index), text)
       end

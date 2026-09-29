@@ -9,9 +9,7 @@ require_relative 'resources'
 require_relative 'yaml'
 
 module Slipway
-  # Reads and writes the YAML form of a Project or Group.
   module Manifest
-    # A document that does not describe a valid resource; the message starts with where it came from.
     class Invalid < Error
       attr_reader :source, :problem
 
@@ -22,7 +20,6 @@ module Slipway
       end
     end
 
-    # Turns one string-keyed document into a resource, reporting the first problem it finds.
     class Reader
       FIELDS = {
         'Project' => { root: %w[kind metadata spec], metadata: %w[name group labels creationTimestamp],
@@ -38,7 +35,6 @@ module Slipway
         @default_group = default_group
       end
 
-      # The Project or Group the document describes, or Invalid for the first field that is wrong.
       def resource
         invalid('document is not a mapping') unless @document.is_a?(Hash)
         fields = FIELDS.fetch(kind)
@@ -140,7 +136,6 @@ module Slipway
         end
       end
 
-      # A name or label that breaks its rule is a problem of this document.
       def checked
         yield
       rescue Names::Invalid, Labels::Invalid => e
@@ -154,10 +149,9 @@ module Slipway
 
     private_constant :Reader
 
-    # Builds a Project or Group from a string-keyed Hash; +default_group+ applies when metadata.group is absent.
+    # +hash+ must have string keys.
     def self.parse(hash, source:, default_group: 'default') = Reader.new(hash, source, default_group).resource
 
-    # Every mapping in a YAML stream; empty documents are skipped and anything else is Invalid.
     def self.load_documents(text, source:)
       documents(text, source).each_with_index.filter_map do |document, index|
         case document
@@ -174,7 +168,6 @@ module Slipway
       raise Invalid.new(source, e.message)
     end
 
-    # Parses YAML holding exactly one resource.
     def self.parse_yaml(text, source:, default_group: 'default')
       case load_documents(text, source:)
       in [document] then parse(document, source:, default_group:)
@@ -183,9 +176,8 @@ module Slipway
       end
     end
 
-    # Each document of a YAML stream loaded with the restrictions of Psych.safe_load. The
-    # stream is parsed first and every document re-emitted alone, because
-    # Psych.safe_load_stream only exists from psych 5.3 and the gem supports Ruby 3.4.
+    # Psych.safe_load_stream only exists from psych 5.3 and the gem supports Ruby 3.4, so the
+    # stream is parsed first and every document re-emitted alone for Psych.safe_load.
     def self.documents(text, source)
       Psych.parse_stream(text, filename: source).children.map do |document|
         stream = Psych::Nodes::Stream.new
@@ -195,15 +187,13 @@ module Slipway
     end
     private_class_method :documents
 
-    # YAML types an unquoted 2026-09-29T00:12:33Z as a Time, which the safe loader refuses;
-    # the message names the class Psych saw and the form the file should take.
+    # YAML types an unquoted 2026-09-29T00:12:33Z as a Time, which the safe loader refuses.
     def self.disallowed(error)
       klass = error.message.delete_prefix('Tried to load unspecified class: ')
       "#{klass} values are not accepted; timestamps, dates and symbols must be quoted strings"
     end
     private_class_method :disallowed
 
-    # The YAML text of a resource, without the leading document marker, the way kubectl prints objects.
     def self.dump(resource) = Yaml.dump(resource.to_manifest)
   end
 end

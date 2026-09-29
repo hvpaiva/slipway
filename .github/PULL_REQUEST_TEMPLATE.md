@@ -9,6 +9,6 @@
 ## Checklist
 
 - [ ] Tests added or updated for the change
-- [ ] `bundle exec rake` is green (tests and RuboCop)
-- [ ] Generated files refreshed (`bundle exec rake generate`) when a command, option or text changed
-- [ ] `CHANGELOG.md` updated under `## [Unreleased]` for user-visible changes
+- [ ] `bundle exec rake check` is green
+- [ ] Generated files refreshed with `bundle exec rake generate` when a command, option or text changed
+- [ ] `CHANGELOG.md` has a line under `## [Unreleased]`, or the pull request carries `skip-changelog`

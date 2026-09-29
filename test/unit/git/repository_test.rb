@@ -4,14 +4,12 @@ require 'test_helper'
 require 'slipway/git'
 require 'tmpdir'
 
-# Runs the real git against the fixture repositories.
 class GitRepositoryTest < Minitest::Test
   include GitFixtures
 
   FIRST_COMMIT = '5bbaee2c60e94db1f64d04925d8365eec25d449b'
   COMMIT_TIME = Time.utc(2023, 11, 14, 22, 13, 20)
 
-  # A stand-in Runner that answers every call with one canned Result.
   class CannedRunner
     def initialize(status, err)
       @result = Slipway::Git::Runner::Result.new(status:, out: '', err:)
