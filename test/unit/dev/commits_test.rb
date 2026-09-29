@@ -212,11 +212,11 @@ class CommitsTest < Minitest::Test
   end
 
   def test_bytes_that_are_not_utf8_are_replaced_instead_of_crashing
-    sha = commit_bytes("Add caf\xE9\n".b)
-    out, err, status = lint('--body', write('body', "Adds caf\xE9.\n".b))
+    sha = commit_bytes("Add r\xE9sum\xE9\n".b)
+    out, err, status = lint('--body', write('body', "Adds a r\xE9sum\xE9.\n".b))
 
     assert_equal 1, status.exitstatus
-    assert_equal ["#{sha} \"Add caf?\": #{RULE}"], out.lines(chomp: true)
+    assert_equal ["#{sha} \"Add r?sum?\": #{RULE}"], out.lines(chomp: true)
     assert_empty err
   end
 
