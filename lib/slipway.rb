@@ -2,6 +2,12 @@
 
 require_relative 'slipway/version'
 require_relative 'slipway/cli'
+require_relative 'slipway/names'
+require_relative 'slipway/labels'
+require_relative 'slipway/selector'
+require_relative 'slipway/resources'
+require_relative 'slipway/manifest'
+require_relative 'slipway/store'
 
 # A kubectl-style registry for the git repositories on your machine.
 module Slipway
