@@ -64,6 +64,17 @@ class SeamsTest < Minitest::Test
     assert_equal variables.fetch('editor'), Slipway::Editor::VARIABLE
   end
 
+  def test_the_repository_falls_back_to_the_network_defaults_of_the_config
+    defaults = Slipway::Config::SETTINGS.to_h { [it.key, it.default] }
+
+    assert_equal defaults.fetch('networkTimeout'), Slipway::Git::Repository::NETWORK_TIMEOUT
+    assert_equal defaults.fetch('protocols'), Slipway::Git::Repository::PROTOCOLS
+  end
+
+  def test_a_refused_transport_gets_no_hint_to_list_what_the_config_refuses
+    assert_equal Slipway::Config::UNSAFE_PROTOCOLS.keys, Slipway::Git::ProtocolNotAllowed::UNSAFE
+  end
+
   def test_config_documentation_covers_every_key_and_reads_as_the_man_page_prints_it
     assert_equal Slipway::Config::KEYS, Slipway::Config::DOCUMENTATION.keys
     assert_equal 'Group used when -n is not given. Default: default.', Slipway::Config::DOCUMENTATION.fetch('group')

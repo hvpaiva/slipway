@@ -1,19 +1,28 @@
 # frozen_string_literal: true
 
+require_relative 'fetch_result'
+
 module Slipway
   module Git
+    # +calls+ lists every question asked, as [name, path] or [:fetch, path, { prune: }], so a test
+    # can tell which repositories a command reached.
     class Fake
-      Entry = Data.define(:status, :commit, :remote)
+      Entry = Data.define(:status, :commit, :remote, :fetch, :fetched_at)
+
+      NOTHING_FETCHED = FetchResult.new(updates: [].freeze)
 
       def initialize
         @entries = {}
         @failures = {}
+        @calls = []
+        @lock = Mutex.new
       end
 
-      def add(path, status:, commit: nil, remote: nil)
+      # +fetch+ is the FetchResult a fetch returns, or an error raised the way fail raises it.
+      def add(path, status:, commit: nil, remote: nil, fetch: NOTHING_FETCHED, fetched_at: nil)
         key = File.expand_path(path)
         @failures.delete(key)
-        @entries[key] = Entry.new(status:, commit:, remote:)
+        @entries[key] = Entry.new(status:, commit:, remote:, fetch:, fetched_at:)
         self
       end
 
@@ -26,17 +35,30 @@ module Slipway
         self
       end
 
-      def status(path) = entry(path).status
+      def calls = @lock.synchronize { @calls.dup }
 
-      def last_commit(path) = entry(path).commit
+      def status(path) = entry(:status, path).status
 
-      def remote_url(path) = entry(path).remote
+      def last_commit(path) = entry(:last_commit, path).commit
+
+      def remote_url(path) = entry(:remote_url, path).remote
+
+      def fetch(path, prune:)
+        outcome = entry(:fetch, path, prune:).fetch
+        raise failure(File.expand_path(path), outcome) unless outcome.is_a?(FetchResult)
+
+        outcome
+      end
+
+      def fetched_at(path) = entry(:fetched_at, path).fetched_at
 
       private
 
       # A path nobody registered is a path that does not exist, as for the real Repository.
-      def entry(path)
+      def entry(name, path, **options)
         key = File.expand_path(path)
+        call = options.empty? ? [name, key] : [name, key, options]
+        @lock.synchronize { @calls << call }
         raise failure(key, @failures[key]) if @failures.key?(key)
 
         @entries.fetch(key) { raise MissingPath, key }

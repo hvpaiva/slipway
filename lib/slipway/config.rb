@@ -7,7 +7,7 @@ require_relative 'cli/style'
 require_relative 'names'
 
 module Slipway
-  Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :protocols, :path, :exists)
+  Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :protocols, :path, :exists, :variables)
 
   class Config
     class Error < Slipway::Error; end
@@ -138,7 +138,10 @@ module Slipway
       path = paths.config_file
       contents = Document.read(path, explicit: paths.config_explicit?)
       resolved = SETTINGS.to_h { |setting| [setting.attribute, resolve(setting, flags, env, contents.values)] }
-      new(path:, exists: contents.exists, **resolved)
+      # Each key whose value its environment variable supplied, with that variable's name, so a
+      # message can point at the variable rather than at a file it outranks.
+      variables = SETTINGS.select { from_variable?(it, flags, env) }.to_h { [it.key, it.variable] }.freeze
+      new(path:, exists: contents.exists, variables:, **resolved)
     end
 
     def self.resolve(setting, flags, env, file)

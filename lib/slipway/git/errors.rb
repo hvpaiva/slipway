@@ -47,5 +47,36 @@ module Slipway
       # Git's own remedy, so the user can decide whether to trust the directory.
       def hint = "Run 'git config --global --add safe.directory #{Shellwords.escape(path)}' to trust it."
     end
+
+    # Credentials, a passphrase or a host key confirmation were missing or refused, and network
+    # commands never prompt for them.
+    class AuthRequired < Error
+      def initialize(path) = super(path, 'authentication required and prompts are disabled')
+
+      def hint = "Run 'git -C #{Shellwords.escape(path)} fetch' once in a terminal to see what git needs."
+    end
+
+    class LocalUpstream < Error
+      def initialize(path) = super(path, 'the current branch tracks a local branch, not a remote one')
+    end
+
+    # Git refuses a transport that GIT_ALLOW_PROTOCOL, built from the "protocols" setting, does not list.
+    class ProtocolNotAllowed < Error
+      # The transports the "protocols" setting refuses to list, so no hint suggests adding one.
+      UNSAFE = %w[ext fd].freeze
+
+      attr_reader :protocol
+
+      # +source+ says where the transports are listed, worded for the hint.
+      def initialize(path, protocol:, source:)
+        @protocol = protocol
+        @source = source
+        super(path, "transport '#{protocol}' not allowed")
+      end
+
+      def hint
+        "Add #{protocol} to #{@source} to allow it." unless UNSAFE.include?(protocol)
+      end
+    end
   end
 end

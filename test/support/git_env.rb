@@ -22,6 +22,17 @@ module GitEnv
     -c gc.auto=0 -c maintenance.auto=false
   ].freeze
 
+  FETCH_PORCELAIN = Gem::Version.new('2.41')
+
+  def self.version
+    @version ||= Gem::Version.new(Open3.capture2(ENVIRONMENT, 'git', 'version').first[/\d+(?:\.\d+)+/])
+  end
+
+  # Git learned fetch --porcelain in 2.41; an older git fetches without listing the refs that moved.
+  def skip_unless_fetch_lists_refs
+    skip 'git before 2.41 fetches without listing the refs that moved' if GitEnv.version < FETCH_PORCELAIN
+  end
+
   def git!(dir, *args)
     out, err, status = git(dir, *args)
     raise "git #{args.join(' ')} failed in #{dir}: #{err}" unless status.success?

@@ -7,13 +7,49 @@ module Slipway
       # Six NUL separated fields in the order Commit.parse expects; -z terminates the record.
       LOG_ARGS = ['log', '-1', '-z', '--format=%H%x00%h%x00%ct%x00%an%x00%ae%x00%s'].freeze
       REMOTE_ARGS = %w[config --get remote.origin.url].freeze
+      # No remote argument: git fetches the remote of the current branch, else origin, as the
+      # user's own `git fetch` would, so nothing from a manifest reaches this argv. --no-all
+      # overrides fetch.all (git 2.44 and later), under which git would fetch every remote and
+      # --atomic would refuse to run.
+      FETCH_ARGS = %w[--no-all --atomic --no-recurse-submodules --no-auto-maintenance].freeze
+      # A branch that tracks another local branch has "." as its remote, and a remote-less fetch
+      # would read the repository itself: no remote-tracking ref moves, yet FETCH_HEAD is rewritten.
+      UPSTREAM_REMOTE_ARGS = ['for-each-ref', '--format=%(HEAD)%(upstream:remotename)', 'refs/heads/'].freeze
+      CURRENT_LOCAL_UPSTREAM = '*.'
+      # Git learned `fetch --porcelain` in 2.41. An older git rejects the option as a usage error
+      # before it connects, and the fetch runs again without it.
+      PORCELAIN = '--porcelain'
+      PORCELAIN_UNKNOWN = /\Aerror: unknown option .porcelain'$/
+      USAGE_STATUS = 129
+      FETCH_HEAD = 'FETCH_HEAD'
+      FETCH_HEAD_ARGS = ['rev-parse', '--git-path', FETCH_HEAD].freeze
       # `git config --get` exits 1 when the key is absent, which is an answer, not a failure.
       ABSENT_KEY_STATUS = 1
       UNBORN_MESSAGE = 'does not have any commits yet'
       MESSAGE_LIMIT = 200
+      NETWORK_TIMEOUT = 60
+      PROTOCOLS = %w[ssh https].freeze
+      PROTOCOLS_SOURCE = '"protocols" in the configuration file'
+      # What git and ssh print when credentials or a host key are missing, would need a prompt, or
+      # were refused by the remote.
+      AUTH_REQUIRED = Regexp.union('terminal prompts disabled', 'could not read Username', 'could not read Password',
+                                   'Authentication failed', 'Permission denied (publickey',
+                                   'Host key verification failed', 'returned error: 403')
+      # Git refuses a transport before it connects, so a real refusal is the whole of stderr and
+      # ends in die(). Over ssh the remote writes to the same stream, and a line it prints is
+      # followed by git's own message or ends in a signal (128 plus its number).
+      PROTOCOL_REFUSED = /\Afatal: transport '(?<protocol>[a-z][a-z0-9+.-]*)' not allowed\n\z/
+      DIE_STATUS = 128
 
-      def initialize(runner: Runner.new)
+      def initialize(runner: Runner.new, network_timeout: NETWORK_TIMEOUT, protocols: PROTOCOLS,
+                     protocols_source: PROTOCOLS_SOURCE)
         @runner = runner
+        @network_timeout = network_timeout
+        @network_environment = Runner.network_environment(protocols)
+        @protocols_source = protocols_source
+        # Cleared once git turns out to predate --porcelain; threads racing on it only repeat
+        # the rejected attempt.
+        @porcelain = true
       end
 
       def status(path)
@@ -30,29 +66,85 @@ module Slipway
         result.success? ? result.out.chomp : nil
       end
 
+      def fetch(path, prune:)
+        raise LocalUpstream, File.expand_path(path) if local_upstream?(path)
+
+        options = [*FETCH_ARGS, *('--prune' if prune)]
+        if @porcelain
+          result = network_fetch(path, PORCELAIN, *options, accept: method(:porcelain_unknown?))
+          return FetchResult.parse(result.out) if result.success?
+
+          @porcelain = false
+        end
+        network_fetch(path, *options)
+        FetchResult.new(updates: nil)
+      end
+
+      # nil for a repository that was never fetched or whose last fetch failed: git empties
+      # FETCH_HEAD before it contacts the remote and writes a line for each ref it fetched.
+      def fetched_at(path)
+        head = File.stat(fetch_head(File.expand_path(path)))
+        head.mtime.utc unless head.zero?
+      rescue Errno::ENOENT
+        nil
+      end
+
       private
 
       # The spawn is skipped for a path that is not a directory, since git would only say the same.
-      def run(path, *, accept: nil)
+      def run(path, *, accept: nil, network: false, **)
         directory = File.expand_path(path)
         raise MissingPath, directory unless File.directory?(directory)
 
-        result = @runner.run(directory, *)
+        result = @runner.run(directory, *, **)
         return result if result.success? || accept&.call(result)
 
-        raise classify(directory, result)
+        raise classify(directory, result, network:)
+      end
+
+      def network_fetch(path, *, accept: nil)
+        run(path, *Runner::NETWORK_CONFIG, 'fetch', *, accept:, network: true,
+                                                       timeout: @network_timeout, env: @network_environment)
+      end
+
+      # A .git directory is read without a spawn, so listing projects costs no extra git process;
+      # a worktree or a separate git directory keeps FETCH_HEAD where rev-parse says.
+      def fetch_head(directory)
+        git_dir = File.join(directory, '.git')
+        return File.join(git_dir, FETCH_HEAD) if File.directory?(git_dir)
+
+        File.expand_path(run(directory, *FETCH_HEAD_ARGS).out.chomp, directory)
+      end
+
+      def local_upstream?(path)
+        run(path, *UPSTREAM_REMOTE_ARGS).out.lines(chomp: true).include?(CURRENT_LOCAL_UPSTREAM)
       end
 
       def unborn?(result) = result.err.include?(UNBORN_MESSAGE)
 
-      # Git's stderr under LC_ALL=C starts with a stable phrase for each failure Slipway names.
-      def classify(path, result)
+      def porcelain_unknown?(result) = result.status == USAGE_STATUS && PORCELAIN_UNKNOWN.match?(result.err)
+
+      def classify(path, result, network:)
+        failure = network ? network_failure(path, result) : local_failure(path, result)
+        failure || Error.new(path, "git exited with status #{result.status}: #{first_line(result.err)}")
+      end
+
+      # Git's stderr under LC_ALL=C opens with a stable phrase for each local failure Slipway
+      # names. A network command's stderr may open with what ssh or the remote printed, so these
+      # phrases describe the local repository only for a command that never leaves the machine.
+      def local_failure(path, result)
         case result.err
         when /\Afatal: not a git repository/ then NotARepository.new(path)
         when /\Afatal: cannot change to/ then MissingPath.new(path)
         when /\Afatal: detected dubious ownership/ then UnsafeRepository.new(path)
-        else Error.new(path, "git exited with status #{result.status}: #{first_line(result.err)}")
         end
+      end
+
+      def network_failure(path, result)
+        refusal = PROTOCOL_REFUSED.match(result.err) if result.status == DIE_STATUS
+        return ProtocolNotAllowed.new(path, protocol: refusal[:protocol], source: @protocols_source) if refusal
+
+        AuthRequired.new(path) if AUTH_REQUIRED.match?(result.err)
       end
 
       # Git quotes the URL it failed on, credentials included, and a server can add lines of its

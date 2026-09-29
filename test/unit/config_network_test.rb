@@ -60,6 +60,17 @@ class ConfigNetworkTest < Minitest::Test
     end
   end
 
+  def test_config_names_the_variables_that_supplied_a_value
+    with_sandbox do |env|
+      write(env, "protocols: [ssh]\ncolor: never\n")
+      varied = env.merge('SLIPWAY_PROTOCOLS' => 'file', 'SLIPWAY_NETWORK_TIMEOUT' => '', 'SLIPWAY_COLOR' => 'always')
+
+      assert_equal({ 'protocols' => 'SLIPWAY_PROTOCOLS', 'color' => 'SLIPWAY_COLOR' }, load(varied).variables)
+      assert_equal({ 'protocols' => 'SLIPWAY_PROTOCOLS' }, load(varied, flags: { color: 'auto' }).variables)
+      assert_empty load(env).variables
+    end
+  end
+
   def test_variables_are_validated_with_the_variable_as_prefix
     with_sandbox do |env|
       %w[x 0 -1 4.5 1m 86401 99999999999].each do |value|

@@ -76,7 +76,8 @@ gem install slipway
 ```
 
 Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH` (older git runs but always
-reports `Stashes: 0`). It has no runtime gem dependencies. To install from a checkout:
+reports `Stashes: 0`, and git before 2.41 fetches without listing the refs that moved). It has no
+runtime gem dependencies. To install from a checkout:
 
 ```sh
 bundle install
