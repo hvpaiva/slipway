@@ -99,6 +99,7 @@ bundle exec rake install
 | `get TYPE [NAME...]` | List resources as a table, or as wide, json, yaml or name output. |
 | `describe TYPE [NAME...]` | Print every field of the selected resources, including the repository state. |
 | `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group; `-o yaml` prints the manifest. |
+| `create project --from-dir DIR` | Register every git repository at or under a directory, with its origin URL. |
 | `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
@@ -121,6 +122,26 @@ Projects live in groups the way pods live in namespaces. `-n NAME` (`--group`) s
 `default` group is used, or the one set by `SLIPWAY_GROUP` or the `group` config key. The
 default group is created the first time a write needs it; every other group has to be created
 first, and `slipway delete group default` is refused.
+
+### Registering existing clones
+
+`slipway create project --from-dir ~/dev/personal -n personal` registers every git repository
+at or under the directory, searching `--depth` levels down (1 by default, at most 8). The search
+stops at a directory with a `.git` entry, so a linked worktree counts and nothing nested inside
+a repository does, and it never follows a symbolic link below the directory. Each project is
+named after its directory, lowercased, with each run of characters other than ASCII letters,
+digits and dashes made one dash (`My.Notes_v2` becomes `my-notes-v2`). `spec.path` starts with
+`~/` under `HOME`, and `spec.remote` is the URL of `origin` without its credentials: the whole
+user part over http and https, the password elsewhere. An origin that still breaks the
+`spec.remote` rule, such as a local path, is left out with a `warning:` line. The checked-out
+branch is not recorded, since it may be a feature branch; set `spec.branch` with `edit` when you
+want it.
+
+A path the group already holds prints `project/NAME unchanged`, whatever its name, so running
+the command again registers only the new clones. A derived name that another path already has
+is reported after the other lines, as `error: ~/dev/foo: project "foo" already exists at
+~/dev/Foo`, with exit status 1. `--dry-run=client -o yaml` prints the projects as one
+`kind: List` without writing anything, ready for `slipway apply -f` on another machine.
 
 ### Selectors
 

@@ -14,6 +14,7 @@ module Slipway
       # Over http a token is often sent as the user name, so the whole userinfo is secret there,
       # and in a scheme that carries http, such as git+https or persistent-https.
       WHOLE_USERINFO = /(?:\A|[+-])https?\z/i
+      LEADING_USERINFO = /\A#{USERINFO}/
       MASK = '***'
 
       MAX = 2048
@@ -46,6 +47,16 @@ module Slipway
         text.gsub(USERINFO) do
           match = Regexp.last_match
           "#{match[:scheme]}://#{mask(match[:scheme], match[:userinfo])}@"
+        end
+      end
+
+      # Drops what #redact would mask, so a remote read from a clone keeps its address and a
+      # credential helper supplies what was dropped.
+      def self.without_credentials(url)
+        url.sub(LEADING_USERINFO) do
+          match = Regexp.last_match
+          user = WHOLE_USERINFO.match?(match[:scheme]) ? '' : match[:userinfo].partition(':').first
+          user.empty? ? "#{match[:scheme]}://" : "#{match[:scheme]}://#{user}@"
         end
       end
 

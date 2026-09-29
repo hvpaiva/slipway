@@ -71,6 +71,25 @@ class GitUrlTest < Minitest::Test
     assert_equal redact(text), redact(redact(text))
   end
 
+  def test_without_credentials_drops_what_redact_masks_and_the_rest_validates
+    { 'https://u:s3cret@example.com/x.git' => 'https://example.com/x.git',
+      'https://ghp_TOKEN@example.com/x.git' => 'https://example.com/x.git',
+      'git+https://ci:tok@example.com/x' => 'git+https://example.com/x',
+      'ssh://git:pw@example.com:2222/x' => 'ssh://git@example.com:2222/x',
+      'ssh://git:p@ss@example.com/x' => 'ssh://git@example.com/x',
+      'ssh://:pw@example.com/x' => 'ssh://example.com/x' }.each do |url, stripped|
+      assert_equal stripped, Slipway::Git::Url.without_credentials(url)
+      assert_equal stripped, validate(stripped) unless stripped.start_with?('git+')
+    end
+  end
+
+  def test_without_credentials_leaves_other_remotes_as_they_are
+    ['git@github.com:o/r.git', 'u:s3cret@host:path', 'ssh://git@host/o/r', 'https://host/o/r?to=me@example.com',
+     'https://u:s3#cret@h/x'].each do |url|
+      assert_equal url, Slipway::Git::Url.without_credentials(url)
+    end
+  end
+
   def test_remotes_in_the_url_and_scp_forms_are_accepted
     ['git@github.com:o/r.git', 'github.com:o/r.git', 'ssh://git@host:2222/o/r', 'ssh://host/~me/r.git',
      'https://host/o/r', 'http://host.example:8080/o/r.git', 'git://host/o/r.git', 'file:///srv/o/r.git',
