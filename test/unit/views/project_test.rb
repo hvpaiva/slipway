@@ -18,6 +18,11 @@ class ViewsProjectTest < Minitest::Test
     Age:          3h
     Path:         ~/dev/hldr
     Description:  Site
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       Dirty
     Repository:
       Branch:      main
@@ -37,6 +42,23 @@ class ViewsProjectTest < Minitest::Test
       Author:   Ada Lovelace <ada@example.com>
       Date:     2026-09-29T11:15:00Z
       Subject:  initial commit
+  TEXT
+  MISSING_DESCRIBE = <<~TEXT
+    Name:         gone
+    Group:        default
+    Labels:       <none>
+    Created:      2026-09-29T09:00:00Z
+    Age:          3h
+    Path:         ~/dev/gone
+    Description:  <none>
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
+    Status:       Missing
+    Repository:   no such directory
+    Last Commit:  <none>
   TEXT
 
   def test_headers_add_group_first_wide_columns_and_labels_last
@@ -106,20 +128,8 @@ class ViewsProjectTest < Minitest::Test
   def test_describe_replaces_the_repository_with_the_error_when_git_could_not_answer
     project = Slipway::Project.new(name: 'gone', path: '~/dev/gone', created_at: CommandsHelper::CREATED)
     inspection = Slipway::Inspection.failed(project, Slipway::Git::MissingPath.new('/home/me/dev/gone'))
-    expected = <<~TEXT
-      Name:         gone
-      Group:        default
-      Labels:       <none>
-      Created:      2026-09-29T09:00:00Z
-      Age:          3h
-      Path:         ~/dev/gone
-      Description:  <none>
-      Status:       Missing
-      Repository:   no such directory
-      Last Commit:  <none>
-    TEXT
 
-    assert_equal expected, render(Slipway::Views::Project.describe(inspection, now: NOW))
+    assert_equal MISSING_DESCRIBE, render(Slipway::Views::Project.describe(inspection, now: NOW))
   end
 
   def test_describe_shows_none_for_an_unborn_branch_without_upstream

@@ -15,7 +15,7 @@ class CreateTest < Minitest::Test
       project = runtime.store.find(PROJECTS, 'hldr', group: nil)
 
       assert_equal [0, "project/hldr created\n", ''], result
-      assert_equal ['hldr', 'default', {}, CREATED, '~/dev/hldr', nil], project.to_h.values
+      assert_equal Slipway::Project.new(name: 'hldr', created_at: CREATED, path: '~/dev/hldr'), project
       assert runtime.store.exist?(GROUPS, 'default', group: nil)
     end
   end

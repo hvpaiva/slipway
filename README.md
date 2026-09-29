@@ -46,6 +46,11 @@ Created:      2026-09-29T07:15:35Z
 Age:          1s
 Path:         ~/dev/augur
 Description:  <none>
+Remote:       <none>
+Branch:       <none>
+Revision:     <none>
+Sync Policy:  FastForward
+Paused:       false
 Status:       Dirty
 Repository:
   Branch:      main
@@ -272,6 +277,21 @@ characters) and labels follow the Kubernetes rules. `spec.path` is stored as wri
 expanded against `HOME` when used, so `~/dev/hldr` means the same thing on every machine that
 syncs the registry; quote it on the command line so the shell does not expand it first.
 `metadata.group` defaults to the current group and `creationTimestamp` is set on creation.
+
+The rest of a project's spec declares the state its repository is expected to be in. Every
+field is optional, and one at its default is not written:
+
+| Field | Meaning | Default |
+| --- | --- | --- |
+| `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
+| `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
+| `spec.revision` | The commit the project is expected to be at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. | none |
+| `spec.syncPolicy` | `FastForward` allows the checked-out branch to be fast-forwarded onto its upstream; `FetchOnly` allows fetching only. | `FastForward` |
+| `spec.paused` | `true` marks the project as paused. | `false` |
+
+No command acts on these fields yet. They are checked whenever a manifest is read, and a value
+that breaks its rule is refused with that rule, so nothing that could reach git as an option or
+carry a control character is accepted. `describe`, `-o json` and `-o yaml` show them.
 
 `slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
 and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.

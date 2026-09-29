@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative '../git/status'
 require_relative '../git/url'
 require_relative '../labels'
 require_relative '../resources'
@@ -46,7 +47,7 @@ module Slipway
         project = inspection.project
         [['Name', project.name], ['Group', project.group], ['Labels', project.labels],
          ['Created', project.created_at], ['Age', Output::Age.humanize(project.created_at, now)],
-         ['Path', project.path], ['Description', project.description],
+         ['Path', project.path], ['Description', project.description], *desired(project),
          ['Status', Output::Painted.new(role: State.role(inspection.state), text: inspection.state)],
          ['Repository', repository(inspection)], ['Last Commit', last_commit(inspection.commit)]]
       end
@@ -64,6 +65,12 @@ module Slipway
             'lastCommit' => commit_object(inspection.commit)
           ).compact
         )
+      end
+
+      def self.desired(project)
+        [['Remote', project.remote&.then { Git::Url.redact(it) }], ['Branch', project.branch],
+         ['Revision', project.revision&.then { "#{it[0, Git::Porcelain::ABBREVIATION]} (pinned)" }],
+         ['Sync Policy', project.sync_policy], ['Paused', project.paused]]
       end
 
       def self.branch(status)
@@ -117,8 +124,8 @@ module Slipway
       # prints a field as it is, so git's text is made plain here as it is in a table.
       def self.plain(fields) = fields.transform_values { it.is_a?(String) ? Output.plain(it) : it }
 
-      private_class_method :branch, :fetched, :last_commit_age, :repository, :last_fetch, :failure, :last_commit,
-                           :commit_object, :plain
+      private_class_method :desired, :branch, :fetched, :last_commit_age, :repository, :last_fetch, :failure,
+                           :last_commit, :commit_object, :plain
     end
   end
 end

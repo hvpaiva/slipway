@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
+require 'json'
 require 'test_helper'
 
 class ApplyIntegrationTest < Minitest::Test
   include IntegrationHelper
+
+  SHA = '5bbaee2c60e94db1f64d04925d8365eec25d449b'
 
   def manifest_file(env, name, text)
     path = File.join(env['HOME'], 'manifests', name)
@@ -103,6 +106,50 @@ class ApplyIntegrationTest < Minitest::Test
       assert_equal [1, '', "error: #{file}: groups \"nope\" not found\n"],
                    slipway('apply', '-f', file, '-n', 'nope', env:)
       assert_equal "project/api\n", slipway!('get', 'projects', '-n', 'work', '-o', 'name', env:)
+    end
+  end
+
+  def test_a_manifest_without_the_declared_fields_stays_byte_for_byte_and_unchanged
+    with_home do |env|
+      path = repo(env, 'kept')
+      seed(env, manifest('Project', 'kept', path:, paused: false))
+      stored = File.join(data_home(env), 'projects', 'default', 'kept.yaml')
+      before = File.read(stored)
+
+      [manifest('Project', 'kept', path:), manifest('Project', 'kept', path:, syncPolicy: 'FastForward')].each do |text|
+        assert_equal [0, "project/kept unchanged\n", ''], slipway('apply', '-f', '-', env:, stdin: text)
+      end
+      assert_equal before, File.read(stored)
+      assert_equal({ 'path' => '~/dev/kept' }, Psych.safe_load(before)['spec'])
+    end
+  end
+
+  def test_declared_fields_apply_as_configured_and_show_in_json_and_describe
+    with_home do |env|
+      path = repo(env, 'held')
+      seed(env, manifest('Project', 'held', path:))
+      declared = { remote: 'git@github.com:hvpaiva/held.git', branch: 'main', revision: SHA,
+                   syncPolicy: 'FetchOnly', paused: true }
+
+      assert_equal [0, "project/held configured\n", ''],
+                   slipway('apply', '-f', '-', env:, stdin: manifest('Project', 'held', path:, **declared))
+      spec = JSON.parse(slipway!('get', 'project', 'held', '-o', 'json', env:)).fetch('spec')
+
+      assert_equal({ 'path' => path, **declared.transform_keys(&:to_s) }, spec)
+      assert_includes slipway!('describe', 'project', 'held', env:),
+                      "Remote:       git@github.com:hvpaiva/held.git\nBranch:       main\n" \
+                      "Revision:     #{SHA[0, 7]} (pinned)\nSync Policy:  FetchOnly\nPaused:       true\n"
+    end
+  end
+
+  def test_a_remote_with_credentials_is_refused_before_it_reaches_the_store
+    with_home do |env|
+      text = manifest('Project', 'leak', path: '~/dev/leak', remote: 'https://ci:s3cret@example.com/x.git')
+      status, out, err = slipway('apply', '-f', '-', env:, stdin: text)
+
+      assert_equal [1, '', "error: STDIN: \"spec.remote\" must not embed credentials; use a credential helper\n"],
+                   [status, out, err]
+      refute_path_exists File.join(data_home(env), 'projects')
     end
   end
 
