@@ -12,6 +12,7 @@ class ConfigTest < Minitest::Test
       config = load(env)
 
       assert_equal %w[auto dark default], [config.color, config.theme, config.group]
+      assert_equal [60, %w[ssh https]], [config.network_timeout, config.protocols]
       assert_nil config.editor
       assert_equal File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml'), config.path
       refute_predicate config, :exists?
@@ -114,8 +115,10 @@ class ConfigTest < Minitest::Test
 
   def test_unknown_key_lists_the_known_keys
     with_sandbox do |env|
-      assert_file_error 'unknown key "colour" (known keys: color, editor, group, theme)', env, "colour: never\n"
-      assert_file_error 'unknown key "1" (known keys: color, editor, group, theme)', env, "1: never\n"
+      known = '(known keys: color, editor, group, networkTimeout, protocols, theme)'
+
+      assert_file_error "unknown key \"colour\" #{known}", env, "colour: never\n"
+      assert_file_error "unknown key \"1\" #{known}", env, "1: never\n"
     end
   end
 
@@ -163,15 +166,16 @@ class ConfigTest < Minitest::Test
 
   def test_to_h_lists_string_keys_in_documented_order
     with_sandbox do |env|
-      write(env, "theme: light\n")
+      write(env, "theme: light\nnetworkTimeout: 30\n")
 
-      assert_equal({ 'color' => 'auto', 'editor' => nil, 'group' => 'default', 'theme' => 'light' }, load(env).to_h)
-      assert_equal %w[color editor group theme], load(env).to_h.keys
+      assert_equal({ 'color' => 'auto', 'editor' => nil, 'group' => 'default', 'networkTimeout' => 30,
+                     'protocols' => %w[ssh https], 'theme' => 'light' }, load(env).to_h)
+      assert_equal Slipway::Config::KEYS, load(env).to_h.keys
     end
   end
 
   def test_keys_and_documentation_cover_the_same_settings
-    assert_equal %w[color editor group theme], Slipway::Config::KEYS
+    assert_equal %w[color editor group networkTimeout protocols theme], Slipway::Config::KEYS
     assert_equal Slipway::Config::KEYS, Slipway::Config::DOCUMENTATION.keys
     assert(Slipway::Config::DOCUMENTATION.values.all? { it.is_a?(String) && it.end_with?('.') })
   end

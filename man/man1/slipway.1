@@ -92,6 +92,12 @@ Editor used by edit; takes precedence over VISUAL and EDITOR.
 \fBSLIPWAY_GROUP\fR
 Default group scope; overridden by \-\-group.
 .TP
+\fBSLIPWAY_NETWORK_TIMEOUT\fR
+Seconds a git network command may run before it is killed.
+.TP
+\fBSLIPWAY_PROTOCOLS\fR
+Transports git may use in network commands, separated by colons (ssh:https).
+.TP
 \fBSLIPWAY_DEBUG\fR
 When non\-empty, unexpected errors also print their class and backtrace.
 .TP
@@ -147,6 +153,12 @@ Command line of the editor that slipway edit opens.
 .TP
 \fBgroup\fR
 Group used when \-n is not given. Default: default.
+.TP
+\fBnetworkTimeout\fR
+Seconds a git network command may run before it is killed with the processes it started. Default: 60.
+.TP
+\fBprotocols\fR
+Transports git may use in network commands, as a list; any other transport is refused, and so are ext and fd. Add file for local mirrors. Default: ssh, https.
 .TP
 \fBtheme\fR
 Color theme: dark or light. Default: dark.

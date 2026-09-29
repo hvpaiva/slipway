@@ -230,15 +230,18 @@ or `SLIPWAY_CONFIG` names another one. It is optional, and every key in it is op
 
 ```yaml
 # ~/.config/slipway/config.yaml
-color: auto        # auto, always or never
-theme: light       # dark or light
+color: auto              # auto, always or never
+theme: light             # dark or light
 editor: code --wait
-group: personal    # used when -n is not given
+group: personal          # used when -n is not given
+networkTimeout: 60       # seconds before a git network command is killed
+protocols: [ssh, https]  # transports git may use; add file for local mirrors
 ```
 
 `slipway config view` prints the values in effect with the file path as a comment on the
 first line; `slipway config path` prints the path alone. An unknown key or a wrong value is an
-error naming the file.
+error naming the file. `protocols` refuses `ext` and `fd` even when listed: `ext` runs a command
+named in the URL, and `fd` reads from file descriptors.
 
 | Variable | Effect |
 | --- | --- |
@@ -248,6 +251,8 @@ error naming the file.
 | `SLIPWAY_THEME` | `dark` or `light`. |
 | `SLIPWAY_EDITOR` | Editor for `edit`; outranks the config key, `VISUAL` and `EDITOR`. |
 | `SLIPWAY_GROUP` | Group used when `-n` is not given. |
+| `SLIPWAY_NETWORK_TIMEOUT` | Seconds a git network command may run before it is killed. |
+| `SLIPWAY_PROTOCOLS` | Transports git may use in network commands, separated by colons: `ssh:https`. |
 | `SLIPWAY_DEBUG` | When non-empty, unexpected errors also print their class and backtrace. |
 | `NO_COLOR` | When non-empty, disables color in `auto` mode. |
 | `FORCE_COLOR` | When non-empty, enables color in `auto` mode even on a pipe. |

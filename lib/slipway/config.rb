@@ -7,20 +7,46 @@ require_relative 'cli/style'
 require_relative 'names'
 
 module Slipway
-  Config = Data.define(:color, :theme, :editor, :group, :path, :exists)
+  Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :protocols, :path, :exists)
 
   class Config
     class Error < Slipway::Error; end
 
-    Setting = Data.define(:key, :variable, :default, :description, :valid, :expectation) do
-      def check(value, prefix, quoted:)
-        return value if valid.call(value)
+    # A git transport name, spelled as a URL scheme. The names reach GIT_ALLOW_PROTOCOL joined by
+    # colons, so a name holding a colon would allow a transport nobody listed.
+    PROTOCOL = /\A[a-z][a-z0-9+.-]*\z/
+    INTEGER = ->(text) { Integer(text, 10, exception: false) }
+    # Colon-separated like GIT_ALLOW_PROTOCOL; an empty field is kept so the check refuses it.
+    LIST = ->(text) { text.split(':', -1) }
+    # Once GIT_ALLOW_PROTOCOL is set it is git's whole policy, and git's own refusal of ext no
+    # longer applies, so these stay refused even when listed.
+    UNSAFE_PROTOCOLS = {
+      'ext' => 'runs a command named in the URL',
+      'fd' => 'reads from file descriptors'
+    }.freeze
 
-        subject = quoted ? "\"#{key}\" " : ''
-        raise Error, "#{prefix}: #{subject}#{expectation}"
+    # +parse+ reads the string an environment variable holds; what it cannot read comes back as
+    # nil and fails the check with the key's expectation, or with +variable_expectation+ when the
+    # variable is written in another form than the file's value. +refusal+ says why a value of the
+    # right form is still refused, or returns nil.
+    Setting = Data.define(:key, :variable, :default, :description, :valid, :expectation, :parse,
+                          :variable_expectation, :refusal) do
+      def initialize(parse: :itself.to_proc, variable_expectation: nil, refusal: ->(_) {}, **) = super
+
+      def attribute = key.gsub(/(?=[A-Z])/, '_').downcase.to_sym
+
+      def check(value, prefix, subject: "\"#{key}\" ", expectation: self.expectation)
+        problem = valid.call(value) ? refusal.call(value) : expectation
+        return value if problem.nil?
+
+        raise Error, "#{prefix}: #{subject}#{problem}"
       end
 
-      def documentation = [description, default && "Default: #{default}."].compact.join(' ')
+      def from_variable(text)
+        check(parse.call(text), variable, subject: '', expectation: variable_expectation || expectation)
+      end
+
+      def documentation = [description, default && "Default: #{Array(default).join(', ')}."].compact.join(' ')
     end
 
     SETTINGS = [
@@ -35,6 +61,26 @@ module Slipway
                   description: 'Group used when -n is not given.',
                   valid: ->(value) { Names.valid?(value) },
                   expectation: "must be a valid group name: #{Names::RULE}"),
+      # Capped at a day: Thread#join, which enforces the deadline, takes a timeout past about 1.8e10
+      # seconds as already passed.
+      Setting.new(key: 'networkTimeout', variable: 'SLIPWAY_NETWORK_TIMEOUT', default: 60,
+                  description: 'Seconds a git network command may run before it is killed with the processes it ' \
+                               'started.',
+                  valid: ->(value) { value.is_a?(Integer) && value.between?(1, 86_400) },
+                  expectation: 'must be an integer from 1 to 86400', parse: INTEGER),
+      Setting.new(key: 'protocols', variable: 'SLIPWAY_PROTOCOLS', default: %w[ssh https].freeze,
+                  description: 'Transports git may use in network commands, as a list; any other transport is ' \
+                               'refused, and so are ext and fd. Add file for local mirrors.',
+                  valid: lambda { |value|
+                    value.is_a?(Array) && !value.empty? && value.all? { it.is_a?(String) && PROTOCOL.match?(it) }
+                  },
+                  expectation: 'must be a list of lowercase git transport names, such as ssh, https or file',
+                  variable_expectation: 'must be lowercase git transport names separated by colons, such as ssh:https',
+                  parse: LIST,
+                  refusal: lambda { |names|
+                    unsafe = names.find { UNSAFE_PROTOCOLS.key?(it) }
+                    "must not include #{unsafe}, which #{UNSAFE_PROTOCOLS[unsafe]}" if unsafe
+                  }),
       Setting.new(key: 'theme', variable: 'SLIPWAY_THEME', default: CLI::Theme::DEFAULT_NAME,
                   description: 'Color theme: dark or light.',
                   valid: ->(value) { CLI::Theme::NAMES.include?(value) },
@@ -69,7 +115,7 @@ module Slipway
         return {} if document.nil?
         raise Error, "#{@path}: expected a mapping of keys to values" unless document.is_a?(Hash)
 
-        document.to_h { |key, value| [key.to_s, setting(key).check(value, @path, quoted: true)] }
+        document.to_h { |key, value| [key.to_s, setting(key).check(value, @path)] }
       end
 
       private
@@ -91,23 +137,23 @@ module Slipway
     def self.load(paths, env:, flags: {})
       path = paths.config_file
       contents = Document.read(path, explicit: paths.config_explicit?)
-      resolved = SETTINGS.to_h { |setting| [setting.key.to_sym, resolve(setting, flags, env, contents.values)] }
+      resolved = SETTINGS.to_h { |setting| [setting.attribute, resolve(setting, flags, env, contents.values)] }
       new(path:, exists: contents.exists, **resolved)
     end
 
     def self.resolve(setting, flags, env, file)
-      flag = flags[setting.key.to_sym]
+      flag = flags[setting.attribute]
       return flag unless flag.nil?
-
-      variable = env[setting.variable]
-      return setting.check(variable, setting.variable, quoted: false) unless variable.nil? || variable.empty?
+      return setting.from_variable(env[setting.variable]) if from_variable?(setting, flags, env)
 
       file.fetch(setting.key, setting.default)
     end
-    private_class_method :resolve
+
+    def self.from_variable?(setting, flags, env) = flags[setting.attribute].nil? && !env[setting.variable].to_s.empty?
+    private_class_method :resolve, :from_variable?
 
     def exists? = exists
 
-    def to_h = KEYS.to_h { [it, public_send(it)] }
+    def to_h = SETTINGS.to_h { [it.key, public_send(it.attribute)] }
   end
 end

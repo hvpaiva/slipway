@@ -57,7 +57,8 @@ class RuntimeTest < Minitest::Test
       file = write_config(env, "colour: always\n")
       error = assert_raises(Slipway::Config::Error) { Slipway::Runtime.build(context(env), opts(config: file)) }
 
-      assert_equal "#{file}: unknown key \"colour\" (known keys: color, editor, group, theme)", error.message
+      assert_equal "#{file}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
+                   'protocols, theme)', error.message
       assert_equal 1, error.exit_status
     end
   end
