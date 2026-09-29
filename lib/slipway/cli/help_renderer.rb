@@ -31,6 +31,7 @@ module Slipway
       def command(command, path)
         join([
                command.description,
+               exit_statuses(command.exit_statuses),
                examples(command.examples),
                *command_sections(command),
                option_section('Options', command.options),
@@ -51,6 +52,14 @@ module Slipway
           rows = commands.map { "#{INDENT}#{it.name.ljust(width)}#{it.summary}" }
           "#{header(section)}\n#{rows.join("\n")}"
         end
+      end
+
+      def exit_statuses(statuses)
+        return nil if statuses.empty?
+
+        width = statuses.keys.map { it.size + GAP.size }.max
+        rows = statuses.map { |status, meaning| "#{INDENT}#{status.ljust(width)}#{meaning}" }
+        "#{header('Exit Status')}\n#{rows.join("\n")}"
       end
 
       def examples(examples)

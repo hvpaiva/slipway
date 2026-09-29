@@ -130,7 +130,7 @@ module Slipway
           *tagged_section('ENVIRONMENT', @environment),
           *files_section,
           *tagged_section('CONFIGURATION', @configuration),
-          *tagged_section('EXIT STATUS', EXIT_STATUSES),
+          *tagged_section('EXIT STATUS', EXIT_STATUSES), *own_exit_statuses,
           *see_also(paths.drop(1))
         ]
       end
@@ -143,6 +143,7 @@ module Slipway
           '.SH DESCRIPTION', *Roff.paragraphs(command.description),
           *commands_section(command),
           *options_section(command.options),
+          *(command.exit_statuses.empty? ? [] : tagged_section('EXIT STATUS', command.exit_statuses)),
           *examples_section(command.examples),
           *see_also(related(path))
         ]
@@ -217,6 +218,16 @@ module Slipway
 
       def tagged_section(title, entries)
         [Roff.heading(title), *entries.flat_map { |key, meaning| Roff.tagged(Roff.bold(key), meaning) }]
+      end
+
+      # A script author reads the root page for the exit statuses, so it names the pages that add
+      # to them.
+      def own_exit_statuses
+        pages = paths.drop(1).select { @registry.resolve(it).first.exit_statuses.any? }
+        return [] if pages.empty?
+
+        ['.PP', 'The pages of these commands list their own statuses:',
+         pages.map { Roff.reference(page_name(it)) }.join(",\n")]
       end
 
       def files_section

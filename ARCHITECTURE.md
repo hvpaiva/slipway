@@ -67,7 +67,7 @@ stored.
 ## One definition, four outputs
 
 A `CLI::Command` is plain data: name, summary, description, section, examples, positionals,
-options, subcommands, handler. The same object feeds
+options, subcommands, exit statuses, handler. The same object feeds
 
 - parsing and validation (`Parser`, `Validator`),
 - `slipway VERB --help` and `slipway help VERB` (`HelpRenderer`),
@@ -89,9 +89,11 @@ README variable table to the same keys.
 **A verb.** Create `lib/slipway/commands/<verb>.rb` with a class under `Commands` inheriting
 `Base`. Define `self.command(factory)` returning a `CLI::Command` (set `section:` to one of
 `Basic Commands`, `Repository Commands`, `Settings Commands`, `Other Commands`; pass
-`handler: new(factory)`) and `run(runtime, context, args, opts)`. Reuse `Options::TYPE`,
-`Options.name_positional(factory)`, `Options::DRY_RUN` and friends; a verb that acts on
-repositories takes `Options.project_positional(factory)` and reads it with
+`handler: new(factory)`) and `run(runtime, context, args, opts)`. A verb whose exit statuses
+differ from the shared ones passes `exit_statuses:`, a Hash of status to meaning, which help
+prints under the description and the man page renders as its EXIT STATUS section. Reuse
+`Options::TYPE`, `Options.name_positional(factory)`, `Options::DRY_RUN` and friends; a verb that
+acts on repositories takes `Options.project_positional(factory)` and reads it with
 `Scope#project_targets`. Require the file in `commands.rb` and add the class to `VERBS` in help
 order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
 `Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
