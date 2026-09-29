@@ -6,6 +6,7 @@ class InspectorTest < Minitest::Test
   include GitFixtures
 
   NOW = Time.utc(2026, 9, 29, 12, 0, 0)
+  PID_FIFO = 'git.pid'
 
   def setup
     @home = Dir.mktmpdir('slipway-inspector-')
@@ -135,6 +136,21 @@ class InspectorTest < Minitest::Test
     assert_equal 'Clean', with_env(hermetic_env(@home)) { inspector.examine(project.with(path: outer)) }.state
   end
 
+  def test_an_interrupted_examine_all_leaves_no_git_running
+    bin = fake_git(@home, %(echo $$ > "$2/#{PID_FIFO}"\nexec sleep 30))
+    projects = %w[one two].map { parked(it) }
+    inspector = Slipway::Inspector.new(git: Slipway::Git::Repository.new, clock: -> { NOW }, home: @home)
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      examining = Thread.new { inspector.examine_all(projects) }
+      examining.report_on_exception = false
+      pids = interrupt_while_git_runs(examining, projects)
+
+      assert_raises(Interrupt) { examining.join(5) }
+      pids.each { |pid| assert_raises(Errno::ESRCH, "git #{pid} outlived the interrupt") { Process.kill(0, pid) } }
+    end
+  end
+
   private
 
   def repo(name, status:, commit: nil, remote: nil)
@@ -148,5 +164,23 @@ class InspectorTest < Minitest::Test
     project = repo(name, status: CommandsHelper::UNBORN)
     @git.fail(File.join(@home, 'dev', name), error)
     project
+  end
+
+  def parked(name)
+    directory = File.join(@home, 'dev', name)
+    FileUtils.mkdir_p(directory)
+    File.mkfifo(File.join(directory, PID_FIFO))
+    Slipway::Project.new(name:, path: "~/dev/#{name}")
+  end
+
+  # Reading a FIFO waits for the git that writes it, and a stopped thread is parked in the pool,
+  # so the interrupt lands while every git is running.
+  def interrupt_while_git_runs(thread, projects)
+    pids = projects.map { Integer(File.read(File.join(@home, 'dev', it.name, PID_FIFO))) }
+    Thread.pass until thread.stop?
+
+    pids.each { assert_equal 1, Process.kill(0, it) }
+    thread.raise(Interrupt)
+    pids
   end
 end

@@ -120,10 +120,80 @@ class GitRunnerTest < Minitest::Test
       thread = Thread.new { @runner.run(@root, 'status') }
       thread.report_on_exception = false
       sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       thread.raise(Interrupt)
 
       assert_raises(Interrupt) { thread.join }
+      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
       assert gone?(Integer(File.read(pids))), 'git survived the interrupt'
+    end
+  end
+
+  def test_an_interrupted_run_kills_a_git_that_survives_term
+    fifo = File.join(@root, 'git.pid')
+    File.mkfifo(fifo)
+    bin = fake_git(@root, %(trap '' TERM; echo $$ > "#{fifo}"; exec sleep 30))
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      running = Thread.new { @runner.run(@root, 'status') }
+      running.report_on_exception = false
+      pid = Integer(File.read(fifo))
+      Thread.pass until running.stop?
+      running.raise(Interrupt)
+
+      assert_raises(Interrupt, 'the run waited for a git that ignores TERM') { running.join(5) }
+      assert gone?(pid), 'git outlived an interrupted run'
+    ensure
+      Process.kill('KILL', pid) if pid && !gone?(pid)
+    end
+  end
+
+  def test_an_interrupted_run_still_raises_the_interrupt_when_the_group_answers_eperm
+    pids = File.join(@root, 'pids')
+    bin = fake_git(@root, "echo $$ > #{pids}\nexec sleep 30")
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      thread = Thread.new { @runner.run(@root, 'status') }
+      thread.report_on_exception = false
+      sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
+      answering_eperm_to_term do |refused|
+        thread.raise(Interrupt)
+
+        assert_raises(Interrupt) { thread.join(5) }
+        assert_equal [-Integer(File.read(pids))], refused
+      end
+    end
+  end
+
+  def test_an_interrupted_run_prints_nothing_while_a_helper_holds_the_output_open
+    fifo = File.join(@root, 'helper.pid')
+    File.mkfifo(fifo)
+    bin = fake_git(@root, %(sh -c 'trap "" TERM; echo $$ > "#{fifo}"; exec sleep 30' &\nwait))
+    before = Thread.list
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      _, err = capture_io { interrupt_with_a_helper_left(fifo, before) }
+
+      assert_empty err
+    end
+  end
+
+  def test_a_run_killed_as_git_starts_still_stops_it
+    bin = fake_git(@root, 'exec sleep 30')
+    started = Queue.new
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      gate = Queue.new
+      running = Thread.new { gate.pop && @runner.run(@root, 'status') }
+      killing_after_detach(running, started) do
+        gate << true
+        running.join(5)
+      end
+      pid = started.pop
+
+      assert gone?(pid), 'git survived a kill that landed before the block'
+    ensure
+      Process.kill('KILL', pid) if pid && !gone?(pid)
     end
   end
 
@@ -136,6 +206,48 @@ class GitRunnerTest < Minitest::Test
   end
 
   private
+
+  # Stands in for macOS, which answers EPERM once every process left in the group has exited
+  # but is not yet reaped: the TERM is sent, so git ends, and then the call fails as it does there.
+  def answering_eperm_to_term
+    kill = Process.method(:kill)
+    refused = []
+    Process.singleton_class.remove_method(:kill)
+    Process.define_singleton_method(:kill) do |signal, pid|
+      refused << pid if signal == 'TERM' && pid.negative?
+      kill.call(signal, pid).tap { raise Errno::EPERM if refused.include?(pid) }
+    end
+    yield refused
+  ensure
+    Process.singleton_class.remove_method(:kill)
+    Process.define_singleton_method(:kill, kill)
+  end
+
+  # The helper ignores TERM, so the pipes are still open when the interrupted block closes them
+  # under the readers, which report on their own threads after the interrupt has left run.
+  def interrupt_with_a_helper_left(fifo, before)
+    running = Thread.new { @runner.run(@root, 'status') }
+    running.report_on_exception = false
+    helper = Integer(File.read(fifo))
+    Thread.pass until running.stop?
+    running.raise(Interrupt)
+    assert_raises(Interrupt) { running.join }
+    Thread.pass until (Thread.list - before).empty?
+  ensure
+    Process.kill('KILL', helper) if helper
+  end
+
+  # The kill is queued the moment Process.detach returns, before Open3 yields to the block, and
+  # joining the killer is an interrupt check, so an unmasked kill lands right there.
+  def killing_after_detach(target, started, &)
+    trace = TracePoint.new(:c_return) do |call|
+      next unless call.method_id == :detach
+
+      started << call.return_value.pid
+      Thread.new { target.kill }.join
+    end
+    trace.enable(target_thread: target, &)
+  end
 
   # A killed grandchild lingers as a zombie until its new parent reaps it, so poll for a moment.
   def gone?(pid)

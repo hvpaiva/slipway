@@ -14,16 +14,17 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the three questions slipway needs (status, last commit, remote); `Git::Status` and `Git::Commit` parse the answers; `Git::Url` redacts the credentials in a URL; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
 | Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
 | Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print. No I/O. |
-| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a thread pool and preserves order. |
+| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, which runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values and output; output paints through the command layer's `Context`. The command
 layer and the domain (with the git adapter) sit at the bottom: neither requires commands, views,
-the runtime or the inspector. The command layer requires one domain file, the one allowed edge:
-`cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a `Slipway::Error`. The domain
-may use the command layer: `labels.rb` and `selector.rb` raise `CLI::UsageError`, and
-`config.rb` validates against `CLI::Theme` and `CLI::Style`. `test/unit/conventions_test.rb`
-reads every `require_relative` under `lib/` and fails on an edge that breaks these rules.
+the runtime, the inspector or the pool. The command layer requires one domain file, the one
+allowed edge: `cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a
+`Slipway::Error`. The domain may use the command layer: `labels.rb` and `selector.rb` raise
+`CLI::UsageError`, and `config.rb` validates against `CLI::Theme` and `CLI::Style`.
+`test/unit/conventions_test.rb` reads every `require_relative` under `lib/` and fails on an edge
+that breaks these rules.
 
 ## One invocation
 
