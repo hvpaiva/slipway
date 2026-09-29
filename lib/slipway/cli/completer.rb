@@ -2,31 +2,57 @@
 
 module Slipway
   module CLI
-    # Backs the hidden `__complete WORDS...` command: replays the words typed so far
-    # against the registry and prints candidates for the last one. Never fails.
+    # Backs the hidden `__complete WORDS...` command with cobra's directive protocol:
+    # one candidate per line, as `value` or `value<TAB>description`, then a final `:N`
+    # line where N is 4 (no file completion) or 0 (let the shell complete file names).
+    #
+    # Candidates come from the registry. Subcommands carry their summary as the
+    # description and options their description; enum values have none. A completer
+    # proc on an Option or Positional may return an Array of values, a Hash of value to
+    # description, or the symbol FILES to request file completion with no candidates.
+    # Never raises: on any error only `:4` is printed.
     class Completer
+      FILES = :files
+      NO_FILES_DIRECTIVE = 4
+      FILES_DIRECTIVE = 0
+      # bash splits `--flag=value` at the `=` (COMP_WORDBREAKS), so the separator may arrive
+      # as a word of its own between the flag and its value.
+      EQUALS = '='
+      INLINE_VALUE = /\A--[^=]+=/
+
       def initialize(registry)
         @registry = registry
       end
 
       def call(context, words, _opts = {})
-        candidates(words).each { context.puts(it) }
-      rescue StandardError
-        nil
+        candidates, directive = safely { complete(words) }
+        candidates.each { |value, description| context.puts(description ? "#{value}\t#{description}" : value) }
+        context.puts(":#{directive}")
       end
 
-      def candidates(words)
+      # Returns [candidates, directive] for the last word of +words+, where every candidate
+      # is a [value, description or nil] pair.
+      def complete(words)
         words = words.dup
         current = words.pop || ''
         state = replay(words)
-        return [] unless state
+        return [[], NO_FILES_DIRECTIVE] unless state
 
-        select(candidates_for(state, current), current, state.args)
+        candidates = candidates_for(state, current)
+        return [[], FILES_DIRECTIVE] if candidates == FILES
+
+        [select(candidates, prefix(state, current), state.args), NO_FILES_DIRECTIVE]
       end
 
       private
 
       State = Struct.new(:command, :args, :pending, :literal)
+
+      def safely
+        yield
+      rescue StandardError
+        [[], NO_FILES_DIRECTIVE]
+      end
 
       # Returns nil when the words name a subcommand that does not exist.
       def replay(words)
@@ -34,7 +60,7 @@ module Slipway
       end
 
       def consume(state, word)
-        if state.pending then state.pending = nil
+        if state.pending then consume_value(state, word)
         elsif word == '--' && !state.literal then state.literal = true
         elsif option_word?(word, state) then state.pending = pending_option(word, state)
         elsif state.command.group? then state.command = state.command.find(word) or return nil
@@ -43,49 +69,78 @@ module Slipway
         state
       end
 
+      # A lone `=` keeps the option open so the next word is still its value.
+      def consume_value(state, word)
+        state.pending = nil unless word == EQUALS
+      end
+
       def option_word?(word, state) = word.start_with?('-') && !state.literal
 
       # Returns the Option still waiting for its value, or nil when the word carried one.
+      # An optional-argument option only takes its value attached, so it never waits.
       def pending_option(word, state)
         name = option_name(word)
         return nil unless name
 
         option = option_for(state.command, name)
-        option unless option.nil? || option.flag?
+        option unless option.nil? || option.flag? || option.optional
       end
 
       # The name a switch word refers to, or nil when the value is attached (`--x=v`, `-ov`).
       def option_name(word)
         case word
-        when /\A--[^=]+=/ then nil
+        when INLINE_VALUE then nil
         when /\A--(.+)\z/, /\A-(.)\z/ then Regexp.last_match(1)
         end
       end
 
       def option_for(command, name)
-        (@registry.globals + command.options).find { it.long == name || it.short == name }
+        options_of(command).find { it.long == name || it.short == name }
       end
 
+      def options_of(command) = @registry.globals + command.options
+
+      # FILES, or every candidate as a [value, description] pair before prefix matching.
       def candidates_for(state, current)
-        return state.pending.candidates(state.args) if state.pending
-        return inline_value_candidates(state, current) if current.match?(/\A--[^=]+=/)
-        return (@registry.globals + state.command.options).flat_map(&:switches) if option_word?(current, state)
-        return state.command.visible_subcommands.flat_map(&:names) if state.command.group?
+        return values_of(state.pending, state.args) if state.pending
+        return inline_value_candidates(state, current) if current.match?(INLINE_VALUE)
+        return switch_candidates(state.command) if option_word?(current, state)
+        return subcommand_candidates(state.command) if state.command.group?
 
-        positional_candidates(state)
+        values_of(state.command.positional_at(state.args.size), state.args)
       end
 
+      def values_of(target, args)
+        values = target&.candidates(args) || []
+        return values if values == FILES
+
+        values.is_a?(Hash) ? values.to_a : values.map { [it, nil] }
+      end
+
+      # Values for `--flag=partial` carry the `--flag=` prefix so they replace the whole word.
       def inline_value_candidates(state, current)
-        option_for(state.command, current[/\A--([^=]+)=/, 1])&.candidates(state.args) || []
+        flag, = current.split(EQUALS, 2)
+        values = values_of(option_for(state.command, flag.delete_prefix('--')), state.args)
+        return values if values == FILES
+
+        values.map { |value, description| ["#{flag}=#{value}", description] }
       end
 
-      def positional_candidates(state)
-        state.command.positional_at(state.args.size)&.candidates(state.args) || []
+      def switch_candidates(command)
+        options_of(command).flat_map { |option| option.switches.map { [it, option.description] } }
       end
 
-      def select(candidates, current, given)
-        prefix = current.sub(/\A--[^=]+=/, '')
-        candidates.select { it.start_with?(prefix) } - given
+      def subcommand_candidates(command)
+        command.visible_subcommands.map { [it.name, it.summary] }
+      end
+
+      def prefix(state, current)
+        state.pending && current == EQUALS ? '' : current
+      end
+
+      # Keeps the candidates matching +prefix+ minus the values already typed on the line.
+      def select(candidates, prefix, given)
+        candidates.select { |value, _| value.start_with?(prefix) && !given.include?(value) }
       end
     end
   end

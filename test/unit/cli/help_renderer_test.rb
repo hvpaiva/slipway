@@ -13,13 +13,14 @@ class HelpRendererTest < Minitest::Test
     Settings Commands:
       config          Modify the configuration
       completion      Output shell completion code for the specified shell (bash, zsh, fish)
+      man             Show the manual page of a command
 
     Other Commands:
       help            Help about any command
       version         Print the client version
 
     Options:
-          --color[=WHEN]   When to use color in the output. One of: auto, always, never. (default "auto")
+          --color[=WHEN]   When to use color in the output (auto unless configured). One of: auto, always, never.
       -n, --group NAME     The group scope for this request.
           --config PATH    Path to the configuration file.
       -h, --help           Print help and exit.

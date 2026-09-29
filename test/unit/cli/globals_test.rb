@@ -12,12 +12,12 @@ class GlobalsTest < Minitest::Test
     assert_equal %i[color group config help version], Slipway::CLI::Globals::ALL.map(&:key)
   end
 
-  def test_color_takes_an_optional_mode_and_defaults_to_auto
+  def test_color_takes_an_optional_mode_and_has_no_default
     color = Slipway::CLI::Globals::COLOR
 
     assert_equal '--color[=WHEN]', color.label
     assert_equal 'always', color.implicit
-    assert_equal 'auto', color.default
+    assert_nil color.default
     assert_equal Slipway::CLI::Style::MODES, color.enum
   end
 

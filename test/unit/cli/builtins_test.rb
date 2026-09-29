@@ -7,11 +7,12 @@ class BuiltinsTest < Minitest::Test
     @fixture = FixtureRegistry.new
   end
 
-  def test_all_registers_the_four_builtins_in_their_sections
+  def test_all_registers_the_five_builtins_in_their_sections
     builtins = Slipway::CLI::Builtins.all(program: 'slipway', version: '0.1.0', resolve: -> { @fixture.registry })
 
-    assert_equal %w[help version completion __complete], builtins.map(&:name)
-    assert_equal ['Other Commands', 'Other Commands', 'Settings Commands'], builtins.first(3).map(&:section)
+    assert_equal %w[help version completion man __complete], builtins.map(&:name)
+    assert_equal ['Other Commands', 'Other Commands', 'Settings Commands', 'Settings Commands'],
+                 builtins.first(4).map(&:section)
     assert_predicate builtins.last, :hidden
     assert_predicate builtins.last, :raw
   end
@@ -47,10 +48,10 @@ class BuiltinsTest < Minitest::Test
     _, zsh, = @fixture.run('completion', 'zsh')
     _, fish, = @fixture.run('completion', 'fish')
 
-    assert_includes bash, 'complete -o default -F _slipway_complete slipway'
-    assert_includes bash, 'slipway __complete "${words[@]}"'
+    assert_includes bash, 'complete -F _slipway slipway'
+    assert_includes bash, '__complete "${words[@]:1:cword-1}" "$cur"'
     assert_equal '#compdef slipway', zsh.lines.first.chomp
-    assert_includes fish, "complete -c slipway -f -a '(__slipway_complete)'"
+    assert_includes fish, "complete -c slipway -n '__slipway_complete' -f -a '$__slipway_results'"
   end
 
   def test_completion_rejects_unknown_and_missing_shells
@@ -63,18 +64,19 @@ class BuiltinsTest < Minitest::Test
     assert_equal "error: missing required argument \"SHELL\"\nSee 'slipway completion --help' for usage.\n", missing
   end
 
-  def test_complete_prints_one_candidate_per_line
-    assert_equal "projects\ngroups\n", @fixture.run('__complete', 'get', '')[1]
-    assert_equal "alpha\nbeta\n", @fixture.run('__complete', 'get', 'projects', '')[1]
-    assert_equal "beta\n", @fixture.run('__complete', 'get', 'projects', 'alpha', 'b')[1]
-    assert_equal "table\nwide\njson\nyaml\nname\n", @fixture.run('__complete', 'get', 'projects', '-o', '')[1]
+  def test_complete_prints_one_candidate_per_line_then_the_directive
+    assert_equal "projects\ngroups\n:4\n", @fixture.run('__complete', 'get', '')[1]
+    assert_equal "alpha\nbeta\n:4\n", @fixture.run('__complete', 'get', 'projects', '')[1]
+    assert_equal "beta\n:4\n", @fixture.run('__complete', 'get', 'projects', 'alpha', 'b')[1]
+    assert_equal "table\nwide\njson\nyaml\nname\n:4\n", @fixture.run('__complete', 'get', 'projects', '-o', '')[1]
   end
 
-  def test_complete_lists_visible_commands_only
+  def test_complete_lists_visible_commands_with_their_summaries
     status, out, err = @fixture.run('__complete', '')
 
     assert_equal 0, status
-    assert_equal %w[get ls create config help version completion], out.split("\n")
+    assert_equal %w[get create config help version completion man], out.lines.map { it[/\A[^\t\n]+/] }.first(7)
+    assert_equal ":4\n", out.lines.last
     assert_empty err
   end
 end

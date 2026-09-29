@@ -60,7 +60,8 @@ class RegistryTest < Minitest::Test
   def test_manifest_lists_every_command_with_the_program_data
     manifest = @registry.manifest
 
-    assert_equal(%w[get create config raw help version completion __complete], manifest[:commands].map { it[:name] })
+    assert_equal(%w[get create config raw help version completion man __complete],
+                 manifest[:commands].map { it[:name] })
     assert_equal({ program: 'slipway', version: '0.1.0' }, manifest.slice(:program, :version))
   end
 

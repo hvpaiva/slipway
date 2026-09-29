@@ -55,7 +55,7 @@ class RunnerTest < Minitest::Test
 
     assert_equal [0, '', ''], [status, out, err]
     assert_equal ['get', %w[projects alpha]], [call.name, call.args]
-    assert_equal({ output: 'json', no_headers: nil, selector: nil, color: 'auto', group: nil, config: nil, help: nil,
+    assert_equal({ output: 'json', no_headers: nil, selector: nil, color: nil, group: nil, config: nil, help: nil,
                    version: nil }, call.opts)
     assert_predicate call.opts, :frozen?
   end

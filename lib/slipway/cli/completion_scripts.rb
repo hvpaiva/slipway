@@ -2,52 +2,154 @@
 
 module Slipway
   module CLI
-    # Shell wrappers that delegate every completion request to `PROGRAM __complete WORDS...`,
-    # so the shell scripts never need regenerating when commands change.
+    # Shell wrappers that delegate every completion request to `PROGRAM __complete WORDS...`
+    # and interpret its directive line, so the scripts never change when commands do.
     module CompletionScripts
       SHELLS = %w[bash zsh fish].freeze
 
       def self.render(shell, program)
-        public_send(shell, program)
+        RENDERERS.fetch(shell).render(program)
       end
 
-      def self.bash(program)
-        <<~BASH
-          # bash completion for #{program}. Source it or install it to
-          # ${XDG_DATA_HOME:-~/.local/share}/bash-completion/completions/#{program}
-          _#{program}_complete() {
-              local IFS=$'\\n'
-              local words=("${COMP_WORDS[@]:1:COMP_CWORD}")
-              COMPREPLY=($(#{program} __complete "${words[@]}" 2>/dev/null))
-          }
-          complete -o default -F _#{program}_complete #{program}
-        BASH
+      # Uses bash-completion's initializer when one is loaded (2.12+ or older), else reads
+      # COMP_WORDS directly. Descriptions are stripped after the tab; when the directive
+      # allows it and nothing matched, file names are completed.
+      module Bash
+        def self.render(program)
+          <<~BASH
+            # bash completion for #{program}                             -*- shell-script -*-
+            # Install to ${XDG_DATA_HOME:-~/.local/share}/bash-completion/completions/#{program}
+            # or load it with: eval "$(#{program} completion bash)"
+            _#{program}() {
+                # prev is filled by the bash-completion initializers; it stays local, not global.
+                # shellcheck disable=SC2034
+                local cur prev words cword
+                if declare -F _comp_initialize >/dev/null 2>&1; then
+                    _comp_initialize -n = -- "$@" || return
+                elif declare -F _init_completion >/dev/null 2>&1; then
+                    _init_completion -n = || return
+                else
+                    words=("${COMP_WORDS[@]}") cword=$COMP_CWORD cur=${COMP_WORDS[COMP_CWORD]}
+                fi
+
+                local out directive
+                out=$("${words[0]}" __complete "${words[@]:1:cword-1}" "$cur" 2>/dev/null) || return
+                directive=${out##*$'\\n':}
+                [[ $out == :* ]] && directive=${out#:}
+                out=${out%$'\\n'*}
+                [[ $out == :* ]] && out=""
+
+                COMPREPLY=()
+                local line
+                if [[ -n $out ]]; then
+                    while IFS= read -r line; do COMPREPLY+=("${line%%$'\\t'*}"); done <<<"$out"
+                fi
+                # readline still breaks the word at "=", so "--flag=" must leave the replies.
+                if [[ $cur == -*=* && $COMP_WORDBREAKS == *=* ]]; then
+                    local i prefix=${cur%%=*}=
+                    for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=${COMPREPLY[i]#"$prefix"}; done
+                fi
+                (( directive & 2 )) && compopt -o nospace 2>/dev/null
+                if (( ${#COMPREPLY[@]} == 0 )) && ! (( directive & 4 )); then
+                    if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
+                        _comp_compgen_filedir
+                    elif declare -F _filedir >/dev/null 2>&1; then
+                        _filedir
+                    elif ! compopt -o default 2>/dev/null; then
+                        mapfile -t COMPREPLY < <(compgen -f -- "$cur")
+                    fi
+                fi
+            }
+            complete -F _#{program} #{program}
+          BASH
+        end
       end
 
-      def self.zsh(program)
-        <<~ZSH
-          #compdef #{program}
-          # zsh completion for #{program}. Install it as _#{program} on your $fpath.
-          _#{program}() {
-              local -a candidates
-              candidates=("${(@f)$(#{program} __complete "${words[@]:1:CURRENT-1}" 2>/dev/null)}")
-              compadd -a candidates
-          }
-          compdef _#{program} #{program}
-        ZSH
+      # Builds `value:description` pairs for _describe; a `--flag=` prefix is moved into
+      # IPREFIX with compset so the values alone are listed.
+      module Zsh
+        def self.render(program)
+          <<~ZSH
+            #compdef #{program}
+            # zsh completion for #{program}. Install it as _#{program} in a directory on your fpath,
+            # such as ~/.zfunc/_#{program} with `fpath+=~/.zfunc` before compinit, or load it
+            # with: source <(#{program} completion zsh)
+            compdef _#{program} #{program}
+
+            _#{program}() {
+                local -a lines candidates describe_opts
+                local line directive prefix="" ret=1
+                lines=("${(@f)$(${words[1]} __complete "${(@)words[2,CURRENT-1]}" "${words[CURRENT]}" 2>/dev/null)}")
+                (( ${#lines} )) || return 1
+                directive=${lines[-1]#:}
+                lines=("${(@)lines[1,-2]}")
+                compset -P '--[^=]#=' && prefix=$IPREFIX
+                for line in "${lines[@]}"; do
+                    [[ -z $line ]] && continue
+                    line=${line#"$prefix"}
+                    if [[ $line == *$'\\t'* ]]; then
+                        candidates+=("${${line%%$'\\t'*}//:/\\\\:}:${line#*$'\\t'}")
+                    else
+                        candidates+=("${line//:/\\\\:}")
+                    fi
+                done
+                (( directive & 2 )) && describe_opts+=(-S '')
+                if (( ${#candidates} )); then
+                    _describe -t values '#{program}' candidates "${describe_opts[@]}" && ret=0
+                fi
+                if (( ret )) && ! (( directive & 4 )); then
+                    _files && ret=0
+                fi
+                return ret
+            }
+
+            if [[ "$funcstack[1]" == "_#{program}" ]]; then
+                _#{program} "$@"
+            fi
+          ZSH
+        end
       end
 
-      def self.fish(program)
-        <<~FISH
-          # fish completion for #{program}. Install it to ~/.config/fish/completions/#{program}.fish
-          function __#{program}_complete
-              set -l words (commandline -opc)
-              set -e words[1]
-              #{program} __complete $words (commandline -ct) 2>/dev/null
-          end
-          complete -c #{program} -f -a '(__#{program}_complete)'
-        FISH
+      # Runs the program once per command line, caches its answer, and feeds fish the
+      # `value<TAB>description` lines natively; paths are offered when the directive allows.
+      module Fish
+        def self.render(program)
+          <<~FISH
+            # fish completion for #{program}. Install it to ~/.config/fish/completions/#{program}.fish
+            function __#{program}_complete
+                set -l line (commandline -cp)
+                if set -q __#{program}_line; and test "$__#{program}_line" = "$line"
+                    return 0
+                end
+                set -g __#{program}_line $line
+                set -g __#{program}_directive 4
+                set -g __#{program}_results
+                set -l tokens (commandline -opc)
+                set -l program $tokens[1]
+                set -e tokens[1]
+                set -l lines ($program __complete $tokens (commandline -ct) 2>/dev/null)
+                or return 0
+                if test (count $lines) -gt 0
+                    set -g __#{program}_directive (string replace -r '^:' '' -- $lines[-1])
+                    set -e lines[-1]
+                    set -g __#{program}_results $lines
+                end
+            end
+
+            function __#{program}_wants_files
+                __#{program}_complete
+                test (count $__#{program}_results) -eq 0
+                and test (math "bitand($__#{program}_directive, 4)") -eq 0
+            end
+
+            complete -c #{program} -e
+            complete -c #{program} -n '__#{program}_complete' -f -a '$__#{program}_results'
+            complete -c #{program} -n '__#{program}_wants_files' -a '(__fish_complete_path (commandline -ct))'
+          FISH
+        end
       end
+
+      RENDERERS = { 'bash' => Bash, 'zsh' => Zsh, 'fish' => Fish }.freeze
     end
   end
 end

@@ -12,6 +12,7 @@ require_relative 'cli/validator'
 require_relative 'cli/help_renderer'
 require_relative 'cli/completer'
 require_relative 'cli/completion_scripts'
+require_relative 'cli/manpage'
 require_relative 'cli/builtins'
 require_relative 'cli/runner'
 
