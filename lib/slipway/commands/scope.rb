@@ -103,9 +103,7 @@ module Slipway
       def listed(kind)
         matcher = selector
         scope_group = kind.namespaced? && !all_groups? ? group : nil
-        resources = @runtime.store.list(kind, group: scope_group) do |problem|
-          @context.warn("#{@context.paint_err(:warning, 'warning:')} #{Output.plain(problem.message)}")
-        end
+        resources = @runtime.store.list(kind, group: scope_group) { Output.warning(@context, it.message) }
         resources.select { matcher.match?(it.labels) }
       end
 

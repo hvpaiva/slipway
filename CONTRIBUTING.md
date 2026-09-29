@@ -65,8 +65,9 @@ Each of these fails `rake check` or CI when it is broken.
   require commands, views, the runtime, the inspector or the pool, and `cli/` requires one file
   outside itself (`cli/errors.rb` requires `error.rb`). [ARCHITECTURE.md](ARCHITECTURE.md#layers)
   has the full rule.
-- `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer, and
-  nothing under `lib/` writes to stdout or stderr except `cli/context.rb`.
+- `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer,
+  `Output.warning` is the only place that writes a `warning:` line, and nothing under `lib/`
+  writes to stdout or stderr except `cli/context.rb`.
 - The man page ENVIRONMENT section and the README variable table list every variable the code
   reads except `HOME` and `PATH`, the README tables for STATUS words, exit statuses and rake
   tasks match the code, and the README configuration example sets every config key and no

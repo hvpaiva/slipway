@@ -52,12 +52,13 @@ that breaks these rules.
    and exits 1 (2 for `UsageError`), `Interrupt` exits 130, `Errno::EPIPE` exits 0 quietly, and
    any other `StandardError` exits 1, with class and backtrace added when `SLIPWAY_DEBUG` is set.
 
-Every table cell, describe value and warning line passes `Output.plain`, which makes control
-and bidirectional characters visible, and so do the fields git answered in json and yaml output.
-The runner's error lines pass the same rule through `CLI::Style.plain`; only a `UsageError`
-takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean this?" list. A
-remote URL passes `Git::Url.redact`, and a git failure keeps only the first line of git's
-stderr, redacted and cut to 200 characters.
+Every table cell, describe value and `result_line` name passes `Output.plain`, which makes
+control and bidirectional characters visible, and so do the fields git answered in json and
+yaml output. Warning lines are written only by `Output.warning`, which passes the message
+through the same rule. The runner's error lines pass it through `CLI::Style.plain`; only a
+`UsageError` takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean
+this?" list. A remote URL passes `Git::Url.redact`, and a git failure keeps only the first line
+of git's stderr, redacted and cut to 200 characters.
 
 ## One definition, four outputs
 
@@ -88,9 +89,10 @@ README variable table to the same keys.
 `Options::DRY_RUN` and friends. Require the file in `commands.rb` and add the class to `VERBS`
 in help order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
 `Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
-group. Print results through `result_line` (`project/hldr created`) and raise
-`Slipway::Error` or `CLI::UsageError` rather than writing to stderr. Run `rake generate` so the
-new man page and help fixture land in `man/man1` and `test/fixtures/golden`.
+group. Print results through `result_line` (`project/hldr created`) and warnings through
+`Output.warning`, and raise `Slipway::Error` or `CLI::UsageError` rather than writing to
+stderr. Run `rake generate` so the new man page and help fixture land in `man/man1` and
+`test/fixtures/golden`.
 
 **An option.** Add a `CLI::Option` (`long:`, optional `short:`, `argument:` for a value,
 `enum:` for a closed set, `default:`, `repeatable:`, `required:`, `optional:` plus `implicit:`
@@ -138,9 +140,10 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   against a stub program that answers `__complete` from a `FixtureRegistry`.
 
 Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the
-single git spawner and YAML writer, no direct stdout or stderr, no runtime dependencies, the
-files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of `CHANGELOG.md`) and
-`test/unit/readme_test.rb` (the README tables and configuration example against the code).
+single git spawner, YAML writer and warning writer, no direct stdout or stderr, no runtime
+dependencies, the files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of
+`CHANGELOG.md`) and `test/unit/readme_test.rb` (the README tables and configuration example
+against the code).
 Tests for the development code live under `test/unit/dev`. The commit tests run git in
 temporary repositories; the release and GitHub tests never run git or `gh` and hand the code a
 fake command runner.
