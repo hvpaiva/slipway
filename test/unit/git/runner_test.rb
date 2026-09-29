@@ -165,6 +165,19 @@ class GitRunnerTest < Minitest::Test
     end
   end
 
+  def test_an_interrupted_run_prints_nothing_while_a_helper_holds_the_output_open
+    fifo = File.join(@root, 'helper.pid')
+    File.mkfifo(fifo)
+    bin = fake_git(@root, %(sh -c 'trap "" TERM; echo $$ > "#{fifo}"; exec sleep 30' &\nwait))
+    before = Thread.list
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      _, err = capture_io { interrupt_with_a_helper_left(fifo, before) }
+
+      assert_empty err
+    end
+  end
+
   def test_a_run_killed_as_git_starts_still_stops_it
     bin = fake_git(@root, 'exec sleep 30')
     started = Queue.new
@@ -208,6 +221,20 @@ class GitRunnerTest < Minitest::Test
   ensure
     Process.singleton_class.remove_method(:kill)
     Process.define_singleton_method(:kill, kill)
+  end
+
+  # The helper ignores TERM, so the pipes are still open when the interrupted block closes them
+  # under the readers, which report on their own threads after the interrupt has left run.
+  def interrupt_with_a_helper_left(fifo, before)
+    running = Thread.new { @runner.run(@root, 'status') }
+    running.report_on_exception = false
+    helper = Integer(File.read(fifo))
+    Thread.pass until running.stop?
+    running.raise(Interrupt)
+    assert_raises(Interrupt) { running.join }
+    Thread.pass until (Thread.list - before).empty?
+  ensure
+    Process.kill('KILL', helper) if helper
   end
 
   # The kill is queued the moment Process.detach returns, before Open3 yields to the block, and

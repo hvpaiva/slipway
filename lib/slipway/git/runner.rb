@@ -83,9 +83,14 @@ module Slipway
       end
 
       # Drains one pipe on its own thread so a chatty command cannot deadlock on a full buffer.
+      # Its result is only taken through value, which re-raises, so a reader cut off when an
+      # interrupted block closes the pipes stays quiet instead of printing a thread trace.
       def reader(io)
         io.binmode
-        Thread.new { io.read }
+        Thread.new do
+          Thread.current.report_on_exception = false
+          io.read
+        end
       end
 
       # Kills the process group so helpers git spawned die with it, then reports the deadline.
