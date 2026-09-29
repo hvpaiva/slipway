@@ -60,8 +60,9 @@ yaml output. Warning lines are written only by `Output.warning`, which passes th
 through the same rule. The runner's error lines pass it through `CLI::Style.plain`; only a
 `UsageError` takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean
 this?" list. A remote URL git reports passes `Git::Url.redact`, and a git failure keeps only
-the first line of git's stderr, redacted and cut to 200 characters. `spec.remote` is refused
-whenever redact would change it, so json and yaml print it as stored.
+the first line of git's stderr, redacted and cut to 200 characters. `spec.remote` is refused,
+from `--remote` or a manifest, whenever redact would change it, so json and yaml print it as
+stored.
 
 ## One definition, four outputs
 

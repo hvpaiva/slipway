@@ -18,7 +18,7 @@ ships with: help, man pages, shell completion, a config file, and colors that re
 $ slipway create group personal --description "Personal projects"
 group/personal created
 
-$ slipway create project hldr --path '~/dev/hldr' -n personal --label lang=rust --description "Site and CLI for hvpaiva.dev"
+$ slipway create project hldr --path '~/dev/hldr' -n personal --label lang=rust --description "Site and CLI for hvpaiva.dev" --remote git@github.com:hvpaiva/hldr.git --branch main
 project/hldr created
 
 $ slipway create project augur --path '~/dev/augur' -n personal --label lang=bash
@@ -96,7 +96,7 @@ bundle exec rake install
 | --- | --- |
 | `get TYPE [NAME...]` | List resources as a table, or as wide, json, yaml or name output. |
 | `describe TYPE [NAME...]` | Print every field of the selected resources, including the repository state. |
-| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`) or create a group. |
+| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group. |
 | `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
@@ -260,6 +260,8 @@ metadata:
 spec:
   path: "~/dev/hldr"
   description: Site and CLI for hvpaiva.dev
+  remote: git@github.com:hvpaiva/hldr.git
+  branch: main
 ```
 
 ```yaml

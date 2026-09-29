@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative 'base'
+require_relative '../git/branch_name'
+require_relative '../git/url'
 require_relative '../labels'
 require_relative '../store'
 
@@ -15,7 +17,8 @@ module Slipway
                     "#{Options::TYPES_SENTENCE}".freeze
       PATH_MISSING = 'required flag(s) "--path" not set'
       PATH_EMPTY = 'flag --path must not be empty'
-      PATH_ON_GROUP = 'flag --path applies to projects only'
+      PROJECT_ONLY = 'flag --%s applies to projects only'
+      PROJECT_FLAGS = %i[path remote branch].freeze
 
       PATH = CLI::Option.new(long: 'path', argument: 'DIR',
                              description: 'Directory of the git repository to register; required for projects. ' \
@@ -25,13 +28,19 @@ module Slipway
                              description: 'A short description of the resource.')
       LABEL = CLI::Option.new(long: 'label', argument: 'KEY=VALUE', repeatable: true,
                               description: 'A label to set on the new resource; may be repeated.')
+      REMOTE = CLI::Option.new(long: 'remote', argument: 'URL',
+                               description: 'The URL the origin remote is expected to have, written to spec.remote. ' \
+                                            'A URL that embeds credentials is refused; use a credential helper.')
+      BRANCH = CLI::Option.new(long: 'branch', argument: 'NAME',
+                               description: 'The branch the project is expected to have checked out, written to ' \
+                                            'spec.branch.')
 
       def self.command(factory)
         CLI::Command.new(
           name: 'create', summary: 'Create a resource by name', section: 'Basic Commands',
           description: DESCRIPTION, examples:,
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: false, required: true)],
-          options: [PATH, TEXT, LABEL, Options::DRY_RUN],
+          options: [PATH, TEXT, LABEL, REMOTE, BRANCH, Options::DRY_RUN],
           handler: new(factory)
         )
       end
@@ -42,6 +51,9 @@ module Slipway
                            command: "create project hldr --path '~/dev/hldr'"),
           CLI::Example.new(comment: 'Register a project in the work group with two labels',
                            command: "create project api --path '~/work/api' -n work --label lang=go --label tier=api"),
+          CLI::Example.new(comment: 'Register a project with the remote and the branch it is expected to have',
+                           command: "create project hldr --path '~/dev/hldr' " \
+                                    '--remote git@github.com:hvpaiva/hldr.git --branch main'),
           CLI::Example.new(comment: 'Create a group with a description',
                            command: 'create group work --description "Projects for the day job"'),
           CLI::Example.new(comment: 'Check the arguments without writing the project',
@@ -63,13 +75,18 @@ module Slipway
 
       def build(kind, name, group, opts)
         labels = Labels.parse_pairs(opts[:label] || [])
-        if kind.namespaced?
-          Project.new(name:, group:, labels:, path: project_path(opts[:path]), description: opts[:description])
-        else
-          raise CLI::UsageError, PATH_ON_GROUP unless opts[:path].nil?
+        return project(name, group, labels, opts) if kind.namespaced?
 
-          Group.new(name:, labels:, description: opts[:description])
-        end
+        flag = PROJECT_FLAGS.find { !opts[it].nil? }
+        raise CLI::UsageError, format(PROJECT_ONLY, flag) if flag
+
+        Group.new(name:, labels:, description: opts[:description])
+      end
+
+      def project(name, group, labels, opts)
+        Project.new(name:, group:, labels:, path: project_path(opts[:path]), description: opts[:description],
+                    remote: opts[:remote] && usage { Git::Url.validate!(opts[:remote], field: 'flag --remote') },
+                    branch: opts[:branch] && usage { Git::BranchName.validate!(opts[:branch]) })
       end
 
       # A manifest has no working directory, so a relative --path is resolved here, against
@@ -80,6 +97,14 @@ module Slipway
         return path if path.start_with?('~') || File.absolute_path?(path)
 
         File.absolute_path(path)
+      end
+
+      # The checks a manifest's spec.remote and spec.branch pass, so a refusal reads the same; typed on
+      # the command line, it is a usage error.
+      def usage
+        yield
+      rescue Git::Url::Invalid, Git::BranchName::Invalid => e
+        raise CLI::UsageError, e.message
       end
 
       # What a real create would reject before writing.

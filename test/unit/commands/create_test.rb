@@ -50,7 +50,36 @@ class CreateTest < Minitest::Test
                    run_create('project', 'hldr', runtime:)
       assert_equal [2, '', "error: flag --path applies to projects only\n#{HINT}"],
                    run_create('group', 'work', '--path', '~/work', runtime:)
+      assert_equal [2, '', "error: flag --remote applies to projects only\n#{HINT}"],
+                   run_create('group', 'work', '--remote', 'git@h:o/r.git', runtime:)
+      assert_equal [2, '', "error: flag --branch applies to projects only\n#{HINT}"],
+                   run_create('group', 'work', '--branch', 'main', runtime:)
       assert_empty runtime.store.list(GROUPS)
+    end
+  end
+
+  def test_remote_and_branch_are_written_to_the_spec
+    with_runtime do |runtime|
+      result = run_create('project', 'hldr', '--path', '~/dev/hldr', '--remote', 'git@github.com:hvpaiva/hldr.git',
+                          '--branch', 'main', runtime:)
+      project = runtime.store.find(PROJECTS, 'hldr', group: nil)
+
+      assert_equal [0, "project/hldr created\n", ''], result
+      assert_equal ['git@github.com:hvpaiva/hldr.git', 'main'], [project.remote, project.branch]
+    end
+  end
+
+  def test_remote_and_branch_are_checked_as_a_manifest_checks_them
+    with_runtime do |runtime|
+      create = ->(*flags) { run_create('project', 'hldr', '--path', '~/dev/hldr', *flags, runtime:) }
+
+      assert_equal [2, '', "error: \"ext::sh -c x\" is not a valid remote URL: #{Slipway::Git::Url::RULE}\n#{HINT}"],
+                   create.call('--remote', 'ext::sh -c x')
+      assert_equal [2, '', "error: flag --remote must not embed credentials; use a credential helper\n#{HINT}"],
+                   create.call('--remote=https://ci:s3cret@example.com/x.git')
+      assert_equal [2, '', "error: \"--track\" is not a valid branch name: #{Slipway::Git::BranchName::RULE}\n#{HINT}"],
+                   create.call('--branch=--track', '--dry-run=client')
+      assert_empty runtime.store.list(PROJECTS)
     end
   end
 

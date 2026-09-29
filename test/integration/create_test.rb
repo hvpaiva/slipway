@@ -108,6 +108,19 @@ class CreateIntegrationTest < Minitest::Test
     end
   end
 
+  # The C locale labels the argument US-ASCII; the manifest still holds the UTF-8 the user typed.
+  def test_remote_and_branch_land_in_the_manifest_on_disk
+    with_home do |env|
+      remote = "file:///srv/jo\u00e3o/hldr.git"
+      status, out, err = slipway('create', 'project', 'hldr', '--path', '~/dev/hldr', '--remote', remote,
+                                 '--branch', 'release/1.x', env:)
+      manifest = Psych.safe_load_file(File.join(data_home(env), 'projects', 'default', 'hldr.yaml'))
+
+      assert_equal [0, "project/hldr created\n", ''], [status, out, err]
+      assert_equal({ 'path' => '~/dev/hldr', 'remote' => remote, 'branch' => 'release/1.x' }, manifest['spec'])
+    end
+  end
+
   def test_names_follow_rfc1123
     with_home do |env|
       status, out, err = slipway('create', 'project', 'Bad_Name', '--path', '~/dev/x', env:)
