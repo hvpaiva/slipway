@@ -5,7 +5,7 @@ require 'slipway/paths'
 require 'slipway/config'
 
 class ConfigTest < Minitest::Test
-  include Sandbox
+  include ConfigHelper
 
   def test_defaults_when_the_default_file_is_missing
     with_sandbox do |env|
@@ -182,34 +182,5 @@ class ConfigTest < Minitest::Test
     assert_kind_of Slipway::Error, error
     assert_equal 1, error.exit_status
     assert_nil error.hint
-  end
-
-  private
-
-  def load(env, config: nil, flags: {})
-    Slipway::Config.load(Slipway::Paths.new(env, config:), env:, flags:)
-  end
-
-  def config_path(env) = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')
-
-  def write(env, text)
-    path = config_path(env)
-    FileUtils.mkdir_p(File.dirname(path))
-    File.write(path, text)
-  end
-
-  def error_for(env, text)
-    write(env, text)
-    assert_raises(Slipway::Config::Error) { load(env) }
-  end
-
-  def assert_file_error(problem, env, text)
-    assert_equal "#{config_path(env)}: #{problem}", error_for(env, text).message
-  end
-
-  def assert_config_error(message, env, config: nil)
-    error = assert_raises(Slipway::Config::Error) { load(env, config:) }
-
-    assert_equal message, error.message
   end
 end
