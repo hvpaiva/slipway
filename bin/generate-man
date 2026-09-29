@@ -1,46 +1,27 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Renders the man pages into man/man1 from the command registry. The page date comes
-# from the newest release heading in CHANGELOG.md, or from SOURCE_DATE_EPOCH, so the
-# output is reproducible.
+# Renders the man pages from the command registry into man/man1, or into the directory given
+# as the only argument. The .TH date is the date of the newest release heading in
+# CHANGELOG.md and stays empty until a version is released, so the output is reproducible.
 
 require 'fileutils'
 require 'slipway'
+require_relative '../rakelib/support/changelog'
 
 ROOT = File.expand_path('..', __dir__)
 CHANGELOG = File.join(ROOT, 'CHANGELOG.md')
-OUTPUT_DIR = File.join(ROOT, 'man', 'man1')
-RELEASE_HEADING = /\A## \[\d+\.\d+\.\d+\] - (\d{4}-\d{2}-\d{2})\s*\z/
 
-def changelog_date
-  return unless File.exist?(CHANGELOG)
-
-  File.foreach(CHANGELOG) do |line|
-    match = RELEASE_HEADING.match(line)
-    return match[1] if match
-  end
-  nil
-end
-
-def epoch_date
-  epoch = ENV.fetch('SOURCE_DATE_EPOCH', '')
-  return if epoch.empty?
-
-  Time.at(Integer(epoch)).utc.strftime('%Y-%m-%d')
-end
-
-def page_date
-  changelog_date || epoch_date ||
-    abort('generate-man: CHANGELOG.md has no release heading and SOURCE_DATE_EPOCH is unset')
-end
+abort 'usage: bin/generate-man [DIRECTORY]' if ARGV.size > 1
+output_dir = File.expand_path(ARGV.fetch(0, File.join(ROOT, 'man', 'man1')))
+date = File.exist?(CHANGELOG) ? Changelog.release_date(File.read(CHANGELOG)).to_s : ''
 
 registry = Slipway::Commands.registry(Slipway::Runtime.method(:build))
-pages = Slipway::CLI::Manpage.new(registry, date: page_date, configuration: Slipway::Config::DOCUMENTATION).pages
+pages = Slipway::CLI::Manpage.new(registry, date:, configuration: Slipway::Config::DOCUMENTATION).pages
 
-FileUtils.mkdir_p(OUTPUT_DIR)
-FileUtils.rm_f(Dir[File.join(OUTPUT_DIR, '*.1')])
+FileUtils.mkdir_p(output_dir)
+FileUtils.rm_f(Dir[File.join(output_dir, '*.1')])
 pages.each do |name, roff|
-  File.write(File.join(OUTPUT_DIR, name), roff)
-  puts "wrote man/man1/#{name}"
+  File.write(File.join(output_dir, name), roff)
+  puts "wrote #{File.join(output_dir, name).delete_prefix("#{ROOT}/")}"
 end
