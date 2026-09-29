@@ -153,7 +153,7 @@ module Slipway
 
     # Every mapping in a YAML stream; empty documents are skipped and anything else is Invalid.
     def self.load_documents(text, source:)
-      Psych.safe_load_stream(text, filename: source).each_with_index.filter_map do |document, index|
+      documents(text, source).each_with_index.filter_map do |document, index|
         case document
         in nil then nil
         in Hash then document
@@ -174,6 +174,18 @@ module Slipway
       in documents then raise Invalid.new(source, "expected one document, found #{documents.size}")
       end
     end
+
+    # Each document of a YAML stream loaded with the restrictions of Psych.safe_load. The
+    # stream is parsed first and every document re-emitted alone, because
+    # Psych.safe_load_stream only exists from psych 5.3 and the gem supports Ruby 3.4.
+    def self.documents(text, source)
+      Psych.parse_stream(text, filename: source).children.map do |document|
+        stream = Psych::Nodes::Stream.new
+        stream.children << document
+        Psych.safe_load(stream.to_yaml, filename: source)
+      end
+    end
+    private_class_method :documents
 
     # The YAML text of a resource, without the leading document marker, the way kubectl prints objects.
     def self.dump(resource) = Psych.safe_dump(resource.to_manifest, line_width: -1).delete_prefix("---\n")
