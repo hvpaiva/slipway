@@ -19,6 +19,11 @@ module Slipway
         when 'FETCHED' then :muted if value == NEVER
         end
       end
+      # The paths of #object a field selector may name, each with the value it compares as when
+      # the object leaves it out: kubectl compares an unset field as the empty string, while a
+      # missing lastFetch means no fetch is on record, which FETCHED shows as <never>.
+      FIELDS = { 'metadata.name' => '', 'metadata.group' => '', 'spec.path' => '', 'status.state' => '',
+                 'status.branch' => '', 'status.lastFetch' => 'never' }.freeze
 
       def self.headers(wide: false, group: false, labels: false)
         columns = [*(['GROUP'] if group), 'NAME', 'BRANCH', 'STATUS', 'FETCHED', 'AGE']

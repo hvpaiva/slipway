@@ -20,8 +20,8 @@ module Slipway
           name: 'get', summary: 'Display one or many resources', section: 'Basic Commands',
           description: DESCRIPTION, examples:, usage: USAGE,
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: false)],
-          options: [Options::OUTPUT, Options::SELECTOR, Options::ALL_GROUPS, Options::NO_HEADERS,
-                    Options::SHOW_LABELS],
+          options: [Options::OUTPUT, Options::SELECTOR, Options::FIELD_SELECTOR, Options::ALL_GROUPS,
+                    Options::NO_HEADERS, Options::SHOW_LABELS],
           handler: new(factory)
         )
       end
@@ -34,6 +34,10 @@ module Slipway
           CLI::Example.new(comment: 'List a single project in YAML output format',
                            command: 'get project hldr -o yaml'),
           CLI::Example.new(comment: 'List the projects labeled lang=rust', command: 'get projects -l lang=rust'),
+          CLI::Example.new(comment: 'List the projects in every group that are not clean',
+                           command: 'get projects -A --field-selector status.state!=Clean'),
+          CLI::Example.new(comment: 'List the projects no fetch has reached',
+                           command: 'get projects --field-selector status.lastFetch=never'),
           CLI::Example.new(comment: 'List every group', command: 'get groups')
         ]
       end
@@ -42,11 +46,13 @@ module Slipway
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, names = scope.targets(args)
+        fields = scope.field_selector(kind, names)
         scope.select(kind, names) do |resources|
-          next scope.report_none(kind) if resources.empty?
-
           printer = Printer.new(runtime, context, opts, group_column: scope.all_groups?)
-          printer.print(kind, printer.items(kind, resources), single: names.size == 1)
+          items = printer.items(kind, resources, fields)
+          next scope.report_none(kind) if items.empty?
+
+          printer.print(kind, items, single: names.size == 1)
         end
       end
 
@@ -59,8 +65,15 @@ module Slipway
         end
 
         # Projects come back examined for every format but name, the one that shows nothing
-        # git answers.
-        def items(kind, resources) = kind.namespaced? && !name? ? examine(resources) : resources
+        # git answers. A field selector reads what git answered, so with one even -o name
+        # examines them.
+        def items(kind, resources, fields)
+          return fields.filter(resources) { group_object(it) } unless kind.namespaced?
+          return resources if name? && fields.empty?
+
+          inspections = fields.filter(examine(resources)) { Views::Project.object(it) }
+          name? ? inspections.map(&:project) : inspections
+        end
 
         def print(kind, items, single:)
           case @opts[:output]

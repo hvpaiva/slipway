@@ -3,6 +3,7 @@
 require_relative '../cli'
 require_relative '../resources'
 require_relative '../output'
+require_relative '../views'
 
 module Slipway
   module Commands
@@ -13,6 +14,12 @@ module Slipway
                                  description: "Selector (label query) to filter on, supports '=', '==', '!=', 'in', " \
                                               "'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). " \
                                               'Matching objects must satisfy all of the specified label constraints.')
+      FIELD_SELECTOR = CLI::Option.new(long: 'field-selector', argument: 'EXPR',
+                                       description: "Selector (field query) to filter on, supports '=', '==', and " \
+                                                    "'!=' (e.g. --field-selector key1=value1,key2=value2). Projects " \
+                                                    "support #{Views::Project::FIELDS.keys.join(', ')}; groups " \
+                                                    "support #{Views::Group::FIELDS.keys.join(', ')}. " \
+                                                    'status.lastFetch is never for a project with no fetch on record.')
       ALL_GROUPS = CLI::Option.new(long: 'all-groups', short: 'A',
                                    description: 'If present, list the requested object(s) across all groups. ' \
                                                 'The group in the current configuration is ignored even if ' \

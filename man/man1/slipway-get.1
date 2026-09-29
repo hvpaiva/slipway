@@ -23,6 +23,9 @@ Output format. One of: table, wide, json, yaml, name. (default "table")
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR
 Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. \-l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
 .TP
+\fB\-\-field\-selector\fR \fIEXPR\fR
+Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. \-\-field\-selector key1=value1,key2=value2). Projects support metadata.name, metadata.group, spec.path, status.state, status.branch, status.lastFetch; groups support metadata.name. status.lastFetch is never for a project with no fetch on record.
+.TP
 \fB\-A\fR, \fB\-\-all\-groups\fR
 If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with \-\-group.
 .TP
@@ -50,6 +53,16 @@ slipway get project hldr \-o yaml
 .EX
 # List the projects labeled lang=rust
 slipway get projects \-l lang=rust
+.EE
+.PP
+.EX
+# List the projects in every group that are not clean
+slipway get projects \-A \-\-field\-selector status.state!=Clean
+.EE
+.PP
+.EX
+# List the projects no fetch has reached
+slipway get projects \-\-field\-selector status.lastFetch=never
 .EE
 .PP
 .EX

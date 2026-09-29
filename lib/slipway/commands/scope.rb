@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
 require_relative '../cli/errors'
+require_relative '../field_selector'
 require_relative '../names'
 require_relative '../output'
 require_relative '../resources'
 require_relative '../selector'
 require_relative '../store'
+require_relative '../views'
 
 module Slipway
   module Commands
@@ -64,6 +66,11 @@ module Slipway
       def all_groups? = @opts[:all_groups] == true
 
       def selector = Selector.parse(@opts[:selector])
+
+      def field_selector(kind, names)
+        check_names(kind) unless names.empty?
+        FieldSelector.parse(@opts[:field_selector], fields: kind.namespaced? ? Views::Project::FIELDS : Views::Group::FIELDS)
+      end
 
       # As in kubectl, the resources that exist are shown before the names that do not are
       # reported, one `error:` line each.
@@ -128,9 +135,10 @@ module Slipway
         [found, missing]
       end
 
-      # kubectl refuses a selector or --all-namespaces next to explicit names.
+      # kubectl refuses a label or field selector or --all-namespaces next to explicit names.
       def check_names(kind)
-        raise CLI::UsageError, NAMES_WITH_SELECTOR unless @opts[:selector].to_s.strip.empty?
+        selectors = @opts.values_at(:selector, :field_selector)
+        raise CLI::UsageError, NAMES_WITH_SELECTOR unless selectors.all? { it.to_s.strip.empty? }
         raise CLI::UsageError, NAMES_WITH_ALL_GROUPS if kind.namespaced? && all_groups?
       end
     end

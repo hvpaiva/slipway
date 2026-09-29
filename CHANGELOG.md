@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `get`, `describe`, `create`, `apply`, `delete`, `edit` and `label` verbs over two resource types, projects and groups, with kubectl's wording and result lines.
 - Groups as namespaces: `-n`/`--group` scopes a command, `-A`/`--all-groups` lists across groups, and the `default` group is created on first use.
 - Label selectors on `get`, `describe` and `fetch`: `key=value`, `key!=value`, `key in (a,b)`, `key notin (a,b)`, `key` and `!key`, comma separated.
+- Field selectors on `get` and `describe` with `--field-selector`: `path=value`, `path==value` and `path!=value`, comma separated, over `metadata.name`, `metadata.group`, `spec.path`, `status.state`, `status.branch` and `status.lastFetch` (`never` when no fetch is on record) of projects and `metadata.name` of groups.
 - Output formats `table`, `wide`, `json`, `yaml` and `name`, plus `--no-headers` and `--show-labels`.
 - One-word repository STATUS per project: Missing, NotARepo, Unsafe, Conflicted, Detached, Unborn, Dirty, Gone, Diverged, Ahead, Behind, Clean and Unknown, read from `git status --porcelain=v2` on a bounded thread pool.
 - `fetch` verb that runs `git fetch` in every selected project on a bounded pool, without prompts, and reports each one as fetched, unchanged, skipped, denied or failed.

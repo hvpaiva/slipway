@@ -10,10 +10,10 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Layer | Directory | What lives there |
 | --- | --- | --- |
 | Command layer | `cli/` | `Registry`, `Command`, `Option`, `Positional`, `Example` (the data model), `Globals` (the options every command accepts), `Parser` (OptionParser adapter), `Validator`, `Runner` (front controller), `HelpRenderer`, `Completer` and `CompletionScripts`, `Manpage`, `Builtins`, `Context`, `Style` and `Theme`, `UsageError`. It knows nothing about projects or git. |
-| Domain | `error.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `config.rb`, `paths.rb`, `editor.rb` | `Slipway::Error` (the base of every failure reported to the user), the one YAML writer, `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label selector grammar, XDG paths, the config file and the editor launcher. |
+| Domain | `error.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb` | `Slipway::Error` (the base of every failure reported to the user), the one YAML writer, `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label and field selector grammars, XDG paths, the config file and the editor launcher. |
 | Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the questions slipway needs (status, last commit, remote, time of the last fetch, whether the branch tracks a local one, whether a fetch without a remote argument has one to use, the git directory its worktrees share) and fetches, the one network command, with its own timeout, a no-prompt environment and only the transports the `protocols` setting lists; `Git::Status`, `Git::Commit` and `Git::FetchResult` parse the answers; `Git::Url` redacts the credentials in a URL; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
 | Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
-| Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print. No I/O. |
+| Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print, and list in `FIELDS` the paths of that hash a field selector may name. No I/O. |
 | Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, which runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). `fetch` runs a `Pool` of its own, sized by the `parallel` setting, and prints each project's result through `each_ordered`, so the lines stream in the order listed; projects on one repository, such as a linked worktree and its main one, fetch one after the other, because they write the same refs. A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
@@ -21,8 +21,9 @@ the git values and output; output paints through the command layer's `Context`. 
 layer and the domain (with the git adapter) sit at the bottom: neither requires commands, views,
 the runtime, the inspector or the pool. The command layer requires one domain file, the one
 allowed edge: `cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a
-`Slipway::Error`. The domain may use the command layer: `labels.rb` and `selector.rb` raise
-`CLI::UsageError`, and `config.rb` validates against `CLI::Theme` and `CLI::Style`.
+`Slipway::Error`. The domain may use the command layer: `labels.rb`, `selector.rb` and
+`field_selector.rb` raise `CLI::UsageError`, and `config.rb` validates against `CLI::Theme` and
+`CLI::Style`.
 `test/unit/conventions_test.rb` reads every `require_relative` under `lib/` and fails on an edge
 that breaks these rules.
 
@@ -45,7 +46,8 @@ that breaks these rules.
    `Runtime` (`Runtime.build` in production, a hand-built one in tests) and hands off to `run`.
 6. `Commands::Scope` resolves the type word, the group in effect, `-A` and the selector, then
    reads from the `Store`. For projects, `Inspector#examine_all` runs `Git::Repository` per path
-   (`#examine` for one) and `State.derive` names the state.
+   (`#examine` for one) and `State.derive` names the state. A field selector is matched after
+   that, on the object hash json prints, because some of its fields are what git answered.
 7. `Views` turn the results into rows or entries, `Output` renders them through the `Context`,
    whose two `Style` objects decide color for stdout and stderr separately.
 8. `Runner#execute` maps failures to exit statuses: `Slipway::Error` prints `error: MESSAGE`

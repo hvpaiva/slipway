@@ -5,6 +5,9 @@ require_relative '../output'
 module Slipway
   module Views
     module Group
+      # See Views::Project::FIELDS.
+      FIELDS = { 'metadata.name' => '' }.freeze
+
       def self.headers(wide: false)
         columns = %w[NAME PROJECTS AGE]
         columns << 'DESCRIPTION' if wide
