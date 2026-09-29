@@ -141,8 +141,9 @@ Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (la
 single git spawner and YAML writer, no direct stdout or stderr, no runtime dependencies, the
 files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of `CHANGELOG.md`) and
 `test/unit/readme_test.rb` (the README tables and configuration example against the code).
-Tests for the development code live under `test/unit/dev` and never run git or `gh`: the
-release and GitHub tests hand the code a fake command runner.
+Tests for the development code live under `test/unit/dev`. The commit tests run git in
+temporary repositories; the release and GitHub tests never run git or `gh` and hand the code a
+fake command runner.
 
 ## Generated artifacts
 
@@ -170,6 +171,7 @@ maintainer runs lives in `rakelib/`: `check.rake`, `generate.rake`, `package.rak
 `shells.rake`, `release.rake` and `github.rake`, which Rake loads on its own, and plain Ruby
 under `rakelib/support/` that the tasks and the scripts in `bin/` share (`changelog.rb` parses
 and cuts the changelog, `release.rb` runs the release flow behind an injectable command runner,
-`commits.rb` holds the commit rules `bin/lint-commits` applies, `github.rb` wraps `gh api`).
+`commits.rb` holds the commit rules `bin/lint-commits` applies and the range `rake check` hands
+it, `github.rb` wraps `gh api`).
 `rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
 of it ships in the gem.

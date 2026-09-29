@@ -350,11 +350,12 @@ are development tasks and are not part of the gem.
 | `rake test:shells` | The completion script tests with zsh and fish required, locally when both are installed, otherwise with docker in an image built from `ruby:4.0`. |
 | `rake rubocop` | RuboCop with the minitest, performance and rake plugins. |
 | `rake audit` | Updates the advisory database and checks `Gemfile.lock` with bundler-audit. |
-| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
+| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `lint:commits`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
 | `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help, completion and man page fixtures and removes the help and completion ones no command owns; `generate` runs the three and prints `git status` for `man`, `test/fixtures/golden` and `test/fixtures/man`. |
 | `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
 | `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
 | `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
+| `rake lint:commits` | `bin/lint-commits` over `origin/main..HEAD`; on `main`, or without `origin/main`, it says so and lints nothing. |
 | `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
 | `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
 | `rake release:guard_ci` | Aborts unless running inside GitHub Actions; `rake release`, `rake release:source_control_push` and `rake release:rubygem_push` run it before they tag or push. |

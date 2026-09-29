@@ -28,15 +28,17 @@ bundle exec rake check   # what CI runs
 ```
 
 `rake check` runs, in this order, RuboCop, ShellCheck over `bin/setup` and the bash completion
-script, `groff -ww` over the man pages, the unit and golden tests under SimpleCov with the
-coverage minimums, the integration tests, the generated-files comparison, the package smoke
-test (build, install into a temporary `GEM_HOME`, run the installed executable) and, last,
-bundler-audit. Set `CHECK_OFFLINE=1` to skip the audit when you have no network; the task says
-so when it does. CI runs the same tasks. What `rake check` leaves out is what one machine
-cannot cover: the Ruby 3.4 and macOS entries of the test matrix, and the `completions` job,
-which fails when zsh or fish is missing (run it with `bundle exec rake test:shells`, see
-[Testing completions](#testing-completions)). CI also lints the commits of every pull request
-([Commits](#commits)) and runs the spelling, workflow and link checks listed under
+script, `groff -ww` over the man pages, `bin/lint-commits` over the commits your branch adds to
+`origin/main` ([Commits](#commits); on `main`, or without `origin/main`, it says so and lints
+nothing), the unit and golden tests under SimpleCov with the coverage minimums, the integration
+tests, the generated-files comparison, the package smoke test (build, install into a temporary
+`GEM_HOME`, run the installed executable) and, last, bundler-audit. Set `CHECK_OFFLINE=1` to
+skip the audit when you have no network; the task says so when it does. CI runs the same
+tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3.4 and macOS
+entries of the test matrix, and the `completions` job, which fails when zsh or fish is missing
+(run it with `bundle exec rake test:shells`, see [Testing completions](#testing-completions)).
+CI also lints the commits of every pull request against its base branch, with its title and
+body, and runs the spelling, workflow and link checks listed under
 [Checked by tools](#checked-by-tools).
 
 The individual tasks (`rake test`, `test:cov`, `rubocop`, `lint:man`, `lint:shell`, `audit`
@@ -165,8 +167,8 @@ are all checked there. Merge commits are included but checked for attribution tr
 because git writes their subject. The `main` ruleset on GitHub requires the rest: signed commits, a pull
 request for everyone including the maintainer, green required checks, and merge commits as the
 only merge method. Squash and rebase are disabled so your atomic commits land as you signed
-them; GitHub signs the merge commit. To check a branch before pushing it, run
-`bin/lint-commits origin/main..HEAD`.
+them; GitHub signs the merge commit. `rake check` runs the same script over
+`origin/main..HEAD`, so a branch is checked before it is pushed.
 
 ## Pull requests
 
