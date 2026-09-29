@@ -1,0 +1,128 @@
+# frozen_string_literal: true
+
+require 'fileutils'
+require_relative 'git_env'
+
+# Builds small git repositories in known states with reproducible commit ids.
+module GitFixtures
+  include GitEnv
+
+  # Each state is built by the private method of the same name.
+  STATES = %w[clean staged unstaged untracked ahead behind diverged detached unborn conflicted gone stash
+              plain_dir].freeze
+
+  # Builds a repository in +state+ at +dir+ and returns +dir+. The tracking states (ahead,
+  # behind, diverged, gone) also create a bare origin next to it, named "<dir>-origin.git".
+  def build_repo(dir, state)
+    unless STATES.include?(state)
+      raise ArgumentError, "unknown fixture state #{state.inspect} (known: #{STATES.join(', ')})"
+    end
+
+    send(state, dir)
+    dir
+  end
+
+  private
+
+  def write(dir, name, text)
+    File.write(File.join(dir, name), text)
+  end
+
+  def commit(dir, name, text, message)
+    write(dir, name, text)
+    git!(dir, 'add', '--', name)
+    git!(dir, 'commit', '-q', '-m', message)
+  end
+
+  # One commit on main; every other repository state starts here.
+  def clean(dir)
+    unborn(dir)
+    commit(dir, 'README.md', "hello\n", 'initial commit')
+  end
+
+  def staged(dir)
+    clean(dir)
+    write(dir, 'new.txt', "x\n")
+    git!(dir, 'add', '--', 'new.txt')
+  end
+
+  def unstaged(dir)
+    clean(dir)
+    write(dir, 'README.md', "hello\nchanged\n")
+  end
+
+  def untracked(dir)
+    clean(dir)
+    write(dir, 'notes.txt', "u\n")
+  end
+
+  def detached(dir)
+    clean(dir)
+    git!(dir, 'checkout', '-q', '--detach', 'HEAD')
+  end
+
+  def unborn(dir)
+    FileUtils.mkdir_p(dir)
+    git!(dir, 'init', '-q', '-b', 'main')
+  end
+
+  def conflicted(dir)
+    clean(dir)
+    git!(dir, 'checkout', '-q', '-b', 'other')
+    commit(dir, 'README.md', "other\n", 'other side')
+    git!(dir, 'checkout', '-q', 'main')
+    commit(dir, 'README.md', "main\n", 'main side')
+    _, _, status = git(dir, 'merge', '-q', 'other')
+    raise "merge of #{dir} did not conflict" if status.success?
+  end
+
+  def stash(dir)
+    clean(dir)
+    2.times do |round|
+      write(dir, 'README.md', "hello\nstash #{round}\n")
+      git!(dir, 'stash', '-q')
+    end
+  end
+
+  def plain_dir(dir)
+    FileUtils.mkdir_p(dir)
+    write(dir, 'file.txt', "plain\n")
+  end
+
+  # A repository whose main branch tracks a bare origin next to it and matches it exactly.
+  def synced(dir)
+    clean(dir)
+    origin = "#{dir}-origin.git"
+    FileUtils.mkdir_p(origin)
+    git!(origin, 'init', '-q', '--bare')
+    git!(dir, 'remote', 'add', 'origin', origin)
+    git!(dir, 'push', '-q', '-u', 'origin', 'main')
+  end
+
+  def ahead(dir)
+    synced(dir)
+    commit(dir, 'a.txt', "a\n", 'local work')
+  end
+
+  # Pushes a commit and then drops it locally, so origin is one commit ahead.
+  def behind(dir)
+    synced(dir)
+    commit(dir, 'b.txt', "b\n", 'remote work')
+    git!(dir, 'push', '-q', 'origin', 'main')
+    git!(dir, 'reset', '-q', '--hard', 'HEAD~1')
+  end
+
+  def diverged(dir)
+    behind(dir)
+    commit(dir, 'd.txt', "d\n", 'diverging work')
+  end
+
+  # A feature branch whose upstream was deleted on origin and pruned locally.
+  def gone(dir)
+    synced(dir)
+    git!(dir, 'checkout', '-q', '-b', 'feature')
+    git!(dir, 'push', '-q', '-u', 'origin', 'feature')
+    git!(dir, 'push', '-q', 'origin', '--delete', 'feature')
+    git!(dir, 'fetch', '-q', '--prune', 'origin')
+  end
+end

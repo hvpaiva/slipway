@@ -11,6 +11,8 @@ require_relative 'slipway/store'
 require_relative 'slipway/paths'
 require_relative 'slipway/config'
 require_relative 'slipway/editor'
+require_relative 'slipway/git'
+require_relative 'slipway/state'
 
 # A kubectl-style registry for the git repositories on your machine.
 module Slipway

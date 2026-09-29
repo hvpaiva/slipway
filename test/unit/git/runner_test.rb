@@ -1,0 +1,131 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+require 'slipway/git'
+require 'tmpdir'
+
+class GitRunnerTest < Minitest::Test
+  include GitFixtures
+
+  def setup
+    @root = Dir.mktmpdir('slipway-runner-')
+    @saved = replace_env(hermetic_env(@root))
+    @runner = Slipway::Git::Runner.new
+  end
+
+  def teardown
+    restore_env(@saved)
+    FileUtils.remove_entry(@root)
+  end
+
+  def test_defaults_name_the_binary_and_a_ten_second_deadline
+    assert_equal 'git', @runner.binary
+    assert_in_delta 10.0, @runner.timeout
+  end
+
+  def test_run_returns_the_exit_status_and_both_streams
+    dir = build_repo(File.join(@root, 'clean'), 'clean')
+
+    result = @runner.run(dir, 'rev-parse', '--show-toplevel')
+
+    assert_predicate result, :success?
+    assert_equal 0, result.status
+    assert_equal "#{dir}\n", result.out
+    assert_empty result.err
+  end
+
+  def test_git_failures_come_back_as_results_not_exceptions
+    dir = build_repo(File.join(@root, 'plain'), 'plain_dir')
+
+    result = @runner.run(dir, 'status')
+
+    refute_predicate result, :success?
+    assert_equal 128, result.status
+    assert_match(/\Afatal: not a git repository/, result.err)
+  end
+
+  def test_the_path_is_expanded_before_git_sees_it
+    dir = build_repo(File.join(@root, 'clean'), 'clean')
+
+    result = @runner.run('~/clean', 'rev-parse', '--show-toplevel')
+
+    assert_equal "#{dir}\n", result.out
+  end
+
+  def test_an_inherited_git_dir_does_not_redirect_the_query
+    clean = build_repo(File.join(@root, 'clean'), 'clean')
+    staged = build_repo(File.join(@root, 'staged'), 'staged')
+
+    with_env('GIT_DIR' => File.join(clean, '.git'), 'GIT_WORK_TREE' => clean) do
+      assert_equal "#{staged}\n", @runner.run(staged, 'rev-parse', '--show-toplevel').out
+      assert_includes @runner.run(staged, 'status', '--porcelain=v2', '-z').out, 'new.txt'
+    end
+  end
+
+  def test_the_child_environment_is_pinned
+    bin = fake_git(@root, 'printf "%s|%s|%s|%s" "$LC_ALL" "$GIT_TERMINAL_PROMPT" "$GIT_OPTIONAL_LOCKS" ' \
+                          '"${GIT_DIR-unset}"')
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}", 'GIT_DIR' => '/elsewhere', 'LC_ALL' => 'pt_BR.UTF-8') do
+      assert_equal 'C|0|0|unset', @runner.run(@root, 'status').out
+    end
+  end
+
+  def test_output_is_valid_utf8_whatever_bytes_git_prints
+    dir = build_repo(File.join(@root, 'clean'), 'clean')
+    File.write(File.join(dir, "caf\xE9.txt".b), "x\n")
+
+    result = @runner.run(dir, 'status', '--porcelain=v2', '-z')
+
+    assert_equal Encoding::UTF_8, result.out.encoding
+    assert_predicate result.out, :valid_encoding?
+    assert_includes result.out, "? caf\uFFFD.txt"
+  end
+
+  def test_a_missing_binary_raises_not_installed
+    runner = Slipway::Git::Runner.new(binary: 'slipway-missing-git')
+
+    error = assert_raises(Slipway::Git::NotInstalled) { runner.run(@root, 'version') }
+
+    assert_equal "#{@root}: git executable \"slipway-missing-git\" not found on PATH", error.message
+    assert_equal @root, error.path
+    assert_equal 1, error.exit_status
+  end
+
+  def test_a_slow_git_is_killed_with_its_children_and_reported_as_a_timeout
+    pids = File.join(@root, 'pids')
+    bin = fake_git(@root, "echo $$ > #{pids}\nsleep 30 &\necho $! >> #{pids}\nwait")
+    runner = Slipway::Git::Runner.new(timeout: 0.2)
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      error = assert_raises(Slipway::Git::Timeout) { runner.run(@root, 'status') }
+
+      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
+      assert_equal "#{@root}: git did not finish within 0.2 seconds", error.message
+      assert_equal 2, File.read(pids).split.size
+      File.read(pids).split.each { assert gone?(Integer(it)), "process #{it} survived the kill" }
+    end
+  end
+
+  def test_a_git_ended_by_a_signal_reports_128_plus_the_signal_number
+    bin = fake_git(@root, 'kill -TERM $$')
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      assert_equal 128 + Signal.list.fetch('TERM'), @runner.run(@root, 'status').status
+    end
+  end
+
+  private
+
+  # A killed grandchild lingers as a zombie until its new parent reaps it, so poll for a moment.
+  def gone?(pid)
+    20.times do
+      Process.kill(0, pid)
+      sleep 0.05
+    end
+    false
+  rescue Errno::ESRCH
+    true
+  end
+end
