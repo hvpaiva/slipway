@@ -1,25 +1,40 @@
 # Every job starts from a clean checkout. ruby/setup-ruby reads the Ruby version from
 # mise.toml unless a job passes ruby-version. The shell harness tests skip a missing zsh or
 # fish unless SLIPWAY_REQUIRE_SHELLS is set; only the completions job sets it and installs
-# both shells.
+# both shells. Jobs call the same rake tasks a contributor runs locally through
+# "bundle exec rake check", so this file holds no logic the Rakefile lacks.
+#
+# The job names are the required status checks of the main ruleset ("rake github:setup").
+# Release reuses this workflow through workflow_call, so nothing publishes that CI rejects.
+# The weekly schedule runs only the advisory audit.
 name: CI
 
 on:
   push:
     branches: [main]
+  # edited, labeled and unlabeled rerun the commits job when the title, the body or the
+  # skip-changelog label changes. Every other job reruns too: a skipped job would count
+  # as a passing required check.
   pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_call:
 
 permissions:
   contents: read
 
+# The event name keeps the weekly audit from cancelling a run on main.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # RuboCop is clean, bin/setup and the bash completion script pass ShellCheck, and the
-  # man pages render under groff -ww without a warning.
+  # RuboCop is clean, bin/setup and the bash completion script pass ShellCheck, the man
+  # pages render under groff -ww without a warning, typos finds no misspelling (_typos.toml)
+  # and zizmor finds nothing to report in the workflows.
   lint:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,9 +47,68 @@ jobs:
       - run: bundle exec rubocop
       - run: bundle exec rake lint:shell
       - run: bundle exec rake lint:man
+      - uses: crate-ci/typos@00f422f3b19c57bc6338715ebfe3316d38768461 # v1.50.3
+      # The action pins the zizmor image by digest for the version below. Annotations
+      # replace the SARIF upload, which would need security-events: write.
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          inputs: .github/workflows
+          version: 1.30.1
+          advanced-security: false
+          annotations: true
+
+  # Pull requests only. Every commit subject follows Conventional Commits, no commit is a
+  # fixup, squash or WIP, and neither the commits nor the pull request title and body carry
+  # an AI attribution trailer (bin/lint-commits). A change under lib/, exe/ or man/ comes
+  # with a CHANGELOG.md line unless the pull request has the skip-changelog label.
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The pull request head, not the merge commit GitHub creates, so the range holds only
+      # the contributor's commits. fetch-depth 0 brings the base branch as origin/BASE.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      # The title and body reach the script as files written from environment variables,
+      # never through template expansion inside the script.
+      - name: Check commit messages and the pull request title and body
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title"
+          printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body"
+          bundle exec ruby bin/lint-commits "origin/$BASE_REF..HEAD" \
+            --title "$RUNNER_TEMP/pr-title" --body "$RUNNER_TEMP/pr-body"
+      - name: Require a CHANGELOG.md line for changes under lib/, exe/ or man/
+        if: ${{ !cancelled() }}
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          SKIP_CHANGELOG: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+        run: |
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD") || exit 1
+          if ! grep -qE '^(lib|exe|man)/' <<< "$changed"; then
+            echo "No change under lib/, exe/ or man/; no CHANGELOG.md line needed."
+          elif grep -qx 'CHANGELOG.md' <<< "$changed"; then
+            echo "CHANGELOG.md changed."
+          elif [ "$SKIP_CHANGELOG" = true ]; then
+            echo "CHANGELOG.md unchanged; the skip-changelog label allows it."
+          else
+            echo "::error::This pull request changes lib/, exe/ or man/ without a CHANGELOG.md line under '## [Unreleased]'. Add one, or add the skip-changelog label when the change is invisible to users."
+            exit 1
+          fi
 
   # The suite passes on the oldest supported Ruby, on the current one, and on macOS.
   test:
+    if: github.event_name != 'schedule'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -58,6 +132,7 @@ jobs:
   # Line and branch coverage stay above the minimums in the Rakefile; the report is kept
   # as an artifact.
   coverage:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -73,7 +148,8 @@ jobs:
           name: coverage
           path: coverage/
 
-  # No gem in Gemfile.lock has an entry in the ruby advisory database.
+  # No gem in Gemfile.lock has an entry in the ruby advisory database. Also runs every
+  # Monday, so a new advisory surfaces without waiting for the next push.
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -88,6 +164,7 @@ jobs:
 
   # The committed man pages match what the command registry renders.
   generated:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -97,17 +174,12 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
-      - run: bundle exec rake generate
-      - name: Fail when man/ differs from the generated output
-        run: |
-          git diff --exit-code -- man/ || {
-            echo "::error::man/ is out of date; run 'bundle exec rake generate' and commit the result"
-            exit 1
-          }
+      - run: bundle exec rake generate:check
 
   # The gem builds, installs into an empty GEM_HOME with no other gems, and the installed
   # executable answers version, help, man --path and completion bash.
   package:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -117,22 +189,12 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
-      - run: gem build slipway.gemspec
-      - name: Install the built gem into a temporary GEM_HOME
-        run: gem install --install-dir "$RUNNER_TEMP/gems" --no-document slipway-*.gem
-      - name: Run the installed executable
-        env:
-          GEM_HOME: ${{ runner.temp }}/gems
-          GEM_PATH: ${{ runner.temp }}/gems
-        run: |
-          "$GEM_HOME/bin/slipway" version
-          "$GEM_HOME/bin/slipway" --help
-          "$GEM_HOME/bin/slipway" man --path
-          "$GEM_HOME/bin/slipway" completion bash | shellcheck -s bash -
+      - run: bundle exec rake package:check
 
   # The completion scripts work inside real bash, zsh and fish. SLIPWAY_REQUIRE_SHELLS turns
   # a missing shell into a failure instead of a skip.
   completions:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -144,4 +206,21 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
-      - run: SLIPWAY_REQUIRE_SHELLS=1 bundle exec ruby -Ilib -Itest test/unit/cli/completion_scripts_test.rb
+      - name: Run the completion scripts in bash, zsh and fish
+        env:
+          SLIPWAY_REQUIRE_SHELLS: '1'
+        run: bundle exec ruby -Ilib -Itest test/unit/cli/completion_scripts_test.rb
+
+  # Relative links and heading anchors in the guides resolve. Offline: remote URLs are not
+  # fetched, so a flaky site never fails a pull request (lychee.toml).
+  links:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --config lychee.toml --no-progress './*.md' './.github/**/*.md'

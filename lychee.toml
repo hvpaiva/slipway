@@ -1,0 +1,5 @@
+# Link check for the guides, run by the links job in CI. Offline: only relative links and
+# their heading anchors are checked, so the result depends on the repository alone.
+offline = true
+include_fragments = "anchor-only"
+no_progress = true

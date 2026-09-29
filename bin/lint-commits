@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Checks the commit messages of a revision range, and optionally a pull request title and
+# body, against the rules in rakelib/support/commits.rb:
+#   bin/lint-commits RANGE [--title FILE] [--body FILE]
+# Exits 1 with one line per offending commit or field, 2 on a usage or git error.
+
+require 'optparse'
+require_relative '../rakelib/support/commits'
+
+files = {}
+parser = OptionParser.new do |opts|
+  opts.banner = 'usage: bin/lint-commits RANGE [--title FILE] [--body FILE]'
+  opts.on('--title FILE', 'Check the pull request title in FILE like a commit subject') { files[:title] = it }
+  opts.on('--body FILE', 'Check the pull request body in FILE for attribution lines') { files[:body] = it }
+end
+
+begin
+  range, *extra = parser.parse(ARGV)
+  raise OptionParser::InvalidArgument, 'exactly one RANGE is required' if range.nil? || !extra.empty?
+
+  fields = files.transform_values { File.read(it) }
+  commits = Commits.read(range)
+rescue OptionParser::ParseError, SystemCallError, Commits::Error => e
+  warn "lint-commits: #{e.message}"
+  exit 2
+end
+
+problems = Commits.lint(commits, **fields)
+if problems.empty?
+  puts "lint-commits: #{commits.size} commit(s) in #{range} follow the rules"
+else
+  puts problems
+  exit 1
+end

@@ -1,0 +1,20 @@
+# Spelling check run by the lint job in CI (crate-ci/typos). Generated pages, golden
+# fixtures and the lockfile are excluded: their text comes from sources checked here.
+[files]
+extend-exclude = [
+  "man/man1/",
+  "test/fixtures/",
+  "Gemfile.lock",
+]
+
+[default]
+extend-ignore-re = [
+  # "caf" followed by an escape or interpolation spells "cafe" with a non-ASCII byte in tests.
+  'caf(\\x[0-9A-Fa-f]{2}|\\u[0-9A-Fa-f]{4}|#\{)',
+  # "vew" is the deliberate misspelling of "view" that the did-you-mean tests type.
+  '''["']vew\\?["']''',
+]
+
+[default.extend-identifiers]
+# The termcap capability that ends underlining, set for the man pager.
+LESS_TERMCAP_ue = "LESS_TERMCAP_ue"
