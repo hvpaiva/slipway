@@ -15,11 +15,14 @@ module GitEnv
     'GIT_DIR' => nil, 'GIT_WORK_TREE' => nil, 'GIT_INDEX_FILE' => nil
   }.freeze
 
-  # Identity and the switches that keep signing, hooks, global ignores and advice out.
+  # Identity and the switches that keep signing, hooks, global ignores and advice out, and
+  # that stop git from detaching maintenance after a commit, which would still be touching
+  # the repository while a test removes it.
   CONFIG = %w[
     -c user.name=Fixture -c user.email=fixture@example.com
     -c commit.gpgsign=false -c core.hooksPath=/dev/null -c core.excludesFile=/dev/null
     -c init.defaultBranch=main -c advice.detachedHead=false
+    -c gc.auto=0 -c maintenance.auto=false
   ].freeze
 
   # Runs git in +dir+ with the fixture environment and returns stdout; fails the test on error.
