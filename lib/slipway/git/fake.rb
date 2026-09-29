@@ -1,13 +1,15 @@
 # frozen_string_literal: true
 
 require_relative 'fetch_result'
+require_relative 'fast_forward'
 
 module Slipway
   module Git
-    # +calls+ lists every question asked, as [name, path] or [:fetch, path, { prune: }], so a test
-    # can tell which repositories a command reached.
+    # +calls+ lists every question asked and every move made, as [name, path] or
+    # [name, path, options], so a test can tell which repositories a command reached and what it
+    # changed.
     class Fake
-      Entry = Data.define(:status, :commit, :remote, :remotes, :fetch, :fetched_at)
+      Entry = Data.define(:status, :commit, :remote, :remotes, :fetch, :fetched_at, :fast_forward)
 
       NOTHING_FETCHED = FetchResult.new(updates: [].freeze)
 
@@ -18,13 +20,16 @@ module Slipway
         @lock = Mutex.new
       end
 
-      # +fetch+ is the FetchResult a fetch returns, or an error raised the way fail raises it.
-      # +remotes+ names the configured remotes, origin alone when +remote+ is its URL.
-      def add(path, status:, commit: nil, remote: nil, remotes: nil, fetch: NOTHING_FETCHED, fetched_at: nil)
+      # +fetch+ is the FetchResult a fetch returns, and +fast_forward+ the FastForward the next
+      # move returns (nil moves nothing and names +commit+); either may instead be an error, raised
+      # the way fail raises it. +remotes+ names the configured remotes, origin alone when +remote+
+      # is its URL.
+      def add(path, status:, commit: nil, remote: nil, remotes: nil, fetch: NOTHING_FETCHED, fetched_at: nil,
+              fast_forward: nil)
         key = File.expand_path(path)
         @failures.delete(key)
         remotes ||= remote ? ['origin'] : []
-        @entries[key] = Entry.new(status:, commit:, remote:, remotes:, fetch:, fetched_at:)
+        @entries[key] = Entry.new(status:, commit:, remote:, remotes:, fetch:, fetched_at:, fast_forward:)
         self
       end
 
@@ -69,16 +74,47 @@ module Slipway
       # Each path is a repository of its own.
       def common_dir(path) = File.expand_path(path)
 
+      # A move happens once, as on a real branch: the status and the last commit then show the new
+      # head, that many commits fewer behind, and the next fast-forward moves nothing.
+      def fast_forward(path, onto: Repository::UPSTREAM, reflog_action: Repository::REFLOG_ACTION)
+        key = File.expand_path(path)
+        @lock.synchronize do
+          current = lookup(:fast_forward, key, onto:, reflog_action:)
+          move = current.fast_forward || still(key, current)
+          raise failure(key, move) unless move.is_a?(FastForward)
+
+          @entries[key] = moved(current, move) if move.moved?
+          move
+        end
+      end
+
       private
 
+      def entry(name, path, **) = @lock.synchronize { lookup(name, File.expand_path(path), **) }
+
       # A path nobody registered is a path that does not exist, as for the real Repository.
-      def entry(name, path, **options)
-        key = File.expand_path(path)
-        call = options.empty? ? [name, key] : [name, key, options]
-        @lock.synchronize { @calls << call }
+      # Called with the lock held.
+      def lookup(name, key, **options)
+        @calls << (options.empty? ? [name, key] : [name, key, options])
         raise failure(key, @failures[key]) if @failures.key?(key)
 
         @entries.fetch(key) { raise MissingPath, key }
+      end
+
+      # A real move names HEAD in full, as only the last commit does.
+      def still(key, entry)
+        head = entry.commit&.sha
+        raise ArgumentError, "#{key}: a move that goes nowhere names the last commit; add one" unless head
+
+        FastForward.new(from: head, to: head, count: 0)
+      end
+
+      def moved(entry, move)
+        status = entry.status
+        behind = [status.behind.to_i - move.count, 0].max
+        short = move.to[0, Porcelain::ABBREVIATION]
+        entry.with(status: status.with(head: short, behind:), commit: entry.commit&.with(sha: move.to, short:),
+                   fast_forward: nil)
       end
 
       def failure(key, error)

@@ -7,6 +7,7 @@ require_relative 'git/runner'
 require_relative 'git/status'
 require_relative 'git/commit'
 require_relative 'git/fetch_result'
+require_relative 'git/fast_forward'
 require_relative 'git/repository'
 require_relative 'git/fake'
 

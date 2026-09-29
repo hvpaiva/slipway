@@ -21,10 +21,20 @@ module Slipway
     end
 
     class Timeout < Error
+      DETAIL = 'git did not finish within %<seconds>g %<unit>s'
+
       def initialize(path, seconds: Runner::DEFAULT_TIMEOUT)
         unit = seconds == 1 ? 'second' : 'seconds'
-        super(path, format('git did not finish within %<seconds>g %<unit>s', seconds:, unit:))
+        super(path, format(self.class::DETAIL, seconds:, unit:))
       end
+    end
+
+    # Git stopped partway through writing the working tree leaves the branch and the index where
+    # they were, but keeps the files it had written, and they then show as changes.
+    class WriteTimeout < Timeout
+      DETAIL = "#{Timeout::DETAIL}; the files it had written stay in the working tree".freeze
+
+      def hint = "Run 'git -C #{Shellwords.escape(path)} status' to see them."
     end
 
     class MissingPath < Error
@@ -58,6 +68,37 @@ module Slipway
 
     class LocalUpstream < Error
       def initialize(path) = super(path, 'the current branch tracks a local branch, not a remote one')
+    end
+
+    # The branch was left where it was. +reason+ names why in one word: a state in which a
+    # fast-forward is never attempted or, for the subclasses, git's own refusal.
+    class Blocked < Error
+      attr_reader :reason
+
+      def initialize(path, reason, detail)
+        @reason = reason
+        super(path, detail)
+      end
+    end
+
+    # Git cannot tell a running process from one that died holding the lock, and neither can
+    # slipway, so the lock stays.
+    class Busy < Blocked
+      def initialize(path, lock = 'index.lock')
+        super(path, 'Busy', "another git process holds #{lock}, or one left it behind")
+      end
+    end
+
+    class WouldOverwrite < Blocked
+      def initialize(path) = super(path, 'WouldOverwrite', 'the incoming commits would overwrite untracked files')
+    end
+
+    class WouldLoseChanges < Blocked
+      def initialize(path) = super(path, 'WouldLoseChanges', 'the incoming commits would overwrite local changes')
+    end
+
+    class NotFastForward < Blocked
+      def initialize(path) = super(path, 'NotFastForward', 'the branch cannot be fast-forwarded')
     end
 
     # Git refuses a transport that GIT_ALLOW_PROTOCOL, built from the "protocols" setting, does not list.
