@@ -1,5 +1,6 @@
 # Bundler updates arrive weekly as one pull request for minor and patch bumps; a major
-# bump gets its own. Action SHAs are refreshed monthly, comment included.
+# bump gets its own. Action SHAs are refreshed monthly, and Dependabot rewrites the version
+# comment next to each SHA.
 version: 2
 updates:
   - package-ecosystem: bundler

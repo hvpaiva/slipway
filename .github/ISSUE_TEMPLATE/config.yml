@@ -3,6 +3,3 @@ contact_links:
   - name: Security vulnerability
     url: https://github.com/hvpaiva/slipway/blob/main/SECURITY.md
     about: Do not open an issue for a security problem. SECURITY.md explains how to report it privately.
-  - name: Question
-    url: https://github.com/hvpaiva/slipway/discussions
-    about: Ask about usage or configuration in Discussions.

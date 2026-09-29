@@ -1,7 +1,7 @@
 # Every job starts from a clean checkout. ruby/setup-ruby reads the Ruby version from
-# mise.toml unless a job passes ruby-version. GitHub sets CI=true in every job, and the
-# shell harness tests fail instead of skipping when zsh or fish is missing under CI, so
-# every job that runs the suite installs both shells first.
+# mise.toml unless a job passes ruby-version. The shell harness tests skip a missing zsh or
+# fish unless SLIPWAY_REQUIRE_SHELLS is set; only the completions job sets it and installs
+# both shells.
 name: CI
 
 on:
@@ -49,12 +49,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install zsh, fish and bash-completion
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y zsh fish bash-completion
-      - name: Install fish (zsh ships with macOS)
-        if: runner.os == 'macOS'
-        run: brew install fish
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           ruby-version: ${{ matrix.ruby }}
@@ -70,8 +64,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install zsh, fish and bash-completion
-        run: sudo apt-get update && sudo apt-get install -y zsh fish bash-completion
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
@@ -138,8 +130,8 @@ jobs:
           "$GEM_HOME/bin/slipway" man --path
           "$GEM_HOME/bin/slipway" completion bash | shellcheck -s bash -
 
-  # The completion scripts work inside real bash, zsh and fish. CI=1 is what GitHub already
-  # sets; it is repeated here so the intent survives a copy to another runner.
+  # The completion scripts work inside real bash, zsh and fish. SLIPWAY_REQUIRE_SHELLS turns
+  # a missing shell into a failure instead of a skip.
   completions:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -152,4 +144,4 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
-      - run: CI=1 bundle exec ruby -Ilib -Itest test/unit/cli/completion_scripts_test.rb
+      - run: SLIPWAY_REQUIRE_SHELLS=1 bundle exec ruby -Ilib -Itest test/unit/cli/completion_scripts_test.rb

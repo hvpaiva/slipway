@@ -71,13 +71,18 @@ module ShellHarness
     run_shell(env, 'zsh', '-f', '-c', script, 'harness', dir, line)
   end
 
+  # Set to anything non-empty, this turns a missing zsh or fish into a failure instead of a
+  # skip; the CI completions job sets it after installing both shells.
+  REQUIRE_SHELLS = 'SLIPWAY_REQUIRE_SHELLS'
+
   # True when +binary+ is on PATH. A shell missing locally is a reason to skip its tests;
-  # on CI (ENV["CI"] set) it is a misconfigured runner, so the tests fail instead.
+  # under REQUIRE_SHELLS it is a misconfigured runner, so the tests fail instead.
   def shell_installed?(binary)
     return true if ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? { File.executable?(File.join(it, binary)) }
-    return false if ENV.fetch('CI', '').empty? || !Slipway::CLI::CompletionScripts::SHELLS.include?(binary)
+    return false if ENV.fetch(REQUIRE_SHELLS, '').empty? || !Slipway::CLI::CompletionScripts::SHELLS.include?(binary)
 
-    flunk "#{binary} is not installed; CI must provide every shell the completion scripts target"
+    flunk "#{binary} is not installed; #{REQUIRE_SHELLS} is set, so every shell the completion scripts target " \
+          'must be present'
   end
 
   private
