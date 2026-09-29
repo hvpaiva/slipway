@@ -7,3 +7,4 @@
 /tmp/
 *.gem
 mise.local.toml
+/vendor/
