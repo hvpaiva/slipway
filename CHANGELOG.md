@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FETCHED column with the time since each repository was last fetched, or `<never>`, also shown as `Last Fetch` in `describe` and as `status.lastFetch` in json and yaml output.
 - YAML manifests stored as plain files under `$XDG_DATA_HOME/slipway`, applied from files, directories or stdin with `apply -f`, and reported as created, configured or unchanged.
 - `edit` through `SLIPWAY_EDITOR`, the `editor` config key, `VISUAL` or `EDITOR`, reopening the file with the failure as a comment when the result is invalid.
-- Configuration file at `$XDG_CONFIG_HOME/slipway/config.yaml` with the keys `color`, `editor`, `group`, `networkTimeout`, `protocols` and `theme`, `SLIPWAY_*` environment variables, and `config view` and `config path`.
+- Configuration file at `$XDG_CONFIG_HOME/slipway/config.yaml` with the keys `color`, `editor`, `group`, `networkTimeout`, `parallel`, `protocols` and `theme`, `SLIPWAY_*` environment variables, and `config view` and `config path`.
 - Color per stream with `--color[=auto|always|never]`, `NO_COLOR`, `FORCE_COLOR` and `CLICOLOR_FORCE`, and `dark` and `light` themes following kubecolor.
 - Shell completion for bash, zsh and fish that covers commands, flags, values and resource names.
 - Bundled man pages for every command, with `slipway man`, `slipway man --install` and `slipway man --path`.

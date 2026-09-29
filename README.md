@@ -241,6 +241,7 @@ theme: light             # dark or light
 editor: code --wait
 group: personal          # used when -n is not given
 networkTimeout: 60       # seconds before a git network command is killed
+parallel: 4              # git network commands at once, from 1 to 16
 protocols: [ssh, https]  # transports git may use; add file for local mirrors
 ```
 
@@ -258,6 +259,7 @@ named in the URL, and `fd` reads from file descriptors.
 | `SLIPWAY_EDITOR` | Editor for `edit`; outranks the config key, `VISUAL` and `EDITOR`. |
 | `SLIPWAY_GROUP` | Group used when `-n` is not given. |
 | `SLIPWAY_NETWORK_TIMEOUT` | Seconds a git network command may run before it is killed. |
+| `SLIPWAY_PARALLEL` | How many git network commands run at once, from 1 to 16. |
 | `SLIPWAY_PROTOCOLS` | Transports git may use in network commands, separated by colons: `ssh:https`. |
 | `SLIPWAY_DEBUG` | When non-empty, unexpected errors also print their class and backtrace. |
 | `NO_COLOR` | When non-empty, disables color in `auto` mode. |

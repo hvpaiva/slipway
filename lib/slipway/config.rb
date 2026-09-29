@@ -7,7 +7,8 @@ require_relative 'cli/style'
 require_relative 'names'
 
 module Slipway
-  Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :protocols, :path, :exists, :variables)
+  Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :parallel, :protocols, :path, :exists,
+                       :variables)
 
   class Config
     class Error < Slipway::Error; end
@@ -16,6 +17,7 @@ module Slipway
     # colons, so a name holding a colon would allow a transport nobody listed.
     PROTOCOL = /\A[a-z][a-z0-9+.-]*\z/
     INTEGER = ->(text) { Integer(text, 10, exception: false) }
+    PARALLEL = 1..16
     # Colon-separated like GIT_ALLOW_PROTOCOL; an empty field is kept so the check refuses it.
     LIST = ->(text) { text.split(':', -1) }
     # Once GIT_ALLOW_PROTOCOL is set it is git's whole policy, and git's own refusal of ext no
@@ -68,6 +70,10 @@ module Slipway
                                'started.',
                   valid: ->(value) { value.is_a?(Integer) && value.between?(1, 86_400) },
                   expectation: 'must be an integer from 1 to 86400', parse: INTEGER),
+      Setting.new(key: 'parallel', variable: 'SLIPWAY_PARALLEL', default: 4,
+                  description: "How many git network commands run at once, from #{PARALLEL.min} to #{PARALLEL.max}.",
+                  valid: ->(value) { value.is_a?(Integer) && PARALLEL.cover?(value) },
+                  expectation: "must be an integer from #{PARALLEL.min} to #{PARALLEL.max}", parse: INTEGER),
       Setting.new(key: 'protocols', variable: 'SLIPWAY_PROTOCOLS', default: %w[ssh https].freeze,
                   description: 'Transports git may use in network commands, as a list; any other transport is ' \
                                'refused, and so are ext and fd. Add file for local mirrors.',

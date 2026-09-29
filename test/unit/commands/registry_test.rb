@@ -87,7 +87,7 @@ class CommandsRegistryTest < Minitest::Test
 
       assert_equal [1, ''], [status, out]
       assert_equal "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
-                   "protocols, theme)\n", err
+                   "parallel, protocols, theme)\n", err
     end
   end
 

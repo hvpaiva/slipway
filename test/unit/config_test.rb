@@ -115,7 +115,7 @@ class ConfigTest < Minitest::Test
 
   def test_unknown_key_lists_the_known_keys
     with_sandbox do |env|
-      known = '(known keys: color, editor, group, networkTimeout, protocols, theme)'
+      known = '(known keys: color, editor, group, networkTimeout, parallel, protocols, theme)'
 
       assert_file_error "unknown key \"colour\" #{known}", env, "colour: never\n"
       assert_file_error "unknown key \"1\" #{known}", env, "1: never\n"
@@ -169,13 +169,13 @@ class ConfigTest < Minitest::Test
       write(env, "theme: light\nnetworkTimeout: 30\n")
 
       assert_equal({ 'color' => 'auto', 'editor' => nil, 'group' => 'default', 'networkTimeout' => 30,
-                     'protocols' => %w[ssh https], 'theme' => 'light' }, load(env).to_h)
+                     'parallel' => 4, 'protocols' => %w[ssh https], 'theme' => 'light' }, load(env).to_h)
       assert_equal Slipway::Config::KEYS, load(env).to_h.keys
     end
   end
 
   def test_keys_and_documentation_cover_the_same_settings
-    assert_equal %w[color editor group networkTimeout protocols theme], Slipway::Config::KEYS
+    assert_equal %w[color editor group networkTimeout parallel protocols theme], Slipway::Config::KEYS
     assert_equal Slipway::Config::KEYS, Slipway::Config::DOCUMENTATION.keys
     assert(Slipway::Config::DOCUMENTATION.values.all? { it.is_a?(String) && it.end_with?('.') })
   end

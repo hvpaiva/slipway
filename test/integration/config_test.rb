@@ -5,7 +5,7 @@ require 'test_helper'
 class ConfigIntegrationTest < Minitest::Test
   include IntegrationHelper
 
-  NETWORK = "networkTimeout: 60\nprotocols:\n- ssh\n- https\n"
+  NETWORK = "networkTimeout: 60\nparallel: 4\nprotocols:\n- ssh\n- https\n"
 
   def test_view_shows_the_defaults_and_says_the_file_is_missing
     with_home do |env|
@@ -74,8 +74,8 @@ class ConfigIntegrationTest < Minitest::Test
       protocols = 'must be a list of lowercase git transport names, such as ssh, https or file'
 
       assert_includes slipway!('config', 'view', env:),
-                      "networkTimeout: 30\nprotocols:\n- ssh\n- https\n- file\n"
-      assert_includes slipway!('config', 'view', env: varied), "networkTimeout: 5\nprotocols:\n- https\n"
+                      "networkTimeout: 30\nparallel: 4\nprotocols:\n- ssh\n- https\n- file\n"
+      assert_includes slipway!('config', 'view', env: varied), "networkTimeout: 5\nparallel: 4\nprotocols:\n- https\n"
       assert_equal [1, '', 'error: SLIPWAY_PROTOCOLS: must be lowercase git transport names separated by colons, ' \
                            "such as ssh:https\n"],
                    slipway('config', 'view', env: env.merge('SLIPWAY_PROTOCOLS' => 'ssh,https'))
@@ -114,7 +114,7 @@ class ConfigIntegrationTest < Minitest::Test
     with_home do |env|
       path = write_config(env, "colour: always\n")
       message = "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
-                "protocols, theme)\n"
+                "parallel, protocols, theme)\n"
 
       assert_equal [1, '', message], slipway('config', 'view', env:)
       assert_equal [1, '', message], slipway('get', 'projects', env:)

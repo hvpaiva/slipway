@@ -5,7 +5,7 @@ require 'test_helper'
 class ConfigCommandTest < Minitest::Test
   include CommandsHelper
 
-  NETWORK = "networkTimeout: 60\nprotocols:\n- ssh\n- https\n"
+  NETWORK = "networkTimeout: 60\nparallel: 4\nprotocols:\n- ssh\n- https\n"
   DEFAULTS = "color: auto\neditor:\ngroup: default\n#{NETWORK}theme: dark\n".freeze
 
   def test_view_without_a_file_prints_the_defaults_under_a_not_found_comment
@@ -76,7 +76,7 @@ class ConfigCommandTest < Minitest::Test
       path = write_config(env, "colour: always\n")
 
       assert_equal [1, '', "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, " \
-                           "networkTimeout, protocols, theme)\n"], run_config('config', 'view', env:)
+                           "networkTimeout, parallel, protocols, theme)\n"], run_config('config', 'view', env:)
     end
   end
 
