@@ -39,7 +39,8 @@ class HelpIntegrationTest < Minitest::Test
       assert_equal [0, view, ''], slipway('config', 'view', '--help', env:)
       assert_equal [0, view, ''], slipway('help', 'config', 'view', env:)
       assert_equal [0, page('slipway-config'), ''], slipway('config', '--help', env:)
-      assert_equal [0, "#{config_file(env)}\n", ''], slipway('config', '--color=never', 'path', env:)
+      assert_equal [0, "#{config_file(env)}\n", "The file does not exist; slipway uses its defaults.\n"],
+                   slipway('config', '--color=never', 'path', env:)
     end
   end
 

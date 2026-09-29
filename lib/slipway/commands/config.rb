@@ -47,8 +47,10 @@ module Slipway
 
       class Path < Base
         DESCRIPTION = "Display the path of the configuration file.\n\n" \
-                      'Prints the file that --config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml ' \
-                      'resolves to, whether or not it exists.'
+                      'Prints the file that slipway reads, or would read if it existed: --config, then ' \
+                      'SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml. When the file does not exist, a ' \
+                      'note on stderr says so.'
+        MISSING = 'The file does not exist; slipway uses its defaults.'
 
         def self.command(factory)
           CLI::Command.new(
@@ -58,7 +60,12 @@ module Slipway
           )
         end
 
-        def run(runtime, context, _args, _opts) = context.puts(runtime.config.path)
+        # stdout stays the bare path so "$(slipway config path)" can open the file before it exists.
+        def run(runtime, context, _args, _opts)
+          config = runtime.config
+          context.puts(config.path)
+          context.warn(context.paint_err(:muted, MISSING)) unless config.exists?
+        end
       end
     end
   end
