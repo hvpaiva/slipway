@@ -39,4 +39,5 @@ there is no guaranteed response time. I will confirm the problem, work out a fix
 a disclosure date with you. Fixes ship as a new version on RubyGems, and the changelog entry for
 that version references the advisory. If the vulnerable version has to be pulled, it is yanked
 from RubyGems after the fixed one is available. Credit goes to the reporter unless you prefer
-otherwise.
+otherwise. How a fix release and a yank are carried out is described in
+[Hotfixes and yanking](CONTRIBUTING.md#hotfixes-and-yanking).

@@ -252,9 +252,15 @@ error naming the file.
 | `NO_COLOR` | When non-empty, disables color in `auto` mode. |
 | `FORCE_COLOR` | When non-empty, enables color in `auto` mode even on a pipe. |
 | `CLICOLOR_FORCE` | Same as `FORCE_COLOR`. |
-| `VISUAL`, `EDITOR` | Editor for `edit` when nothing above names one. |
+| `VISUAL` | Editor for `edit` when `SLIPWAY_EDITOR` and the `editor` config key are unset. |
+| `EDITOR` | Editor for `edit` when `VISUAL` is unset as well. |
 | `XDG_CONFIG_HOME` | Base of the configuration directory (default `~/.config`). |
 | `XDG_DATA_HOME` | Base of the data directory (default `~/.local/share`). |
+| `TERM` | `dumb` turns color off in `auto` mode. |
+| `MANPAGER` | When non-empty, `slipway man` leaves the pager palette alone. |
+| `MANROFFOPT` | Same as `MANPAGER`. |
+| `LESS_TERMCAP_md` | Same as `MANPAGER`. |
+| `GROFF_NO_SGR` | Same as `MANPAGER`. |
 
 The registry is a directory of plain YAML files under `$SLIPWAY_DATA_HOME`, by default
 `$XDG_DATA_HOME/slipway` (`~/.local/share/slipway`):
@@ -304,7 +310,9 @@ the names of your projects and groups, asked from the program itself each time y
 ## Manual pages
 
 The pages ship with the gem. `slipway man` opens `slipway(1)` and `slipway man get` opens
-`slipway-get(1)` with `man(1)`. `slipway man --install` copies them to
+`slipway-get(1)` with `man(1)`, colored like the help page when color is on; if any of
+`MANPAGER`, `MANROFFOPT`, `LESS_TERMCAP_md` or `GROFF_NO_SGR` is non-empty, your pager
+settings win and slipway passes nothing of its own. `slipway man --install` copies them to
 `${XDG_DATA_HOME:-~/.local/share}/man/man1`, where man-db looks when `~/.local/bin` is on
 `PATH`; `slipway man --install=DIR` copies them into DIR instead and prints the `MANPATH` line
 that makes `man` find them there. To read them without installing:
@@ -327,25 +335,38 @@ man slipway-get
 
 ## Development
 
-`bin/setup` installs the development dependencies and `bundle exec rake` runs the tests and
-RuboCop. CI runs those plus the lint, audit, coverage, generated-files, package and completion
-jobs in `.github/workflows/ci.yml`; the tasks they call are listed below.
+`bin/setup` installs the development dependencies and reports the tools it found.
+`bundle exec rake` runs the tests and RuboCop, the fast loop; `bundle exec rake check` runs
+what CI runs. CI (`.github/workflows/ci.yml`) runs the tasks of `rake check` as separate jobs,
+plus what a single machine cannot: the Ruby 3.4 and macOS entries of the test matrix and the
+completion scripts in real zsh and fish. It also lints the commits of every pull request and
+checks spelling, the workflows and the links in the guides. The tasks defined under `rakelib/`
+are development tasks and are not part of the gem.
 
 | Task | Runs |
 | --- | --- |
 | `rake test`, `test:unit`, `test:integration` | Minitest with Ruby warnings on: everything under `test/`, or one of `test/unit` and `test/integration`. |
 | `rake test:cov` | The unit and golden tests under SimpleCov, failing below the line and branch minimums set in the Rakefile. |
+| `rake test:shells` | The completion script tests with zsh and fish required, locally when both are installed, otherwise with docker in an image built from `ruby:4.0`. |
 | `rake rubocop` | RuboCop with the minitest, performance and rake plugins. |
 | `rake audit` | Updates the advisory database and checks `Gemfile.lock` with bundler-audit. |
-| `rake generate` | Regenerates every generated file (`generate:man`). |
+| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
+| `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help and completion fixtures and removes the ones no command owns; `generate` runs the three and prints `git status` for `man` and `test/fixtures/golden`. |
+| `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
 | `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
 | `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
+| `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
+| `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
+| `rake release:guard_ci` | Aborts unless running inside GitHub Actions; `rake release` runs it before anything else. |
+| `rake github:setup` | Configures the GitHub repository (merge commits only, release environment, rulesets, security alerts, immutable releases, the `skip-changelog` label) through `gh api`, idempotently. |
 | `rake docs` | YARD documentation. |
-| `rake build`, `rake install`, `rake release` | The bundler gem tasks. |
+| `rake build`, `rake install` | The bundler gem tasks. |
+| `rake release` | The publish step `release.yml` runs through `rubygems/release-gem`; refused locally. Use `bin/release` instead. |
 
-`man/man1` is generated: `rake generate` rewrites the pages from the command definitions,
-dating them from the newest release heading in `CHANGELOG.md`. CI regenerates them and fails
-when the committed pages are stale. The completion scripts are printed at run time and are not
+`man/man1` and `test/fixtures/golden` are generated: `rake generate` rewrites the pages from
+the command definitions, dating them from the newest release heading in `CHANGELOG.md` (no
+date while there is none), and refreshes the fixtures. CI regenerates the pages and fails when
+the committed ones are stale. The completion scripts are printed at run time and are not
 generated files.
 
 ## Other documents
