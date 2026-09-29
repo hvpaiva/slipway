@@ -10,45 +10,46 @@ state the way kubectl shows a cluster. You register a repository once, and from 
 gone from disk. The shape is borrowed on purpose: verbs and resource types (`get projects`,
 `describe group work`), labels and selectors (`-l lang=rust`), groups as namespaces (`-n work`,
 `-A`), manifests you can `apply -f`, and table, json or yaml output. If you already know
-kubectl, you already know slipway. The project is small on purpose and complete in what a CLI
-ships with: help, man pages, shell completion, a config file and colors that follow the rules.
+kubectl, you already know slipway. Slipway is deliberately small and complete in what a CLI
+ships with: help, man pages, shell completion, a config file, and colors that respect
+`NO_COLOR` and the terminal.
 
 ```console
 $ slipway create group personal --description "Personal projects"
 group/personal created
 
-$ slipway create project hldr --path ~/dev/hldr -n personal --label lang=ruby --description "Site and CLI for hvpaiva.dev"
+$ slipway create project hldr --path '~/dev/hldr' -n personal --label lang=rust --description "Site and CLI for hvpaiva.dev"
 project/hldr created
 
-$ slipway create project augur --path ~/dev/augur -n personal --label lang=bash
+$ slipway create project augur --path '~/dev/augur' -n personal --label lang=bash
 project/augur created
 
-$ slipway create project notes --path ~/dev/notes --label kind=docs
+$ slipway create project notes --path '~/dev/notes' --label kind=docs
 project/notes created
 
 $ slipway get projects -A
 GROUP      NAME    BRANCH   STATUS   AGE
-default    notes   main     Ahead    3s
-personal   augur   main     Dirty    3s
-personal   hldr    main     Clean    3s
+default    notes   main     Ahead    0s
+personal   augur   main     Dirty    1s
+personal   hldr    main     Clean    1s
 
 $ slipway get projects -n personal -o wide
 NAME    BRANCH   STATUS   AGE   PATH          HEAD      LAST-COMMIT
-augur   main     Dirty    3s    ~/dev/augur   7bf1540   11h
-hldr    main     Clean    3s    ~/dev/hldr    81deff0   32h
+augur   main     Dirty    1s    ~/dev/augur   8f9cdbb   11h
+hldr    main     Clean    1s    ~/dev/hldr    e001395   32h
 
 $ slipway describe project augur -n personal
 Name:         augur
 Group:        personal
 Labels:       lang=bash
-Created:      2026-09-29T06:08:37Z
-Age:          3s
+Created:      2026-09-29T07:15:35Z
+Age:          1s
 Path:         ~/dev/augur
 Description:  <none>
 Status:       Dirty
 Repository:
   Branch:      main
-  Head:        7bf1540
+  Head:        8f9cdbb
   Upstream:    <none>
   Ahead:       <none>
   Behind:      <none>
@@ -59,11 +60,14 @@ Repository:
   Stashes:     0
   Remote:      <none>
 Last Commit:
-  Hash:     7bf15404641f4f41b6a8a8089e68c61aafdd69fe
+  Hash:     8f9cdbbc5ff8982322347d8e6a76ea3ab8821b51
   Author:   Highlander <contact@hvpaiva.dev>
-  Date:     2026-09-28T18:22:00Z
+  Date:     2026-09-28T20:15:35Z
   Subject:  refactor: split history reader
 ```
+
+The paths are quoted so the shell leaves the `~` alone: slipway expands it itself, which keeps
+the stored manifest portable between machines.
 
 ## Installation
 
@@ -71,8 +75,8 @@ Last Commit:
 gem install slipway
 ```
 
-Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH`. It has no runtime gem
-dependencies. To install from a checkout:
+Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH` (older git runs but always
+reports `Stashes: 0`). It has no runtime gem dependencies. To install from a checkout:
 
 ```sh
 bundle install
@@ -93,10 +97,10 @@ bundle exec rake install
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
-| `version` | Print `slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]`. |
-| `help [COMMAND]` | The same text as `--help`. |
+| `version` | Print the version, the Ruby it runs on and the platform, as `slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]`. |
+| `help [COMMAND]` | Print the same text as `--help`. |
 
-Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`);
+Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`).
 `slipway VERB --help` describes each verb.
 
 ### Groups
@@ -112,22 +116,23 @@ first, and `slipway delete group default` is refused.
 `-l EXPR` (`--selector`) filters by labels with kubectl's grammar. Equality:
 
 ```console
-$ slipway get projects -A -l lang=ruby
+$ slipway get projects -A -l lang=rust
 GROUP      NAME   BRANCH   STATUS   AGE
-personal   hldr   main     Clean    4s
+personal   hldr   main     Clean    1s
 ```
 
 Set-based:
 
 ```console
-$ slipway get projects -A -l 'lang in (ruby,bash)'
+$ slipway get projects -A -l 'lang in (rust,bash)'
 GROUP      NAME    BRANCH   STATUS   AGE
-personal   augur   main     Dirty    4s
-personal   hldr    main     Clean    4s
+personal   augur   main     Dirty    1s
+personal   hldr    main     Clean    1s
 ```
 
 `key!=value`, `key notin (a,b)`, `key` (exists) and `!key` (does not exist) work as well, and
-comma-separated terms must all hold. A selector cannot be combined with explicit names.
+comma-separated terms must all hold. Neither a selector nor `-A` can be combined with explicit
+names.
 
 ### Output formats
 
@@ -135,7 +140,7 @@ comma-separated terms must all hold. A selector cannot be combined with explicit
 commit) to projects and DESCRIPTION to groups. `-o json` and `-o yaml` print the manifest
 plus a `status` section, as one object when a single name is given and as a `kind: List`
 otherwise. `-o name` prints `project/hldr` lines. `--no-headers` drops the header row and
-`--show-labels` appends a LABELS column with `lang=ruby` style pairs. AGE is the time since
+`--show-labels` appends a LABELS column with `lang=rust` style pairs. AGE is the time since
 the resource was registered, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`).
 
 ### Status words
@@ -156,7 +161,7 @@ STATUS is one word per project, chosen in this order of precedence:
 | `Ahead` | Commits not yet pushed to the upstream. |
 | `Behind` | Commits on the upstream not yet pulled. |
 | `Clean` | Nothing to do. |
-| `Unknown` | git could not be asked: not installed, or it did not answer within 10 seconds. One warning is printed on stderr per run. |
+| `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
 
 ### Manifests
 
@@ -169,8 +174,8 @@ metadata:
   name: hldr
   group: personal
   labels:
-    lang: ruby
-  creationTimestamp: '2026-09-29T06:08:37Z'
+    lang: rust
+  creationTimestamp: '2026-09-29T07:15:35Z'
 spec:
   path: "~/dev/hldr"
   description: Site and CLI for hvpaiva.dev
@@ -181,7 +186,7 @@ kind: Group
 metadata:
   name: personal
   labels: {}
-  creationTimestamp: '2026-09-29T06:08:37Z'
+  creationTimestamp: '2026-09-29T07:15:35Z'
 spec:
   description: Personal projects
 ```
@@ -189,8 +194,8 @@ spec:
 Names follow the RFC 1123 label rule (lowercase letters, digits and dashes, at most 63
 characters) and labels follow the Kubernetes rules. `spec.path` is stored as written and
 expanded against `HOME` when used, so `~/dev/hldr` means the same thing on every machine that
-syncs the registry. `metadata.group` defaults to the current group and `creationTimestamp` is
-set on creation.
+syncs the registry; quote it on the command line so the shell does not expand it first.
+`metadata.group` defaults to the current group and `creationTimestamp` is set on creation.
 
 `slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
 and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
@@ -202,9 +207,12 @@ with exit status 1. `--dry-run=client` reports what would change without writing
 
 `slipway edit project hldr` writes the manifest to a temporary file, opens it in
 `SLIPWAY_EDITOR`, then the `editor` config key, then `VISUAL`, then `EDITOR`, or `vi`, and
-saves what comes back as `project/hldr edited`. An unchanged file prints
-`Edit cancelled, no changes made.`; an invalid one is reopened with the failure as a comment
-block at the top, and an empty file aborts with exit status 1.
+saves what comes back as `project/hldr edited`. Text that changes without changing the object
+prints `project/hldr skipped`. An unchanged file prints `Edit cancelled, no changes made.` on
+stderr; an invalid one is reopened with the failure as a comment block at the top, and saving
+that reopened file unchanged aborts with `error: Edit cancelled, no valid changes were saved.`;
+an empty file aborts with `error: Edit cancelled, saved file was empty.`. Both aborts exit
+with status 1.
 
 ### Labels
 
@@ -257,7 +265,9 @@ projects/<group>/<name>.yaml
 ```
 
 Each file is the manifest shown above and nothing else is stored, so the directory can be
-backed up, versioned or synced between machines, and read back with `slipway apply -f`.
+backed up, versioned or synced between machines. To rebuild a registry from a copy, apply
+`groups/` first and then each `projects/<group>/` directory:
+`slipway apply -f copy/groups -f copy/projects/personal`.
 
 ## Colors
 
@@ -280,7 +290,7 @@ eval "$(slipway completion bash)"
 # bash: install it for bash-completion to load on demand
 slipway completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/slipway"
 
-# zsh: put _slipway on your fpath (fpath+=~/.zfunc before compinit), or source it directly
+# zsh: put _slipway in a directory on your fpath (fpath+=~/.zfunc before compinit), or source it directly
 slipway completion zsh > ~/.zfunc/_slipway
 source <(slipway completion zsh)
 
@@ -318,7 +328,8 @@ man slipway-get
 ## Development
 
 `bin/setup` installs the development dependencies and `bundle exec rake` runs the tests and
-RuboCop, which is what CI requires. The other tasks:
+RuboCop. CI runs those plus the lint, audit, coverage, generated-files, package and completion
+jobs in `.github/workflows/ci.yml`; the tasks they call are listed below.
 
 | Task | Runs |
 | --- | --- |
@@ -337,7 +348,7 @@ dating them from the newest release heading in `CHANGELOG.md`. CI regenerates th
 when the committed pages are stale. The completion scripts are printed at run time and are not
 generated files.
 
-## Project
+## Other documents
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, conventions and the release process.
 - [ARCHITECTURE.md](ARCHITECTURE.md) for a map of the code.

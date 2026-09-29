@@ -20,7 +20,7 @@ bundle exec ruby -Ilib exe/slipway --help
 ## Tests and lint
 
 ```sh
-bundle exec rake            # tests and RuboCop, what CI requires
+bundle exec rake            # tests and RuboCop; CI runs these and the tasks below
 bundle exec rake test       # tests only, with Ruby warnings on
 bundle exec rake test:cov   # with SimpleCov and branch coverage
 bundle exec rake rubocop
@@ -30,9 +30,10 @@ bundle exec rake audit      # bundler-audit against a fresh advisory database
 ```
 
 Tests that need a tool you do not have (`shellcheck`, `groff`, `zsh`, `fish`) skip themselves
-and say why. CI has all four; there a missing `zsh` or `fish` fails the suite, and the lint
-job runs `shellcheck` and `groff` directly. Everything runs against temporary directories and
-repositories created for the test, never against your own registry.
+and say why. The `completions` job on CI sets `SLIPWAY_REQUIRE_SHELLS=1` so a missing `zsh`
+or `fish` fails there instead of skipping; every other job skips the way a local run does. The
+lint job runs `shellcheck` and `groff` directly. Everything runs against temporary directories
+and repositories created for the test, never against your own registry.
 
 ## Conventions
 
@@ -83,11 +84,13 @@ eval "$(bundle exec ruby -Ilib exe/slipway completion bash)"
 slipway get <TAB>
 ```
 
-For zsh and fish, install them or run the suite in a container so the skipped tests execute:
+For zsh and fish, install them or run the suite in a container so the skipped tests execute.
+`SLIPWAY_REQUIRE_SHELLS=1` turns a missing shell into a failure, which is how the CI
+`completions` job runs and how you can be sure nothing was skipped:
 
 ```sh
 docker run --rm -v "$PWD:/src" -w /src ruby:4.0 \
-  bash -c 'apt-get update -q && apt-get install -y -q zsh fish shellcheck groff && bin/setup && bundle exec rake test'
+  bash -c 'apt-get update -q && apt-get install -y -q zsh fish shellcheck groff && bin/setup && SLIPWAY_REQUIRE_SHELLS=1 bundle exec rake test'
 ```
 
 ## Commits

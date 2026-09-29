@@ -34,9 +34,9 @@ the temporary files `edit` writes.
 
 ## What happens next
 
-You will get an acknowledgement, usually within a few days; this is a one-person project, so
-there is no guaranteed response time. I will confirm the problem, work out a fix and agree a
-disclosure date with you. Fixes ship as a new version on RubyGems, and the changelog entry for
+You will get an acknowledgment, usually within a few days; this is a one-person project, so
+there is no guaranteed response time. I will confirm the problem, work out a fix and agree on
+a disclosure date with you. Fixes ship as a new version on RubyGems, and the changelog entry for
 that version references the advisory. If the vulnerable version has to be pulled, it is yanked
 from RubyGems after the fixed one is available. Credit goes to the reporter unless you prefer
 otherwise.

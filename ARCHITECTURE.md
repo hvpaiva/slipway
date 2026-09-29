@@ -9,15 +9,16 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 
 | Layer | Directory | What lives there |
 | --- | --- | --- |
-| Command layer | `cli/` | `Registry`, `Command`, `Option`, `Positional`, `Example` (the data model), `Parser` (OptionParser adapter), `Validator`, `Runner` (front controller), `HelpRenderer`, `Completer` and `CompletionScripts`, `Manpage`, `Builtins`, `Context`, `Style` and `Theme`, the error classes. It knows nothing about projects or git. |
-| Domain | `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `config.rb`, `paths.rb`, `editor.rb` | `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label selector grammar, XDG paths, the config file and the editor launcher. |
+| Command layer | `cli/` | `Registry`, `Command`, `Option`, `Positional`, `Example` (the data model), `Globals` (the options every command accepts), `Parser` (OptionParser adapter), `Validator`, `Runner` (front controller), `HelpRenderer`, `Completer` and `CompletionScripts`, `Manpage`, `Builtins`, `Context`, `Style` and `Theme`, `UsageError`. It knows nothing about projects or git. |
+| Domain | `error.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `config.rb`, `paths.rb`, `editor.rb` | `Slipway::Error` (the base of every failure reported to the user), the one YAML writer, `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label selector grammar, XDG paths, the config file and the editor launcher. |
 | Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the three questions slipway needs (status, last commit, remote); `Git::Status` and `Git::Commit` parse the answers; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
 | Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
 | Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print. No I/O. |
 | Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a thread pool and preserves order. |
 
-Dependencies point downward: commands use the runtime, views and output; views use the
-domain and git values; output and the command layer depend on nothing above them.
+Dependencies point one way: commands use the runtime, views and output; views use the domain,
+the git values and output; output paints through the command layer's `Context`; the command
+layer and the domain depend on nothing else in the gem.
 
 ## One invocation
 
@@ -37,8 +38,8 @@ domain and git values; output and the command layer depend on nothing above them
 5. The command's handler is an instance of `Commands::Base`. `call` asks the factory for a
    `Runtime` (`Runtime.build` in production, a hand-built one in tests) and hands off to `run`.
 6. `Commands::Scope` resolves the type word, the group in effect, `-A` and the selector, then
-   reads from the `Store`. For projects, `Inspector#inspect_all` runs `Git::Repository` per path
-   and `State.derive` names the state.
+   reads from the `Store`. For projects, `Inspector#examine_all` runs `Git::Repository` per path
+   (`#examine` for one) and `State.derive` names the state.
 7. `Views` turn the results into rows or entries, `Output` renders them through the `Context`,
    whose two `Style` objects decide color for stdout and stderr separately.
 8. `Runner#execute` maps failures to exit statuses: `Slipway::Error` prints `error: MESSAGE`
@@ -112,9 +113,9 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
 - Golden tests under `test/golden` compare the help page of every command, the three completion
   scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`;
   `UPDATE_GOLDEN=1` rewrites the fixtures after an intended change. `ShellHarness` also drives
-  the completion scripts inside real shells (bash always; zsh and fish when installed, and on CI
-  their absence is a failure) against a stub program that answers `__complete` from a
-  `FixtureRegistry`.
+  the completion scripts inside real shells (bash always; zsh and fish when installed, or
+  unconditionally when `SLIPWAY_REQUIRE_SHELLS` is set, which the CI `completions` job does)
+  against a stub program that answers `__complete` from a `FixtureRegistry`.
 
 ## Generated artifacts
 
