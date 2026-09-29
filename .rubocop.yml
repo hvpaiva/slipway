@@ -48,6 +48,10 @@ Style/AsciiComments:
   # Everything is written in English without emoji; the conventions test covers the rest of each file.
   Enabled: true
 
+Style/Documentation:
+  # A cop that demands a comment on every class gets comments that restate the class name.
+  Enabled: false
+
 Style/DisableCopsWithinSourceCodeDirective:
   # Exceptions to a cop live in this file, where they carry a reason, never inline.
   Enabled: true

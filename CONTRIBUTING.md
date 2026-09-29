@@ -55,8 +55,6 @@ Each of these fails `rake check` or CI when it is broken.
   the limits, split it. Exceptions to a RuboCop rule live in `.rubocop.yml`, never inline.
 - Every Ruby file starts with `# frozen_string_literal: true`. Requires inside the gem use
   `require_relative`; a `require 'slipway/...'` line fails `test/unit/conventions_test.rb`.
-- Every public class and module carries a one-sentence comment saying what it is for. A test
-  over the YARD registry fails on an undocumented class or module under `lib/`.
 - Everything under `lib/`, `exe/`, `bin/`, `rakelib/` and the golden fixtures is ASCII.
 - No new runtime dependencies: the gemspec's `runtime_dependencies` must stay empty, and the
   gem ships only `lib/`, `exe/`, `man/`, `README.md`, `CHANGELOG.md` and `LICENSE.txt`.
@@ -79,8 +77,8 @@ Each of these fails `rake check` or CI when it is broken.
 
 No tool checks these; a reviewer does.
 
-- Comments explain intent or a constraint, never what the code already says. The presence of a
-  class comment is checked; its usefulness is not.
+- Comments explain why the code is the way it is, never what it does. A comment that restates
+  the code is removed in review.
 - Every change ships with tests. A bug fix starts with a test that fails; a new option or verb
   gets unit tests in `test/unit/commands` and, when it prints something, an exact-output
   assertion. The coverage minimums are the mechanical floor; review judges whether the tests
