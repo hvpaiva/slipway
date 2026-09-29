@@ -246,8 +246,10 @@ class ReleaseTest < ReleaseTestCase
 
   def test_refuses_the_current_version_once_it_is_released
     File.write(File.join(@root, 'CHANGELOG.md'), RELEASED_CHANGELOG.gsub('0.2.0', '0.1.0'))
+    tagged = { 'git ls-remote --tags origin refs/tags/v0.1.0' => "abc123\trefs/tags/v0.1.0\n" }
 
-    assert_equal '0.1.0 is already released (CHANGELOG.md has its heading); pick a greater version', refusal('0.1.0')
+    assert_equal '0.1.0 is already released (CHANGELOG.md has its heading); pick a greater version',
+                 refusal('0.1.0', tagged)
   end
 
   def test_releases_the_version_under_development_while_it_has_no_heading
@@ -302,23 +304,79 @@ class ReleaseTest < ReleaseTestCase
 end
 
 class ReleaseRecoveryTest < ReleaseTestCase
-  def test_a_rerun_after_a_failed_tag_push_names_the_push
+  MERGED = 'gh pr list --head release/v0.2.0 --base main --state merged --json mergeCommit ' \
+           '--jq .[0].mergeCommit.oid // empty'
+  NOT_MERGED = 'CHANGELOG.md has the 0.2.0 heading, but v0.2.0 exists neither locally nor on origin and no pull ' \
+               'request from release/v0.2.0 into main is merged; merge the release pull request first, or remove ' \
+               'the heading'
+
+  def cut
     File.write(File.join(@root, 'CHANGELOG.md'), RELEASED_CHANGELOG)
     File.write(File.join(@root, 'lib/slipway/version.rb'), VERSION_RB.sub('0.1.0', '0.2.0'))
+  end
+
+  def test_a_rerun_after_a_failed_tag_push_names_the_push
+    cut
 
     assert_equal 'v0.2.0 is tagged locally but not pushed; run git push origin v0.2.0',
                  refusal('0.2.0', { 'git tag --list v0.2.0' => "v0.2.0\n" })
-    assert_equal ['git tag --list v0.2.0', 'git ls-remote --tags origin refs/tags/v0.2.0'], @runner.commands
+    assert_equal ['git ls-remote --tags origin refs/tags/v0.2.0', 'git tag --list v0.2.0'], @runner.commands
+  end
+
+  def test_a_rerun_after_a_failed_tag_names_the_merge_commit
+    cut
+
+    assert_equal "v0.2.0 was merged but never tagged; tag the merge commit and push the tag:\n  " \
+                 "git tag -s v0.2.0 -m v0.2.0 def456\n  git push origin v0.2.0",
+                 refusal('0.2.0', { MERGED => "def456\n" })
+    assert_equal ['git ls-remote --tags origin refs/tags/v0.2.0', 'git tag --list v0.2.0', 'git fetch origin --tags',
+                  MERGED], @runner.commands
+  end
+
+  def test_a_dry_run_rerun_names_the_merge_commit_too
+    cut
+
+    assert_includes refusal('0.2.0', { MERGED => "def456\n" }, dry_run: true), 'git tag -s v0.2.0 -m v0.2.0 def456'
+  end
+
+  def test_the_merge_commit_is_looked_up_on_the_release_base
+    cut
+    merged = MERGED.sub('--base main', '--base hotfix')
+
+    assert_includes refusal('0.2.0', { merged => "def456\n" }, branch: 'hotfix'), 'git tag -s v0.2.0 -m v0.2.0 def456'
+    assert_includes @runner.commands, merged
+  end
+
+  def test_a_heading_with_no_tag_and_no_merged_release_is_refused
+    cut
+
+    assert_equal NOT_MERGED, refusal
+    refute_includes @runner.commands, 'git switch -c release/v0.2.0'
+  end
+
+  def test_a_lookup_that_gh_cannot_answer_is_reported
+    cut
+
+    assert_equal "#{MERGED} failed:\nHTTP 401: Bad credentials\n",
+                 refusal('0.2.0', { MERGED => ["HTTP 401: Bad credentials\n", FAILED] })
   end
 
   def test_a_tag_on_origin_leaves_the_version_released
-    File.write(File.join(@root, 'CHANGELOG.md'), RELEASED_CHANGELOG)
-    File.write(File.join(@root, 'lib/slipway/version.rb'), VERSION_RB.sub('0.1.0', '0.2.0'))
+    cut
     tags = { 'git tag --list v0.2.0' => "v0.2.0\n",
              'git ls-remote --tags origin refs/tags/v0.2.0' => "abc123\trefs/tags/v0.2.0\n" }
 
     assert_equal '0.2.0 is already released (CHANGELOG.md has its heading); pick a greater version',
                  refusal('0.2.0', tags)
+    refute_includes @runner.commands, MERGED
+  end
+
+  def test_a_failed_tag_says_the_merge_is_done
+    message = refusal('0.2.0', { 'git tag -s v0.2.0 -m v0.2.0 def456' => ['', FAILED] }, push: true)
+
+    assert_equal 'git tag -s v0.2.0 -m v0.2.0 def456 failed; the pull request is merged; run ' \
+                 'git tag -s v0.2.0 -m v0.2.0 def456, then git push origin v0.2.0', message
+    refute_includes @runner.commands, 'git push origin v0.2.0'
   end
 
   def test_a_failed_tag_push_says_the_merge_is_done
