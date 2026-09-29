@@ -95,12 +95,29 @@ class Release
   def validate_order(comparison)
     raise Error, "#{@version} is lower than the current version #{current_version}" if comparison.negative?
     return unless comparison.zero? && Changelog.headings(changelog).any? { it.version == @version }
+    raise Error, "#{@version} is already released (#{CHANGELOG} has its heading); pick a greater version" if remote_tag?
 
-    # A tag push that failed after the merge leaves the heading on the branch and the tag only here.
-    raise Error, "#{tag} is tagged locally but not pushed; run git push origin #{tag}" if local_tag? && !remote_tag?
+    # A tag or tag push that failed after the merge leaves the heading on the branch and the tag
+    # only here, or nowhere.
+    raise Error, "#{tag} is tagged locally but not pushed; run git push origin #{tag}" if local_tag?
 
-    raise Error, "#{@version} is already released (#{CHANGELOG} has its heading); pick a greater version"
+    raise Error, "#{tag} was merged but never tagged; tag the merge commit and push the tag:\n  " \
+                 "#{tag_command(release_merge_commit)}\n  git push origin #{tag}"
   end
+
+  def release_merge_commit
+    # GitHub made the merge commit, and git tag needs the object in this clone.
+    capture(%w[git fetch origin --tags])
+    sha = capture(['gh', 'pr', 'list', '--head', release_branch, '--base', @branch, '--state', 'merged',
+                   '--json', 'mergeCommit', '--jq', '.[0].mergeCommit.oid // empty']).strip
+    return sha unless sha.empty?
+
+    raise Error, "#{CHANGELOG} has the #{@version} heading, but #{tag} exists neither locally nor on origin and no " \
+                 "pull request from #{release_branch} into #{@branch} is merged; merge the release pull request " \
+                 'first, or remove the heading'
+  end
+
+  def tag_command(sha) = "git tag -s #{tag} -m #{tag} #{sha}"
 
   def validate_checkout
     head = capture(%w[git rev-parse --abbrev-ref HEAD]).strip
@@ -194,7 +211,8 @@ class Release
     step(%w[git fetch origin --tags])
     step(['git', 'switch', @branch])
     step(['git', 'merge', '--ff-only', "origin/#{@branch}"])
-    step(['git', 'tag', '-s', tag, '-m', tag, sha])
+    step(['git', 'tag', '-s', tag, '-m', tag, sha],
+         failure: "the pull request is merged; run #{tag_command(sha)}, then git push origin #{tag}")
     step(['git', 'push', 'origin', tag],
          failure: "the pull request is merged and #{tag} is tagged locally; push it with git push origin #{tag}")
     watch_release

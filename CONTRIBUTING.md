@@ -200,9 +200,12 @@ first release is `bin/release 0.1.0`); the tree is clean, on `main` and equal to
 after `git fetch origin --tags`; the tag `vX.Y.Z` exists neither locally nor on origin;
 `## [Unreleased]` has at least one entry; and the repository is set up (the `release`
 environment with its `v*` policy and the `main` ruleset exist), otherwise it stops and names
-`bundle exec rake github:setup` as the fix. When `CHANGELOG.md` already has the heading and
-the tag exists only locally, a tag push that failed after the merge, it stops and names
-`git push origin vX.Y.Z` instead of asking for a greater version. It then creates the branch `release/vX.Y.Z`, writes
+`bundle exec rake github:setup` as the fix. When `CHANGELOG.md` already has the heading but
+origin has no tag, a release that stopped after the merge, it names what is left instead of
+asking for a greater version: `git push origin vX.Y.Z` when the tag exists locally, or, when the
+release pull request is merged and the tag exists nowhere, `git tag -s vX.Y.Z -m vX.Y.Z` on the
+merge commit that `gh pr list` reports (fetched first, so the command works as printed),
+followed by the push. It then creates the branch `release/vX.Y.Z`, writes
 `lib/slipway/version.rb`, rewrites `CHANGELOG.md` (today's date in UTC on the new heading, an
 empty `## [Unreleased]` above it, the `[Unreleased]` and `[X.Y.Z]` link references, older
 references kept), runs `bundle exec rake generate` so the man pages carry the date, runs
@@ -214,7 +217,8 @@ failure in `rake check` leaves the edits in place for you to inspect.
 With `--push` it continues once the pull request exists: waits for the checks with
 `gh pr checks --watch --fail-fast`, merges with `gh pr merge --merge --delete-branch`, fetches
 `main`, creates the signed annotated tag with `git tag -s vX.Y.Z -m vX.Y.Z` on the merge commit,
-pushes the tag and follows the Release workflow with `gh run watch`. A failed tag push names
+pushes the tag and follows the Release workflow with `gh run watch`. A failed tag names the
+`git tag -s` command for the merge commit and the push; a failed tag push names
 `git push origin vX.Y.Z`; a failed Release run says to rerun the failed jobs, or only
 `github-release` once the gem is on rubygems.org. Without `--push`, review the pull request,
 merge it, and tag the merge commit by hand:
