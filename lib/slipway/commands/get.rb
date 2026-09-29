@@ -45,8 +45,8 @@ module Slipway
         scope.select(kind, names) do |resources|
           next scope.report_none(kind) if resources.empty?
 
-          Printer.new(runtime, context, opts, group_column: scope.all_groups?)
-                 .print(kind, resources, single: names.size == 1)
+          printer = Printer.new(runtime, context, opts, group_column: scope.all_groups?)
+          printer.print(kind, printer.items(kind, resources), single: names.size == 1)
         end
       end
 
@@ -58,34 +58,35 @@ module Slipway
           @group_column = group_column
         end
 
-        def print(kind, resources, single:)
+        # Projects come back examined for every format but name, the one that shows nothing
+        # git answers.
+        def items(kind, resources) = kind.namespaced? && !name? ? examine(resources) : resources
+
+        def print(kind, items, single:)
           case @opts[:output]
-          when Output::NAME then resources.each { @context.puts("#{kind.singular}/#{it.name}") }
-          when *Output::Serializer::STRUCTURED then objects(kind, resources, single:)
-          else table(kind, resources)
+          when Output::NAME then items.each { @context.puts("#{kind.singular}/#{it.name}") }
+          when *Output::Serializer::STRUCTURED then objects(kind, items, single:)
+          else table(kind, items)
           end
         end
 
         private
 
-        def objects(kind, resources, single:)
-          items = if kind.namespaced? then examine(resources).map { Views::Project.object(it) }
-                  else resources.map { Views::Group.object(it, count: count(it)) }
-                  end
-          @context.print(Output::Serializer.render(@opts[:output], items, single:))
+        def objects(kind, items, single:)
+          objects = items.map { kind.namespaced? ? Views::Project.object(it) : group_object(it) }
+          @context.print(Output::Serializer.render(@opts[:output], objects, single:))
         end
 
-        def table(kind, resources)
-          headers, rows, roles, offset = kind.namespaced? ? project_table(resources) : group_table(resources)
+        def table(kind, items)
+          headers, rows, roles, offset = kind.namespaced? ? project_table(items) : group_table(items)
           Output::Table.new(@context, headers:, show_headers: !@opts[:no_headers], roles:, color_offset: offset)
                        .print(rows)
         end
 
         # The GROUP column -A prepends is left out of the color cycle, so the other columns
         # keep the colors they have without -A.
-        def project_table(resources)
+        def project_table(inspections)
           columns = { wide: wide?, group: @group_column, labels: @opts[:show_labels] == true }
-          inspections = examine(resources)
           now = @runtime.clock.call
           [Views::Project.headers(**columns), inspections.map { Views::Project.row(it, now:, **columns) },
            Views::Project::ROLES, @group_column ? 1 : 0]
@@ -99,9 +100,13 @@ module Slipway
 
         def examine(resources) = Base.examine(@runtime, @context, resources)
 
+        def group_object(group) = Views::Group.object(group, count: count(group))
+
         def count(group) = @runtime.store.project_count(group.name)
 
         def wide? = @opts[:output] == Output::WIDE
+
+        def name? = @opts[:output] == Output::NAME
       end
 
       private_constant :Printer
