@@ -1,0 +1,175 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+
+# `get` as a table: columns, flags that add or drop columns, selection and states.
+class GetTest < Minitest::Test
+  include CommandsHelper
+
+  WIDE = <<~TABLE
+    NAME    BRANCH   STATUS   AGE   PATH          HEAD      LAST-COMMIT
+    fresh   main     Unborn   3h    ~/dev/fresh   <none>    <none>
+    hldr    main     Clean    3h    ~/dev/hldr    a1b2c3d   45m
+  TABLE
+  ALL_GROUPS = <<~TABLE
+    GROUP     NAME   BRANCH   STATUS   AGE
+    default   hldr   main     Clean    3h
+    work      job    main     Clean    3h
+  TABLE
+  BROKEN = <<~TABLE
+    NAME     BRANCH   STATUS     AGE
+    gone     <none>   Missing    3h
+    plain    <none>   NotARepo   3h
+    theirs   <none>   Unsafe     3h
+  TABLE
+  PAINTED = "\e[37mhldr\e[0m    \e[36mmain\e[0m     \e[32mClean\e[0m     \e[36m3h\e[0m\n" \
+            "\e[37mnotes\e[0m   \e[36mmain\e[0m     \e[33mDirty\e[0m     \e[36m3h\e[0m\n" \
+            "\e[37mslow\e[0m    \e[90;3m<none>\e[0m   \e[90;3mUnknown\e[0m   \e[36m3h\e[0m\n"
+
+  def test_projects_print_as_a_table_of_the_current_group
+    with_runtime do |runtime|
+      register(runtime, 'hldr', labels: { 'lang' => 'rust' })
+      register(runtime, 'notes', status: DIRTY)
+      register_group(runtime, 'work')
+      register(runtime, 'job', group: 'work')
+      expected = "NAME    BRANCH   STATUS   AGE\nhldr    main     Clean    3h\nnotes   main     Dirty    3h\n"
+
+      assert_equal [0, expected, ''], run_commands('get', 'projects', runtime:)
+      assert_equal expected, run_commands('get', 'proj', runtime:)[1]
+    end
+  end
+
+  def test_wide_adds_path_head_and_last_commit_age
+    with_runtime do |runtime|
+      register(runtime, 'hldr')
+      register(runtime, 'fresh', status: UNBORN)
+
+      assert_equal [0, WIDE, ''], run_commands('get', 'projects', '-o', 'wide', runtime:)
+    end
+  end
+
+  def test_all_groups_prepends_the_group_column_and_spans_every_group
+    with_runtime do |runtime|
+      register_group(runtime, 'work')
+      register(runtime, 'hldr')
+      register(runtime, 'job', group: 'work')
+
+      assert_equal [0, ALL_GROUPS, ''], run_commands('get', 'projects', '-A', runtime:)
+      assert_equal ALL_GROUPS, run_commands('get', 'projects', '--all-groups', '-n', 'work', runtime:)[1]
+    end
+  end
+
+  def test_the_group_flag_selects_another_group
+    with_runtime do |runtime|
+      register_group(runtime, 'work')
+      register(runtime, 'hldr')
+      register(runtime, 'job', group: 'work', status: DETACHED)
+
+      assert_equal "NAME   BRANCH       STATUS     AGE\njob    (detached)   Detached   3h\n",
+                   run_commands('get', 'projects', '-n', 'work', runtime:)[1]
+    end
+  end
+
+  def test_show_labels_appends_the_labels_column
+    with_runtime do |runtime|
+      register(runtime, 'hldr', labels: { 'lang' => 'rust', 'app' => 'web' })
+      register(runtime, 'notes')
+      expected = "NAME    BRANCH   STATUS   AGE   LABELS\nhldr    main     Clean    3h    app=web,lang=rust\n" \
+                 "notes   main     Clean    3h    <none>\n"
+
+      assert_equal [0, expected, ''], run_commands('get', 'projects', '--show-labels', runtime:)
+    end
+  end
+
+  def test_no_headers_drops_the_header_line
+    with_runtime do |runtime|
+      register(runtime, 'hldr')
+
+      assert_equal [0, "hldr   main   Clean   3h\n", ''], run_commands('get', 'projects', '--no-headers', runtime:)
+    end
+  end
+
+  def test_the_selector_filters_by_labels
+    with_runtime do |runtime|
+      register(runtime, 'hldr', labels: { 'lang' => 'rust' })
+      register(runtime, 'notes', labels: { 'lang' => 'md' })
+      register(runtime, 'plain')
+
+      assert_equal "NAME   BRANCH   STATUS   AGE\nhldr   main     Clean    3h\n",
+                   run_commands('get', 'projects', '-l', 'lang=rust', runtime:)[1]
+      assert_equal "NAME    BRANCH   STATUS   AGE\nnotes   main     Clean    3h\nplain   main     Clean    3h\n",
+                   run_commands('get', 'projects', '--selector', 'lang!=rust', runtime:)[1]
+      assert_equal "NAME    BRANCH   STATUS   AGE\nplain   main     Clean    3h\n",
+                   run_commands('get', 'projects', '-l', '!lang', runtime:)[1]
+    end
+  end
+
+  def test_names_select_specific_projects_in_the_given_order
+    with_runtime do |runtime|
+      register(runtime, 'hldr')
+      register(runtime, 'notes')
+      register(runtime, 'plain')
+
+      assert_equal "NAME    BRANCH   STATUS   AGE\nplain   main     Clean    3h\nhldr    main     Clean    3h\n",
+                   run_commands('get', 'projects', 'plain', 'hldr', runtime:)[1]
+    end
+  end
+
+  def test_missing_and_broken_paths_show_their_state_with_no_branch
+    with_runtime do |runtime|
+      register(runtime, 'gone', status: nil)
+      register_failing(runtime, 'plain', Slipway::Git::NotARepository)
+      register_failing(runtime, 'theirs', Slipway::Git::UnsafeRepository)
+
+      assert_equal [0, BROKEN, ''], run_commands('get', 'projects', runtime:)
+    end
+  end
+
+  def test_unknown_states_warn_once_per_cause_before_the_table
+    with_runtime do |runtime|
+      register_failing(runtime, 'one', Slipway::Git::NotInstalled)
+      register_failing(runtime, 'two', Slipway::Git::NotInstalled)
+      register_failing(runtime, 'slow', Slipway::Git::Timeout)
+      expected = "NAME   BRANCH   STATUS    AGE\none    <none>   Unknown   3h\nslow   <none>   Unknown   3h\n" \
+                 "two    <none>   Unknown   3h\n"
+
+      status, out, err = run_commands('get', 'projects', runtime:)
+
+      assert_equal [0, expected], [status, out]
+      assert_equal "warning: git executable \"git\" not found on PATH\nwarning: git did not finish within 10 seconds\n",
+                   err
+    end
+  end
+
+  def test_color_paints_status_by_state_and_the_warning_prefix
+    with_runtime do |runtime|
+      register(runtime, 'hldr')
+      register(runtime, 'notes', status: DIRTY)
+      register_failing(runtime, 'slow', Slipway::Git::Timeout)
+
+      _, out, err = run_commands('get', 'projects', '--no-headers', '--color', runtime:)
+
+      assert_equal PAINTED, out
+      assert_equal "\e[33mwarning:\e[0m git did not finish within 10 seconds\n", err
+    end
+  end
+
+  def test_usage_and_help_follow_the_registry
+    with_runtime do |runtime|
+      status, out, err = run_commands('get', '--help', runtime:)
+      missing = run_commands('get', runtime:)
+
+      assert_equal [0, ''], [status, err]
+      assert_includes out, "Display one or many resources.\n\nPrints a table"
+      assert_includes out, "Usage:\n  slipway get TYPE [NAME...] [flags]\n"
+      assert_includes out, '  -A, --all-groups'
+      assert_equal [2, '', "error: missing required argument \"TYPE\"\nSee 'slipway get --help' for usage.\n"], missing
+    end
+  end
+
+  private
+
+  def with_runtime
+    with_sandbox { |env| yield sandbox_runtime(env) }
+  end
+end

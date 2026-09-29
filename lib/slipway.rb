@@ -17,6 +17,7 @@ require_relative 'slipway/output'
 require_relative 'slipway/runtime'
 require_relative 'slipway/inspector'
 require_relative 'slipway/views'
+require_relative 'slipway/commands'
 
 # A kubectl-style registry for the git repositories on your machine.
 module Slipway
