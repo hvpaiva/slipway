@@ -8,10 +8,37 @@ module GitFixtures
 
   # Each state is built by the private method of the same name.
   STATES = %w[clean staged unstaged untracked ahead behind diverged detached unborn conflicted gone stash
-              plain_dir].freeze
+              plain_dir stale stale_untracked_overlap index_lock].freeze
 
-  # The tracking states (ahead, behind, diverged, gone) also create a bare origin next to
-  # +dir+, named "<dir>-origin.git".
+  # States in which origin moved on without +dir+ knowing: a second clone, "<dir>-other", pushed
+  # the commit, so only a fetch shows +dir+ behind.
+  module Stale
+    private
+
+    def stale(dir)
+      synced(dir)
+      other = "#{dir}-other"
+      git!(File.dirname(dir), 'clone', '-q', '--', "#{dir}-origin.git", other)
+      commit(other, 'b.txt', "b\n", 'remote work')
+      git!(other, 'push', '-q', 'origin', 'main')
+    end
+
+    # The commit the fetch brings adds b.txt, which already exists here untracked.
+    def stale_untracked_overlap(dir)
+      stale(dir)
+      write(dir, 'b.txt', "local b\n")
+    end
+
+    # A lock another git process would hold while it writes the index.
+    def index_lock(dir)
+      stale(dir)
+      write(File.join(dir, '.git'), 'index.lock', '')
+    end
+  end
+  include Stale
+
+  # The tracking states (ahead, behind, diverged, gone and the stale ones) also create a bare
+  # origin next to +dir+, named "<dir>-origin.git".
   def build_repo(dir, state)
     unless STATES.include?(state)
       raise ArgumentError, "unknown fixture state #{state.inspect} (known: #{STATES.join(', ')})"

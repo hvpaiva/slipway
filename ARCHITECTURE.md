@@ -128,9 +128,10 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   registry through `apply -f -`, and reads kubectl tables back cell by cell. Repositories come
   from `GitFixtures#build_repo`, which builds real repositories in named states (`clean`,
   `staged`, `unstaged`, `untracked`, `ahead`, `behind`, `diverged`, `detached`, `unborn`,
-  `conflicted`, `gone`, `stash`, `plain_dir`) with a pinned environment and dates, so the same
-  recipe yields the same commit ids on every machine. The git adapter and the inspector are
-  unit-tested against the same fixtures with the real `git`.
+  `conflicted`, `gone`, `stash`, `plain_dir`, and `stale`, `stale_untracked_overlap` and
+  `index_lock`, whose origin holds a commit only a fetch reveals) with a pinned environment and
+  dates, so the same recipe yields the same commit ids on every machine. The git adapter and
+  the inspector are unit-tested against the same fixtures with the real `git`.
 - Golden tests under `test/golden` compare the help page of every command, the three completion
   scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`, and
   `test/unit/cli/manpage_test.rb` compares two pages of a test registry with `test/fixtures/man`;
