@@ -140,9 +140,9 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
 Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the
 single git spawner and YAML writer, no direct stdout or stderr, no runtime dependencies, the
 files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of `CHANGELOG.md`) and
-`test/unit/readme_test.rb` (the README tables against the code). Tests for the development
-code live under `test/unit/dev` and never run git or `gh`: the release and GitHub tests hand
-the code a fake command runner.
+`test/unit/readme_test.rb` (the README tables and configuration example against the code).
+Tests for the development code live under `test/unit/dev` and never run git or `gh`: the
+release and GitHub tests hand the code a fake command runner.
 
 ## Generated artifacts
 

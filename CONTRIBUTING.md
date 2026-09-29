@@ -66,8 +66,9 @@ Each of these fails `rake check` or CI when it is broken.
 - `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer, and
   nothing under `lib/` writes to stdout or stderr except `cli/context.rb`.
 - The man page ENVIRONMENT section and the README variable table list every variable the code
-  reads except `HOME` and `PATH`, and the README tables for STATUS words, exit statuses and
-  rake tasks match the code.
+  reads except `HOME` and `PATH`, the README tables for STATUS words, exit statuses and rake
+  tasks match the code, and the README configuration example sets every config key and no
+  other.
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
   release, dated `YYYY-MM-DD` and ordered newest first by version and date, and a link
   reference for every heading and a heading for every link reference.

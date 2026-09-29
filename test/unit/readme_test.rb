@@ -45,6 +45,10 @@ class ReadmeTest < Minitest::Test
     assert_equal Slipway::CLI::Manpage::EXIT_STATUSES.keys, first_cells('| Status | Meaning |')
   end
 
+  def test_configuration_example_sets_exactly_the_config_keys
+    assert_equal Slipway::Config::KEYS.sort, yaml_block('## Configuration').keys.sort
+  end
+
   def test_every_documented_task_exists
     defined = self.class.rake.tasks.map(&:name)
 
@@ -101,6 +105,14 @@ class ReadmeTest < Minitest::Test
     raise "README.md has no table headed #{header}" unless start
 
     lines.drop(start + 2).take_while { it.start_with?('|') }
+  end
+
+  def yaml_block(heading)
+    start = lines.index(heading)
+    raise "README.md has no #{heading} section" unless start
+
+    block = lines.drop(start).drop_while { it != '```yaml' }.drop(1).take_while { it != '```' }
+    Psych.safe_load(block.join("\n"))
   end
 
   def documented_tasks
