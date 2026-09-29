@@ -60,8 +60,8 @@ Each of these fails `rake check` or CI when it is broken.
   gem ships only `lib/`, `exe/`, `man/`, `README.md`, `CHANGELOG.md` and `LICENSE.txt`.
 - Coverage stays above the line and branch minimums in the Rakefile, overall and per file.
 - Dependencies point one way: the command layer under `cli/` and the domain files never
-  require commands, views, the runtime or the inspector, and `cli/` requires one file outside
-  itself (`cli/errors.rb` requires `error.rb`). [ARCHITECTURE.md](ARCHITECTURE.md#layers)
+  require commands, views, the runtime, the inspector or the pool, and `cli/` requires one file
+  outside itself (`cli/errors.rb` requires `error.rb`). [ARCHITECTURE.md](ARCHITECTURE.md#layers)
   has the full rule.
 - `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer, and
   nothing under `lib/` writes to stdout or stderr except `cli/context.rb`.

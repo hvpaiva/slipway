@@ -2,6 +2,7 @@
 
 require_relative 'git'
 require_relative 'paths'
+require_relative 'pool'
 require_relative 'state'
 
 module Slipway
@@ -23,14 +24,14 @@ module Slipway
     DEFAULT_WORKERS = 8
     UNKNOWN = 'Unknown'
 
-    attr_reader :workers
-
     def initialize(git:, clock:, home: Dir.home, workers: DEFAULT_WORKERS)
       @git = git
       @clock = clock
       @home = home
-      @workers = workers
+      @pool = Pool.new(workers:)
     end
+
+    def workers = @pool.workers
 
     # A relative path has no directory to be relative to and a path that is not a directory
     # needs no git; both are Missing. Any other failure, git's or not, becomes the
@@ -48,12 +49,8 @@ module Slipway
     end
 
     def examine_all(projects)
-      results = Array.new(projects.size)
-      queue = Queue.new
-      projects.each_with_index { |project, index| queue << [project, index] }
-      queue.close
-      Array.new([@workers, projects.size].min) { worker(queue, results) }.each(&:join)
-      Batch.new(inspections: results.freeze, warnings: collect_warnings(results))
+      results = @pool.map(projects) { examine(it) }.freeze
+      Batch.new(inspections: results, warnings: collect_warnings(results))
     end
 
     private
@@ -62,19 +59,6 @@ module Slipway
       status = @git.status(path)
       commit = status.unborn? ? nil : @git.last_commit(path)
       { status:, commit:, remote: @git.remote_url(path), state: State.derive(status) }
-    end
-
-    # Queue#pop returns nil once the queue is closed and empty. Nothing is expected to escape
-    # examine, and if something does the main thread reports it once instead of every worker
-    # printing its own trace.
-    def worker(queue, results)
-      Thread.new do
-        Thread.current.report_on_exception = false
-        while (job = queue.pop)
-          project, index = job
-          results[index] = examine(project)
-        end
-      end
     end
 
     def collect_warnings(results)
