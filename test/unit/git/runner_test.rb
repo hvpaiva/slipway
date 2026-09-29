@@ -120,10 +120,31 @@ class GitRunnerTest < Minitest::Test
       thread = Thread.new { @runner.run(@root, 'status') }
       thread.report_on_exception = false
       sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       thread.raise(Interrupt)
 
       assert_raises(Interrupt) { thread.join }
+      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
       assert gone?(Integer(File.read(pids))), 'git survived the interrupt'
+    end
+  end
+
+  def test_an_interrupted_run_kills_a_git_that_survives_term
+    fifo = File.join(@root, 'git.pid')
+    File.mkfifo(fifo)
+    bin = fake_git(@root, %(trap '' TERM; echo $$ > "#{fifo}"; exec sleep 30))
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      running = Thread.new { @runner.run(@root, 'status') }
+      running.report_on_exception = false
+      pid = Integer(File.read(fifo))
+      Thread.pass until running.stop?
+      running.raise(Interrupt)
+
+      assert_raises(Interrupt, 'the run waited for a git that ignores TERM') { running.join(5) }
+      assert gone?(pid), 'git outlived an interrupted run'
+    ensure
+      Process.kill('KILL', pid) if pid && !gone?(pid)
     end
   end
 
@@ -141,6 +162,25 @@ class GitRunnerTest < Minitest::Test
         assert_raises(Interrupt) { thread.join(5) }
         assert_equal [-Integer(File.read(pids))], refused
       end
+    end
+  end
+
+  def test_a_run_killed_as_git_starts_still_stops_it
+    bin = fake_git(@root, 'exec sleep 30')
+    started = Queue.new
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      gate = Queue.new
+      running = Thread.new { gate.pop && @runner.run(@root, 'status') }
+      killing_after_detach(running, started) do
+        gate << true
+        running.join(5)
+      end
+      pid = started.pop
+
+      assert gone?(pid), 'git survived a kill that landed before the block'
+    ensure
+      Process.kill('KILL', pid) if pid && !gone?(pid)
     end
   end
 
@@ -168,6 +208,18 @@ class GitRunnerTest < Minitest::Test
   ensure
     Process.singleton_class.remove_method(:kill)
     Process.define_singleton_method(:kill, kill)
+  end
+
+  # The kill is queued the moment Process.detach returns, before Open3 yields to the block, and
+  # joining the killer is an interrupt check, so an unmasked kill lands right there.
+  def killing_after_detach(target, started, &)
+    trace = TracePoint.new(:c_return) do |call|
+      next unless call.method_id == :detach
+
+      started << call.return_value.pid
+      Thread.new { target.kill }.join
+    end
+    trace.enable(target_thread: target, &)
   end
 
   # A killed grandchild lingers as a zombie until its new parent reaps it, so poll for a moment.

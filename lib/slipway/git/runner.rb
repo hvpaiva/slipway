@@ -10,6 +10,7 @@ module Slipway
 
       DEFAULT_BINARY = 'git'
       DEFAULT_TIMEOUT = 10.0
+      TERM_GRACE = 1.0
       # Shell convention for a process ended by a signal: 128 plus the signal number.
       SIGNAL_STATUS_BASE = 128
       CEILING_VARIABLE = 'GIT_CEILING_DIRECTORIES'
@@ -44,20 +45,29 @@ module Slipway
       def run(path, *)
         require 'open3'
         directory = File.expand_path(path)
-        Open3.popen3(environment(directory), @binary, '-C', directory, *, pgroup: true) do |stdin, stdout, stderr, wait|
-          stdin.close
-          readers = [stdout, stderr].map { reader(it) }
-          terminate(wait, readers, directory) unless wait.join(@timeout)
-          out, err = readers.map { scrub(it.value) }
-          Result.new(status: exit_status(wait.value), out:, err:)
-        ensure
-          reap(wait) if wait.alive?
+        # Open3 spawns git before this block's ensure is armed, so an interrupt or a Thread#kill
+        # (not an Exception, hence Object) landing in between would leave it running; both are
+        # held until the block runs.
+        Thread.handle_interrupt(Object => :never) do
+          Open3.popen3(environment(directory), @binary, '-C', directory, *, pgroup: true) do |stdin, *pipes, wait|
+            Thread.handle_interrupt(Object => :immediate) { collect(stdin, pipes, wait, directory) }
+          ensure
+            reap(wait) if wait.alive?
+          end
         end
       rescue Errno::ENOENT
         raise NotInstalled.new(directory, binary: @binary)
       end
 
       private
+
+      def collect(stdin, pipes, wait, directory)
+        stdin.close
+        readers = pipes.map { reader(it) }
+        terminate(wait, readers, directory) unless wait.join(@timeout)
+        out, err = readers.map { scrub(it.value) }
+        Result.new(status: exit_status(wait.value), out:, err:)
+      end
 
       # Discovery must not climb above the registered directory, or a subdirectory of some
       # other repository would report that repository's state. Git compares real paths, so
@@ -87,8 +97,14 @@ module Slipway
         raise Timeout.new(directory, seconds: @timeout)
       end
 
+      # This runs with interrupts held, and the thread Open3 waits for git on inherited that
+      # mask, so neither another interrupt nor process exit can end them while git lives; a git
+      # that survives TERM is killed rather than waited for.
       def reap(wait)
         signal(wait, 'TERM')
+        return if wait.join(TERM_GRACE)
+
+        signal(wait, 'KILL')
         wait.join
       end
 
