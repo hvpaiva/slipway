@@ -1,0 +1,11 @@
+Inspect the configuration that slipway resolved from flags, environment variables and the configuration file.
+
+Available Commands:
+  view            Display the configuration in effect
+  path            Display the path of the configuration file
+
+Usage:
+  slipway config COMMAND
+
+Use "slipway config <command> --help" for more information about a given command.
+Use "slipway --help" for a list of global options (applies to all commands).

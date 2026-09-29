@@ -1,0 +1,31 @@
+A kubectl-style registry for the git repositories on your machine
+
+Basic Commands:
+  get             Display one or many resources
+  describe        Show details of a specific resource or group of resources
+  create          Create a resource by name
+  apply           Apply a configuration to a resource by file name or stdin
+  delete          Delete resources by type and name
+  edit            Edit a resource from the default editor
+  label           Update the labels on a resource
+
+Settings Commands:
+  config          Inspect the configuration in effect
+  completion      Output shell completion code for the specified shell (bash, zsh, fish)
+  man             Show the manual page of a command
+
+Other Commands:
+  help            Help about any command
+  version         Print the client version
+
+Options:
+      --color[=WHEN]   When to use color in the output (auto unless configured). One of: auto, always, never.
+  -n, --group NAME     The group scope for this request.
+      --config PATH    Path to the configuration file.
+  -h, --help           Print help and exit.
+  -V, --version        Print the version and exit.
+
+Usage:
+  slipway [flags] COMMAND [ARGS...]
+
+Use "slipway <command> --help" for more information about a given command.

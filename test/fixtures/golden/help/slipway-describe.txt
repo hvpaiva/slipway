@@ -1,0 +1,25 @@
+Show details of a specific resource or group of resources.
+
+Print a detailed description of the selected resources, including the state of the repository at the registered path. You may select a single object by name, all objects of that type, or use a label selector.
+
+Examples:
+  # Describe a project
+  slipway describe project hldr
+
+  # Describe every project in the work group
+  slipway describe projects -n work
+
+  # Describe the projects labeled lang=rust
+  slipway describe projects -l lang=rust
+
+  # Describe a group
+  slipway describe group work
+
+Options:
+  -l, --selector EXPR   Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
+  -A, --all-groups      If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
+
+Usage:
+  slipway describe TYPE [NAME...] [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

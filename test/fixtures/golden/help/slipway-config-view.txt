@@ -1,0 +1,15 @@
+Display the configuration in effect.
+
+Prints every setting as YAML after applying the precedence flag, then SLIPWAY_* environment variable, then configuration file, then built-in default. The first line names the configuration file that was consulted and says so when it does not exist.
+
+Examples:
+  # Show the settings in effect
+  slipway config view
+
+  # Show the settings another file would give
+  slipway config view --config ~/work/slipway.yaml
+
+Usage:
+  slipway config view
+
+Use "slipway --help" for a list of global options (applies to all commands).

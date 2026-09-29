@@ -1,0 +1,29 @@
+Create a resource by name.
+
+A project registers the git repository at --path in the current group, which must exist unless it is the default group. A group is created empty and holds the projects you register with --group later.
+
+Use --dry-run=client to check the arguments without writing anything.
+
+Examples:
+  # Register the repository at ~/dev/hldr as a project in the current group
+  slipway create project hldr --path ~/dev/hldr
+
+  # Register a project in the work group with two labels
+  slipway create project api --path ~/work/api -n work --label lang=go --label tier=api
+
+  # Create a group with a description
+  slipway create group work --description "Projects for the day job"
+
+  # Check the arguments without writing the project
+  slipway create project hldr --path ~/dev/hldr --dry-run=client
+
+Options:
+      --path DIR           Directory of the git repository to register; required for projects and stored as written.
+      --description TEXT   A short description of the resource.
+      --label KEY=VALUE    A label to set on the new resource; may be repeated.
+      --dry-run STRATEGY   If client, only print what would change without writing anything. One of: none, client. (default "none")
+
+Usage:
+  slipway create TYPE NAME [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

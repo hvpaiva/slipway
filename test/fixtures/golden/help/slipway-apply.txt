@@ -1,0 +1,27 @@
+Apply a configuration to a resource by file name or stdin.
+
+The resource name must be specified in the manifest. A resource is created when it does not exist yet, configured when its manifest differs from the one stored, and reported unchanged otherwise. A directory applies every *.yaml and *.yml file it holds, sorted by name and without descending into subdirectories. A project manifest without metadata.group lands in the current group.
+
+YAML is accepted, with several documents per file. Documents are applied in order, so a group may be created by the document before the projects that use it.
+
+Examples:
+  # Apply the configuration in hldr.yaml to a project
+  slipway apply -f hldr.yaml
+
+  # Apply every manifest in a directory
+  slipway apply -f ./projects
+
+  # Apply the YAML passed into stdin
+  slipway apply -f - < hldr.yaml
+
+  # Show what would change without writing anything
+  slipway apply -f hldr.yaml --dry-run=client
+
+Options:
+  -f, --filename FILE      The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '-' reads stdin. (required)
+      --dry-run STRATEGY   If client, only print what would change without writing anything. One of: none, client. (default "none")
+
+Usage:
+  slipway apply [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

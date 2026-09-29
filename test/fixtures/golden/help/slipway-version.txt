@@ -1,0 +1,10 @@
+Print the version of slipway, the Ruby it runs on and the platform.
+
+Examples:
+  # Print the version
+  slipway version
+
+Usage:
+  slipway version
+
+Use "slipway --help" for a list of global options (applies to all commands).

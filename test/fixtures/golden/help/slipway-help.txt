@@ -1,0 +1,11 @@
+Help provides help for any command in the application.
+Type slipway help [path to command] for full details.
+
+Examples:
+  # Show the help of a nested command
+  slipway help config view
+
+Usage:
+  slipway help [COMMAND...]
+
+Use "slipway --help" for a list of global options (applies to all commands).

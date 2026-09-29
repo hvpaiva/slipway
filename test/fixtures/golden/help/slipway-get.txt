@@ -1,0 +1,33 @@
+Display one or many resources.
+
+Prints a table of the most important information about the specified resources. You can filter the list using a label selector and the --selector flag. Projects are listed in the current group unless you pass --all-groups.
+
+Use -o wide to add the path, the head commit and the age of the last commit of each project, and -o json or -o yaml for the full object with its status.
+
+Examples:
+  # List all projects in the current group
+  slipway get projects
+
+  # List all projects in every group, with the path and last commit
+  slipway get projects -A -o wide
+
+  # List a single project in YAML output format
+  slipway get project hldr -o yaml
+
+  # List the projects labeled lang=rust
+  slipway get projects -l lang=rust
+
+  # List every group
+  slipway get groups
+
+Options:
+  -o, --output FORMAT   Output format. One of: table, wide, json, yaml, name. (default "table")
+  -l, --selector EXPR   Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
+  -A, --all-groups      If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
+      --no-headers      When using the default output format, don't print headers.
+      --show-labels     When printing, show all labels as the last column.
+
+Usage:
+  slipway get TYPE [NAME...] [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

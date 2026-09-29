@@ -1,0 +1,21 @@
+Show the manual page of slipway or of one of its commands with man(1).
+The pages ship with the gem; --install copies them where man-db looks for user pages.
+
+Examples:
+  # Read the page of a command
+  slipway man get
+
+  # Install every page for man(1)
+  slipway man --install
+
+  # Print the bundled page directory
+  slipway man --path
+
+Options:
+      --path            Print the directory of the bundled pages and exit.
+      --install[=DIR]   Copy every page into DIR, a man1 directory, or into ${XDG_DATA_HOME:-~/.local/share}/man/man1.
+
+Usage:
+  slipway man [COMMAND...] [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).
