@@ -68,8 +68,9 @@ Each of these fails `rake check` or CI when it is broken.
 - The man page ENVIRONMENT section and the README variable table list every variable the code
   reads except `HOME` and `PATH`, and the README tables for STATUS words, exit statuses and
   rake tasks match the code.
-- `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, release headings
-  dated `YYYY-MM-DD` and ordered newest first, a link reference for every heading.
+- `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
+  release, dated `YYYY-MM-DD` and ordered newest first by version and date, and a link
+  reference for every heading and a heading for every link reference.
 - Spelling, with `typos` over source and docs; the workflows, with `zizmor`; the links and
   anchors in the guides, with `lychee`.
 

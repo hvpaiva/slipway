@@ -89,6 +89,20 @@ class ChangelogTest < Minitest::Test
                  problems(text, version: '1.1.0').first(3)
   end
 
+  def test_releases_are_unique_descend_by_version_and_every_reference_has_a_heading
+    text = RELEASED.sub('## [1.1.0] - 2026-11-02', '## [1.0.1] - 2026-11-02')
+                   .sub('## [1.0.1] - 2026-11-02 [YANKED]', '## [1.1.0] - 2026-11-02 [YANKED]')
+                   .sub('compare/v1.1.0...HEAD', 'compare/v1.0.1...HEAD')
+                   .sub('## [1.0.0] - 2026-10-01', "## [1.0.0] - 2026-10-01\n\n## [1.0.0] - 2026-10-01")
+                   .sub("[1.0.0]: #{REPOSITORY}", "[0.9.0]: #{REPOSITORY}/releases/tag/v0.9.0\n[1.0.0]: #{REPOSITORY}")
+
+    assert_equal ['[1.0.0] has 2 headings, expected one',
+                  '## [1.1.0] - 2026-11-02 [YANKED] is not older than the release above it',
+                  '## [1.0.0] - 2026-10-01 is not older than the release above it',
+                  '[0.9.0] has no heading'],
+                 problems(text, version: '1.0.1')
+  end
+
   def test_the_introduction_and_the_trailing_references_are_required
     text = RELEASED.sub('# Changelog', '# Changes').sub("[1.0.0]: #{REPOSITORY}/releases/tag/v1.0.0\n",
                                                         "\n[1.0.0]: #{REPOSITORY}/releases/tag/v1.0.0\nThe end.\n")
@@ -118,7 +132,13 @@ class ChangelogTest < Minitest::Test
     found << "the first section is #{first}, expected #{UNRELEASED_HEADING}" if first != UNRELEASED_HEADING
     found << "no [#{UNRELEASED}] heading" if count.zero?
     found << "#{count} [#{UNRELEASED}] headings, expected exactly one" if count > 1
-    found + release_headings(headings).reject { release(it) }.map { "#{it} is not ## [x.y.z] - YYYY-MM-DD" }
+    found + duplicate_problems(headings) +
+      release_headings(headings).reject { release(it) }.map { "#{it} is not ## [x.y.z] - YYYY-MM-DD" }
+  end
+
+  def duplicate_problems(headings)
+    labels = release_headings(headings).filter_map { HEADING.match(it)&.[](:label) }
+    labels.tally.select { |_, count| count > 1 }.map { |label, count| "[#{label}] has #{count} headings, expected one" }
   end
 
   def date_problems(headings)
@@ -126,7 +146,15 @@ class ChangelogTest < Minitest::Test
     order = parsed.select(&:last).each_cons(2).filter_map do |(_, newer), (heading, older)|
       "#{heading} is newer than the release above it" if older > newer
     end
-    order + parsed.reject(&:last).map { "#{it.first} has an invalid date" }
+    order + version_order_problems(headings) + parsed.reject(&:last).map { "#{it.first} has an invalid date" }
+  end
+
+  # Two releases on one day are ordered by version alone, which the dates cannot check.
+  def version_order_problems(headings)
+    versions = release_headings(headings).select { release(it) }.map { [it, Gem::Version.new(HEADING.match(it)[:label])] }
+    versions.each_cons(2).filter_map do |(_, newer), (heading, older)|
+      "#{heading} is not older than the release above it" unless older < newer
+    end
   end
 
   def dates(headings)
@@ -150,9 +178,10 @@ class ChangelogTest < Minitest::Test
     releases = labels.grep(VERSION)
     unreleased = releases.empty? ? "#{REPOSITORY}/commits/main" : "#{REPOSITORY}/compare/v#{releases.first}...HEAD"
     expected = { UNRELEASED => unreleased, **releases.to_h { [it, "#{REPOSITORY}/releases/tag/v#{it}"] } }
-    expected.filter_map do |label, url|
+    wrong = expected.filter_map do |label, url|
       "[#{label}] links to #{urls[label]}, expected #{url}" if urls.key?(label) && urls[label] != url
     end
+    (urls.keys - labels).map { "[#{it}] has no heading" } + wrong
   end
 
   def version_problems(headings, version)
