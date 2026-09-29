@@ -11,11 +11,14 @@ module Slipway
 
       # +headers+ names the columns. +roles+, when given, is called with the header and the
       # plain cell text and may return a theme role that replaces the column color.
-      def initialize(context, headers:, show_headers: true, roles: nil)
+      # +color_offset+ is how many leading columns to leave out of the color cycle, so a
+      # GROUP column prepended by -A does not recolor the columns that follow it.
+      def initialize(context, headers:, show_headers: true, roles: nil, color_offset: 0)
         @context = context
         @headers = headers
         @show_headers = show_headers
         @roles = roles
+        @color_offset = color_offset
       end
 
       # Every line of the table, each ending in a newline; empty when there is nothing to show.
@@ -27,13 +30,13 @@ module Slipway
         lines.map { "#{it}\n" }.join
       end
 
-      # Writes the rendered table to the context's stdout.
+      # Renders and writes in one call, so callers hold no context of their own for one table.
       def print(rows) = @context.print(render(rows))
 
       private
 
       def text(value)
-        value = value.to_s
+        value = Output.plain(value)
         value.empty? ? NONE : value
       end
 
@@ -63,7 +66,7 @@ module Slipway
         role = @roles&.call(@headers[index], cell)
         return @context.paint(role, cell) if role
 
-        @context.style.paint_cycle(:table_columns, index, cell)
+        @context.style.paint_cycle(:table_columns, index - @color_offset, cell)
       end
     end
   end

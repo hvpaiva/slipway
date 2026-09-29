@@ -15,7 +15,7 @@ class BaseTest < Minitest::Test
     end
 
     def run(runtime, context, args, opts)
-      kind = scope(runtime, opts).kind(args.first)
+      kind = scope(runtime, context, opts).kind(args.first)
       result_line(context, kind, args[1], 'created', :create_created, dry_run: opts[:dry_run] == 'client')
     end
   end
@@ -59,7 +59,7 @@ class BaseTest < Minitest::Test
   def test_shared_options_carry_kubectl_keys_defaults_and_enums
     options = Slipway::Commands::Options
 
-    assert_equal [:output, 'o', 'table', Slipway::Output::Serializer::FORMATS],
+    assert_equal [:output, 'o', 'table', Slipway::Output::FORMATS],
                  [options::OUTPUT.key, options::OUTPUT.short, options::OUTPUT.default, options::OUTPUT.enum]
     assert_equal %i[selector all_groups no_headers show_labels dry_run],
                  [options::SELECTOR, options::ALL_GROUPS, options::NO_HEADERS, options::SHOW_LABELS,
@@ -72,7 +72,7 @@ class BaseTest < Minitest::Test
   def test_type_positional_completes_the_plural_type_words_with_descriptions
     candidates = Slipway::Commands::Options::TYPE.candidates([])
 
-    assert_equal Slipway::Resources.plurals, candidates.keys
+    assert_equal Slipway::Resources::KINDS.map(&:plural), candidates.keys
     assert_equal ['Registered git repositories', 'Namespaces that hold projects'], candidates.values
     assert_nil Slipway::Commands::Options::TYPE.enum
   end

@@ -47,7 +47,7 @@ class DescribeIntegrationTest < Minitest::Test
     Path:         ~/dev/gone
     Description:  <none>
     Status:       Missing
-    Repository:   <home>/dev/gone: no such directory
+    Repository:   no such directory
     Last Commit:  <none>
 
     Name:         plain
@@ -58,7 +58,7 @@ class DescribeIntegrationTest < Minitest::Test
     Path:         ~/dev/plain
     Description:  <none>
     Status:       NotARepo
-    Repository:   <home>/dev/plain: not a git repository
+    Repository:   not a git repository
     Last Commit:  <none>
 
     Name:         unborn

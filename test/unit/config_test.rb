@@ -125,8 +125,8 @@ class ConfigTest < Minitest::Test
       assert_file_error '"theme" must be one of dark, light', env, "theme: solarized\n"
       assert_file_error '"editor" must be a string', env, "editor: [vim]\n"
       assert_file_error '"editor" must be a string', env, "editor: 3\n"
-      assert_file_error '"group" must be a lowercase name of letters, digits and dashes', env, "group: Work\n"
-      assert_file_error '"group" must be a lowercase name of letters, digits and dashes', env, "group: 7\n"
+      assert_file_error "\"group\" must be a valid group name: #{Slipway::Names::RULE}", env, "group: Work\n"
+      assert_file_error "\"group\" must be a valid group name: #{Slipway::Names::RULE}", env, "group: 7\n"
     end
   end
 
@@ -136,9 +136,9 @@ class ConfigTest < Minitest::Test
 
       assert_equal '3d-viewer', load(env).group
 
-      assert_file_error '"group" must be a lowercase name of letters, digits and dashes', env, "group: -lead\n"
-      assert_file_error '"group" must be a lowercase name of letters, digits and dashes', env, "group: a.b\n"
-      assert_file_error '"group" must be a lowercase name of letters, digits and dashes', env, "group: #{'a' * 64}\n"
+      assert_file_error "\"group\" must be a valid group name: #{Slipway::Names::RULE}", env, "group: -lead\n"
+      assert_file_error "\"group\" must be a valid group name: #{Slipway::Names::RULE}", env, "group: a.b\n"
+      assert_file_error "\"group\" must be a valid group name: #{Slipway::Names::RULE}", env, "group: #{'a' * 64}\n"
     end
   end
 
@@ -156,7 +156,7 @@ class ConfigTest < Minitest::Test
     with_sandbox do |env|
       assert_config_error 'SLIPWAY_COLOR: must be one of auto, always, never', env.merge('SLIPWAY_COLOR' => 'on')
       assert_config_error 'SLIPWAY_THEME: must be one of dark, light', env.merge('SLIPWAY_THEME' => 'blue')
-      assert_config_error 'SLIPWAY_GROUP: must be a lowercase name of letters, digits and dashes',
+      assert_config_error "SLIPWAY_GROUP: must be a valid group name: #{Slipway::Names::RULE}",
                           env.merge('SLIPWAY_GROUP' => 'My Group')
     end
   end

@@ -35,12 +35,7 @@ module Slipway
 
       def self.set?(value) = !value.to_s.empty?
 
-      # Returns +mode+ when it names a color mode or raises Slipway::Error for anything else.
-      def self.fetch_mode(mode)
-        return mode if MODES.include?(mode)
-
-        raise Slipway::Error, "unknown color mode #{mode.inspect} (known modes: #{MODES.join(', ')})"
-      end
+      private_class_method :enabled?, :auto?, :set?
 
       # A Style that paints nothing, for streams whose color has not been decided yet.
       def self.disabled = new(enabled: false, theme: Theme.default)
@@ -50,6 +45,7 @@ module Slipway
         @theme = theme
       end
 
+      # True when paint wraps text in escape sequences.
       def enabled? = @enabled
 
       # Wraps +text+ in the SGR sequence of a single-valued role.

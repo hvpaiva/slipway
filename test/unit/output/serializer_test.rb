@@ -88,7 +88,7 @@ class SerializerTest < Minitest::Test
   end
 
   def test_only_json_and_yaml_are_structured_formats
-    assert_equal %w[table wide json yaml name], Slipway::Output::Serializer::FORMATS
+    assert_equal %w[table wide json yaml name], Slipway::Output::FORMATS
     error = assert_raises(ArgumentError) { render('table', [PROJECT], single: true) }
     assert_equal 'unknown structured format "table" (known formats: json, yaml)', error.message
   end

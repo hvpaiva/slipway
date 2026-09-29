@@ -108,6 +108,21 @@ class GitRunnerTest < Minitest::Test
     end
   end
 
+  def test_an_interrupted_run_kills_the_git_it_started
+    pids = File.join(@root, 'pids')
+    bin = fake_git(@root, "echo $$ > #{pids}\nexec sleep 30")
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      thread = Thread.new { @runner.run(@root, 'status') }
+      thread.report_on_exception = false
+      sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
+      thread.raise(Interrupt)
+
+      assert_raises(Interrupt) { thread.join }
+      assert gone?(Integer(File.read(pids))), 'git survived the interrupt'
+    end
+  end
+
   def test_a_git_ended_by_a_signal_reports_128_plus_the_signal_number
     bin = fake_git(@root, 'kill -TERM $$')
 

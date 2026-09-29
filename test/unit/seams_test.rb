@@ -10,7 +10,7 @@ class SeamsTest < Minitest::Test
 
   def test_every_state_role_exists_in_both_themes
     Slipway::CLI::Theme::NAMES.each do |name|
-      roles = Slipway::CLI::Theme.fetch(name).roles
+      roles = Slipway::CLI::Theme::PRESETS.fetch(name).keys
 
       Slipway::State::ROLES.each_value { assert_includes roles, it, name }
     end
@@ -42,9 +42,8 @@ class SeamsTest < Minitest::Test
     assert_equal variables.fetch('editor'), Slipway::Editor::VARIABLE
   end
 
-  def test_manpage_configuration_section_is_the_config_documentation
-    assert_same Slipway::Config::DOCUMENTATION, Slipway::CLI::Manpage::DEFAULT_CONFIGURATION
-    assert_equal Slipway::Config::KEYS, Slipway::CLI::Manpage::DEFAULT_CONFIGURATION.keys
+  def test_config_documentation_covers_every_key_and_reads_as_the_man_page_prints_it
+    assert_equal Slipway::Config::KEYS, Slipway::Config::DOCUMENTATION.keys
     assert_equal 'Group used when -n is not given. Default: default.', Slipway::Config::DOCUMENTATION.fetch('group')
     assert_equal 'Command line of the editor that slipway edit opens.', Slipway::Config::DOCUMENTATION.fetch('editor')
   end

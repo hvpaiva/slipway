@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'shellwords'
+require_relative '../error'
 
 module Slipway
   module Git
@@ -30,7 +31,12 @@ module Slipway
 
     # The registered path is not a directory on this machine.
     class MissingPath < Error
-      def initialize(path) = super(path, 'no such directory')
+      def initialize(path, detail = 'no such directory') = super
+    end
+
+    # The registered path is relative, and a manifest has no directory to resolve it against.
+    class RelativePath < MissingPath
+      def initialize(path) = super(path, 'relative path; register an absolute path or one starting with ~/')
     end
 
     # The directory exists but no repository contains it.

@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require_relative '../config'
-
 module Slipway
   module CLI
     # Escapes text for roff and spells the few man(7) macros the pages use.
     module Roff
+      BULLET = /\A\s*\*\s+/
+
       module_function
 
       # Backslashes become \e and hyphens \- so options stay searchable; a line that would
@@ -20,19 +20,34 @@ module Slipway
         escaped.include?(' ') ? %("#{escaped}") : escaped
       end
 
+      # A section heading: `.SH TITLE`.
       def heading(title) = ".SH #{argument(title)}"
 
+      # A subsection heading: `.SS TITLE`.
       def subheading(title) = ".SS #{argument(title)}"
 
+      # +value+ in bold, escaped.
       def bold(value) = "\\fB#{text(value)}\\fR"
 
+      # +value+ in italics, escaped.
       def italic(value) = "\\fI#{text(value)}\\fR"
 
       # Paragraphs separated by blank lines become .PP breaks; the first follows the
-      # heading directly, since a paragraph macro right after .SH is a lint error.
+      # heading directly, since a paragraph macro right after .SH is a lint error. A line
+      # starting with `*` is a bullet item with a hanging indent, and leading spaces, which
+      # the terminal help keeps, are dropped because roff would break the line on them.
       def paragraphs(value)
-        value.to_s.split(/\n{2,}/).map { |paragraph| paragraph.lines(chomp: true).map { text(it) } }
-             .flat_map.with_index { |lines, index| index.zero? ? lines : ['.PP', *lines] }
+        value.to_s.split(/\n{2,}/).flat_map.with_index do |paragraph, index|
+          lines = paragraph.lines(chomp: true).flat_map { line(it) }
+          index.zero? || lines.first.start_with?('.IP') ? lines : ['.PP', *lines]
+        end
+      end
+
+      # One line of a paragraph: a bullet item as `.IP` plus its text, or the escaped text.
+      def line(value)
+        return [text(value.lstrip)] unless BULLET.match?(value)
+
+        ['.IP \(bu 2', text(value.sub(BULLET, ''))]
       end
 
       # A .TP entry; +indent+ (in ens) aligns a list of short labels in one column.
@@ -69,12 +84,11 @@ module Slipway
         'XDG_CONFIG_HOME' => 'Base of the configuration directory (default ~/.config).',
         'XDG_DATA_HOME' => 'Base of the data directory (default ~/.local/share).'
       }.freeze
-      # The config file keys, documented once in Config so the page and the loader cannot drift apart.
-      DEFAULT_CONFIGURATION = Config::DOCUMENTATION
 
-      # +source+ fills the fourth .TH field and defaults to "PROGRAM VERSION".
-      def initialize(registry, date:, source: nil, environment: DEFAULT_ENVIRONMENT,
-                     configuration: DEFAULT_CONFIGURATION)
+      # +source+ fills the fourth .TH field and defaults to "PROGRAM VERSION". +configuration+
+      # maps each config file key to its documentation for the root page's CONFIGURATION
+      # section; the caller supplies it because the keys belong to the settings loader.
+      def initialize(registry, date:, source: nil, environment: DEFAULT_ENVIRONMENT, configuration: {})
         @registry = registry
         @date = date
         @source = source || "#{registry.program} #{registry.version}"
@@ -152,38 +166,43 @@ module Slipway
         ['.SH SYNOPSIS', ".SY #{Roff.argument([@registry.program, *path].join(' '))}", *synopsis_args(command), '.YS']
       end
 
+      # Required options, then the positionals (or the command's own usage text), then [flags].
       def synopsis_args(command)
-        args = command.group? ? ['.I COMMAND'] : command.positionals.map { positional_arg(it) }
-        args << '.RI [ flags ]' unless command.options.empty?
-        args
+        required = command.options.select(&:required)
+        options = required.flat_map { [".B #{Roff.text(it.switches.first)}", ".I #{it.argument}"] }
+        [*options, *positional_args(command), '.RI [ flags ]']
       end
 
+      def positional_args(command)
+        return ['.I COMMAND'] if command.group?
+        return [".I #{Roff.argument(command.usage)}\\&"] if command.usage
+
+        command.positionals.map { positional_arg(it) }
+      end
+
+      # Both forms end with \& so a trailing period is not read as the end of a sentence.
       def positional_arg(positional)
         token = Roff.text(positional.variadic ? "#{positional.name}..." : positional.name)
-        positional.required ? ".I #{token}" : ".RI [ #{token} ]\\&"
+        positional.required ? ".I #{token}\\&" : ".RI [ #{token} ]\\&"
       end
 
       # Subcommands under .SS headings per section when there is more than one section.
       def commands_section(command)
-        sections = command.visible_subcommands.group_by(&:section)
+        sections = command.sections
         return [] if sections.empty?
 
         width = command.visible_subcommands.map { it.name.size }.max + 2
-        ordered = sections.sort_by.with_index { |(name, _), seen| [section_rank(name), seen] }
-        entries = ordered.flat_map do |section, commands|
+        entries = sections.flat_map do |section, commands|
           heading = sections.size > 1 ? [Roff.subheading(section)] : []
           heading + commands.flat_map { Roff.tagged(Roff.bold(it.name), it.summary, indent: width) }
         end
         ['.SH COMMANDS', *entries]
       end
 
-      # Known sections keep the help page's order; any other section follows in order of appearance.
-      def section_rank(name) = HelpRenderer::SECTION_ORDER.index(name) || HelpRenderer::SECTION_ORDER.size
-
       def options_section(options)
         return [] if options.empty?
 
-        ['.SH OPTIONS', *options.flat_map { Roff.tagged(option_label(it), option_description(it)) }]
+        ['.SH OPTIONS', *options.flat_map { Roff.tagged(option_label(it), it.description_parts.join(' ')) }]
       end
 
       def option_label(option)
@@ -192,14 +211,6 @@ module Slipway
 
         argument = Roff.italic(option.argument)
         option.optional ? "#{switches}[=#{argument}]" : "#{switches} #{argument}"
-      end
-
-      def option_description(option)
-        parts = [option.description]
-        parts << "One of: #{option.enum.join(', ')}." if option.enum
-        parts << "Default: #{option.default}." unless option.default.nil? || option.default == false
-        parts << 'Required.' if option.required
-        parts.join(' ')
       end
 
       def examples_section(examples)

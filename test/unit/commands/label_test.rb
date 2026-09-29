@@ -111,10 +111,11 @@ class LabelTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Update the labels on a resource.\n\n  *  A label key and value"
-      assert_includes out, "Usage:\n  slipway label TYPE NAME [KEY=VALUE...] [flags]\n"
+      assert_includes out, "Usage:\n  slipway label (TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY-...] [flags]\n"
       assert_includes out, '      --overwrite'
       assert_equal [2, '', "error: missing required argument \"NAME\"\n#{HINT}"], run_label('project', runtime:)
-      assert_equal [1, '', "error: unknown resource type \"pods\"\n"], run_label('pods', 'x', 'a=b', runtime:)
+      assert_equal [1, '', "error: unknown resource type \"pods\" (known types: projects, groups)\n"],
+                   run_label('pods', 'x', 'a=b', runtime:)
     end
   end
 
@@ -125,8 +126,4 @@ class LabelTest < Minitest::Test
   end
 
   def labels_of(runtime, name, group: nil) = runtime.store.find(PROJECTS, name, group:).labels
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env) }
-  end
 end

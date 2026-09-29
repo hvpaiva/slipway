@@ -4,24 +4,26 @@ A project registers the git repository at --path in the current group, which mus
 
 Use --dry-run=client to check the arguments without writing anything.
 
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
 Examples:
   # Register the repository at ~/dev/hldr as a project in the current group
-  slipway create project hldr --path ~/dev/hldr
+  slipway create project hldr --path '~/dev/hldr'
 
   # Register a project in the work group with two labels
-  slipway create project api --path ~/work/api -n work --label lang=go --label tier=api
+  slipway create project api --path '~/work/api' -n work --label lang=go --label tier=api
 
   # Create a group with a description
   slipway create group work --description "Projects for the day job"
 
   # Check the arguments without writing the project
-  slipway create project hldr --path ~/dev/hldr --dry-run=client
+  slipway create project hldr --path '~/dev/hldr' --dry-run=client
 
 Options:
-      --path DIR           Directory of the git repository to register; required for projects and stored as written.
+      --path DIR           Directory of the git repository to register; required for projects. A relative directory is stored resolved against the current directory, a ~ path as written.
       --description TEXT   A short description of the resource.
       --label KEY=VALUE    A label to set on the new resource; may be repeated.
-      --dry-run STRATEGY   If client, only print what would change without writing anything. One of: none, client. (default "none")
+      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 
 Usage:
   slipway create TYPE NAME [flags]

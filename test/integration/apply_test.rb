@@ -100,7 +100,7 @@ class ApplyIntegrationTest < Minitest::Test
       slipway!('create', 'group', 'work', env:)
 
       assert_equal [0, "project/api created\n", ''], slipway('apply', '-f', file, '-n', 'work', env:)
-      assert_equal [1, '', "error: #{file}: group \"nope\" not found\n"],
+      assert_equal [1, '', "error: #{file}: groups \"nope\" not found\n"],
                    slipway('apply', '-f', file, '-n', 'nope', env:)
       assert_equal "project/api\n", slipway!('get', 'projects', '-n', 'work', '-o', 'name', env:)
     end

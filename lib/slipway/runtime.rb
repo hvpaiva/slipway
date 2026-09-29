@@ -7,13 +7,13 @@ require_relative 'git'
 require_relative 'inspector'
 
 module Slipway
-  Runtime = Data.define(:config, :paths, :store, :git, :inspector, :clock, :env)
-
   # Everything a command needs for one run, built once per invocation from the context and
   # the parsed options. Tests build one with fakes and a temporary store instead.
   class Runtime
     CONFIG_FLAG = '--config'
     CONFIG_INLINE = "#{CONFIG_FLAG}=".freeze
+
+    attr_reader :config, :paths, :store, :git, :inspector, :clock, :env
 
     # The production factory: real git, the store under the data home, and the clock in UTC.
     def self.build(context, opts)
@@ -47,7 +47,21 @@ module Slipway
     end
     private_class_method :config_flag
 
+    def initialize(config:, paths:, store:, git:, inspector:, clock:, env:)
+      @config = config
+      @paths = paths
+      @store = store
+      @git = git
+      @inspector = inspector
+      @clock = clock
+      @env = env
+    end
+
     # The group a command works in: the -n flag when typed, else the configured one.
     def group_for(opts) = opts[:group] || config.group
+
+    # Names the store and the settings; the environment is left out so a debugging print
+    # never dumps every variable of the process.
+    def inspect = "#<#{self.class.name} data_home=#{store.root.inspect} config=#{config.to_h.inspect}>"
   end
 end

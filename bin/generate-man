@@ -36,7 +36,7 @@ def page_date
 end
 
 registry = Slipway::Commands.registry(Slipway::Runtime.method(:build))
-pages = Slipway::CLI::Manpage.new(registry, date: page_date).pages
+pages = Slipway::CLI::Manpage.new(registry, date: page_date, configuration: Slipway::Config::DOCUMENTATION).pages
 
 FileUtils.mkdir_p(OUTPUT_DIR)
 FileUtils.rm_f(Dir[File.join(OUTPUT_DIR, '*.1')])

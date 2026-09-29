@@ -8,7 +8,7 @@ class StateTest < Minitest::Test
   WORDS = %w[Missing NotARepo Unsafe Conflicted Detached Unborn Dirty Gone Diverged Ahead Behind Clean Unknown].freeze
 
   def test_words_are_listed_in_precedence_order
-    assert_equal WORDS, Slipway::State::WORDS
+    assert_equal WORDS, Slipway::State::ROLES.keys
   end
 
   def test_clean_repository
@@ -71,9 +71,9 @@ class StateTest < Minitest::Test
   end
 
   def test_every_word_has_a_role_and_nothing_else_does
-    roles = Slipway::State::WORDS.map { Slipway::State.role(it) }
+    roles = Slipway::State::ROLES.keys.map { Slipway::State.role(it) }
 
-    assert_equal Slipway::State::WORDS.size, roles.size
+    assert_equal WORDS.size, roles.size
     assert_raises(KeyError) { Slipway::State.role('Running') }
   end
 

@@ -91,7 +91,7 @@ class ApplyTest < Minitest::Test
 
       assert_equal [1, "project/hldr created\n"], [status, out]
       assert_equal "error: #{broken}: \"spec.path\" is required\n" \
-                   "error: #{orphan}: group \"work\" not found\n" \
+                   "error: #{orphan}: groups \"work\" not found\n" \
                    "error: #{syntax}: did not find expected node content at line 2, column 1\n" \
                    "error: #{missing}: no such file\n", err
     end
@@ -150,7 +150,7 @@ class ApplyTest < Minitest::Test
     with_runtime do |runtime, home|
       file = write(home, 'api.yaml', API)
 
-      assert_equal [1, '', "error: #{file}: group \"work\" not found\n"],
+      assert_equal [1, '', "error: #{file}: groups \"work\" not found\n"],
                    run_apply('-f', file, '--dry-run=client', runtime:)
       register_group(runtime, 'work')
 
@@ -165,7 +165,7 @@ class ApplyTest < Minitest::Test
       option = Slipway::Commands::Apply::FILENAME
 
       assert_equal [0, ''], [status, err]
-      assert_includes out, "Usage:\n  slipway apply [flags]\n"
+      assert_includes out, "Usage:\n  slipway apply -f FILE [flags]\n"
       assert_includes out, '  -f, --filename FILE'
       assert_equal [2, '', "error: required flag(s) \"--filename\" not set\nSee 'slipway apply --help' for usage.\n"],
                    run_apply(runtime:)
@@ -178,10 +178,6 @@ class ApplyTest < Minitest::Test
 
   def run_apply(*argv, runtime:, **)
     run_commands('apply', *argv, runtime:, commands: [Slipway::Commands::Apply], **)
-  end
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env), env.fetch('HOME') }
   end
 
   def write(dir, name, text)

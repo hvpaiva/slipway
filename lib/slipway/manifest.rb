@@ -2,10 +2,11 @@
 
 require 'psych'
 require 'time'
-require_relative 'cli/errors'
+require_relative 'error'
 require_relative 'names'
 require_relative 'labels'
 require_relative 'resources'
+require_relative 'yaml'
 
 module Slipway
   # Reads and writes the YAML form of a Project or Group.
@@ -37,6 +38,7 @@ module Slipway
         @default_group = default_group
       end
 
+      # The Project or Group the document describes, or Invalid for the first field that is wrong.
       def resource
         invalid('document is not a mapping') unless @document.is_a?(Hash)
         fields = FIELDS.fetch(kind)
@@ -58,8 +60,7 @@ module Slipway
       end
 
       def project
-        Project.new(name:, group: group_name, labels:, created_at:,
-                    path: string(@spec, 'spec', 'path', required: true),
+        Project.new(name:, group: group_name, labels:, created_at:, path:,
                     description: string(@spec, 'spec', 'description'))
       end
 
@@ -75,6 +76,13 @@ module Slipway
 
       def group_name
         checked { Names.validate!(string(@metadata, 'metadata', 'group') || @default_group, what: 'group name') }
+      end
+
+      # An empty path would be resolved against whatever directory the reader happens to be in.
+      def path
+        value = string(@spec, 'spec', 'path', required: true)
+        invalid('"spec.path" must not be empty') if value.strip.empty?
+        value
       end
 
       def labels
@@ -132,12 +140,10 @@ module Slipway
         end
       end
 
-      # Name and label rules raise Slipway::Error; here they belong to the document.
+      # A name or label that breaks its rule is a problem of this document.
       def checked
         yield
-      rescue Invalid
-        raise
-      rescue Error => e
+      rescue Names::Invalid, Labels::Invalid => e
         invalid(e.message)
       end
 
@@ -162,7 +168,9 @@ module Slipway
       end
     rescue Psych::SyntaxError => e
       raise Invalid.new(source, "#{e.problem} at line #{e.line}, column #{e.column}")
-    rescue Psych::DisallowedClass, Psych::BadAlias => e
+    rescue Psych::DisallowedClass => e
+      raise Invalid.new(source, disallowed(e))
+    rescue Psych::BadAlias => e
       raise Invalid.new(source, e.message)
     end
 
@@ -187,7 +195,15 @@ module Slipway
     end
     private_class_method :documents
 
+    # YAML types an unquoted 2026-09-29T00:12:33Z as a Time, which the safe loader refuses;
+    # the message names the class Psych saw and the form the file should take.
+    def self.disallowed(error)
+      klass = error.message.delete_prefix('Tried to load unspecified class: ')
+      "#{klass} values are not accepted; timestamps, dates and symbols must be quoted strings"
+    end
+    private_class_method :disallowed
+
     # The YAML text of a resource, without the leading document marker, the way kubectl prints objects.
-    def self.dump(resource) = Psych.safe_dump(resource.to_manifest, line_width: -1).delete_prefix("---\n")
+    def self.dump(resource) = Yaml.dump(resource.to_manifest)
   end
 end

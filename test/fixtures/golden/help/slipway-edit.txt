@@ -2,7 +2,9 @@ Edit a resource from the default editor.
 
 The edit command allows you to directly edit any resource in the registry. It will open the editor named by the SLIPWAY_EDITOR environment variable, then the editor key of the configuration file, then VISUAL or EDITOR, or fall back to 'vi'.
 
-The kind, name and group of a resource cannot be changed. If an error occurs while saving, the file is reopened with the relevant failures as comments at the top; saving it again without changes cancels the edit.
+The kind, name, group and creation timestamp of a resource cannot be changed. If an error occurs while saving, the file is reopened with the relevant failures as comments at the top; saving it again without changes cancels the edit.
+
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
 
 Examples:
   # Edit the project named 'hldr'
@@ -15,6 +17,6 @@ Examples:
   slipway edit group work
 
 Usage:
-  slipway edit TYPE NAME
+  slipway edit (TYPE NAME | TYPE/NAME) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

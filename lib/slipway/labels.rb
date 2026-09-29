@@ -5,6 +5,9 @@ require_relative 'cli/errors'
 module Slipway
   # Label keys and values as kubernetes defines them, plus the KEY=VALUE and KEY- words of the command line.
   module Labels
+    # A key or value that breaks the rule; callers decide whether it came from the command line or a file.
+    class Invalid < Error; end
+
     NAME = /\A[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?\z/
     PREFIX = /\A[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\z/
     MAX_NAME = 63
@@ -14,6 +17,7 @@ module Slipway
     VALUE_RULE = 'empty, or letters, digits, dashes, underscores and dots, starting and ending with a letter ' \
                  'or digit, at most 63 characters'
 
+    # True for a String key with an optional DNS prefix, a slash and a valid name.
     def self.valid_key?(key)
       return false unless key.is_a?(String)
 
@@ -24,18 +28,21 @@ module Slipway
       end
     end
 
+    # True for an empty String or one that reads as a label name.
     def self.valid_value?(value) = value.is_a?(String) && (value.empty? || valid_name?(value))
 
+    # Returns +key+ or raises Invalid with the key rule.
     def self.validate_key!(key)
       return key if valid_key?(key)
 
-      raise Error, "#{key.inspect} is not a valid label key: #{KEY_RULE}"
+      raise Invalid, "#{key.inspect} is not a valid label key: #{KEY_RULE}"
     end
 
+    # Returns +value+ or raises Invalid with the value rule.
     def self.validate_value!(value)
       return value if valid_value?(value)
 
-      raise Error, "#{value.inspect} is not a valid label value: #{VALUE_RULE}"
+      raise Invalid, "#{value.inspect} is not a valid label value: #{VALUE_RULE}"
     end
 
     # Returns +labels+ once every key and value passes.
@@ -50,8 +57,7 @@ module Slipway
     def self.parse_pairs(words)
       words.each_with_object({}) do |word, pairs|
         key, value = split_pair(word, 'KEY=VALUE')
-        raise CLI::UsageError, "label #{key.inspect} is given more than once" if pairs.key?(key)
-
+        duplicate!(key) if pairs.key?(key)
         pairs[key] = value
       end
     end
@@ -65,8 +71,7 @@ module Slipway
           removals << removal_key(word, removals)
         else
           key, value = split_pair(word, 'KEY=VALUE or KEY-')
-          raise CLI::UsageError, "label #{key.inspect} is given more than once" if sets.key?(key)
-
+          duplicate!(key) if sets.key?(key)
           sets[key] = value
         end
       end
@@ -99,9 +104,12 @@ module Slipway
 
     def self.removal_key(word, removals)
       key = as_usage_error { validate_key!(word.delete_suffix('-')) }
-      raise CLI::UsageError, "label #{key.inspect} is given more than once" if removals.include?(key)
-
+      duplicate!(key) if removals.include?(key)
       key
+    end
+
+    def self.duplicate!(key)
+      raise CLI::UsageError, "label #{key.inspect} is given more than once"
     end
 
     def self.reject_overlap(sets, removals)
@@ -114,11 +122,11 @@ module Slipway
     # Label words come from the command line, so a bad key or value is a usage error there.
     def self.as_usage_error
       yield
-    rescue Error => e
+    rescue Invalid => e
       raise CLI::UsageError, e.message
     end
 
-    private_class_method :valid_name?, :valid_prefix?, :split_pair, :removal?, :removal_key, :reject_overlap,
-                         :as_usage_error
+    private_class_method :valid_name?, :valid_prefix?, :split_pair, :removal?, :removal_key, :duplicate!,
+                         :reject_overlap, :as_usage_error
   end
 end

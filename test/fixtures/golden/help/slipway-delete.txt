@@ -4,6 +4,8 @@ Every name is resolved before anything is deleted, so a name that does not exist
 
 Deleting a project removes its registration only. The repository on disk is not touched.
 
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
 Examples:
   # Delete a project from the current group
   slipway delete project hldr
@@ -18,10 +20,10 @@ Examples:
   slipway delete project hldr --ignore-not-found
 
 Options:
-      --dry-run STRATEGY   If client, only print what would change without writing anything. One of: none, client. (default "none")
+      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
       --ignore-not-found   Treat "resource not found" as a successful delete.
 
 Usage:
-  slipway delete TYPE NAME... [flags]
+  slipway delete (TYPE NAME... | TYPE/NAME...) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

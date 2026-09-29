@@ -26,7 +26,7 @@ module Slipway
         "#{block(entries, 0).join("\n")}\n"
       end
 
-      # Writes the rendered entries to the context's stdout.
+      # Renders and writes in one call, so callers hold no context of their own for one block.
       def print(entries) = @context.print(render(entries))
 
       private
@@ -50,24 +50,24 @@ module Slipway
         value.is_a?(Array) && !value.empty? && value.all? { it.is_a?(Array) && it.size == 2 }
       end
 
-      # The lines a value occupies, painted; always at least one.
+      # The lines a value occupies, painted and free of control characters; always at least one.
       def values(value)
         case value
         when nil, [], {} then [@context.paint(:none, NONE)]
-        when Hash then value.sort.map { |key, item| "#{key}=#{item}" }
-        when Array then value.map(&:to_s)
+        when Hash then value.sort.map { |key, item| Output.plain("#{key}=#{item}") }
+        when Array then value.map { Output.plain(it) }
         else [scalar(value)]
         end
       end
 
       def scalar(value)
         case value
-        when Painted then @context.paint(value.role, value.text)
+        when Painted then @context.paint(value.role, Output.plain(value.text))
         when Numeric then @context.paint(:number, value)
         when true then @context.paint(:boolean_true, value)
         when false then @context.paint(:boolean_false, value)
         when Time then value.utc.strftime(TIME_FORMAT)
-        else value.to_s
+        else Output.plain(value)
         end
       end
     end

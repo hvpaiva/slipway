@@ -55,6 +55,21 @@ class TableTest < Minitest::Test
     assert_equal expected, table.render([%w[hldr Clean 3d]])
   end
 
+  def test_color_offset_keeps_the_column_colors_when_a_leading_column_is_added
+    plain = Slipway::Output::Table.new(colored_context, headers: %w[NAME STATUS])
+    grouped = Slipway::Output::Table.new(colored_context, headers: %w[GROUP NAME STATUS], color_offset: 1)
+
+    assert_equal "\e[37mhldr\e[0m   \e[36mClean\e[0m\n", plain.render([%w[hldr Clean]]).lines.last
+    assert_equal "\e[36mwork\e[0m    \e[37mhldr\e[0m   \e[36mClean\e[0m\n",
+                 grouped.render([%w[work hldr Clean]]).lines.last
+  end
+
+  def test_cells_holding_control_characters_are_made_visible_before_they_are_measured
+    table = Slipway::Output::Table.new(plain_context, headers: %w[NAME SUBJECT])
+
+    assert_equal "NAME   SUBJECT\nhldr   fix^[[2Jall\n", table.render([['hldr', "fix\e[2Jall"]])
+  end
+
   def test_light_theme_cycles_its_own_column_colors
     table = Slipway::Output::Table.new(colored_context(theme: 'light'), headers: %w[NAME STATUS])
 

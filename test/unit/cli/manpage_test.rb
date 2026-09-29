@@ -42,16 +42,18 @@ class ManpageTest < Minitest::Test
 
     assert_includes group, ".SH COMMANDS\n.TP 6\n\\fBview\\fR\nPrint the effective configuration\n"
     refute_includes group, '.SS'
-    assert_includes group, ".SH SYNOPSIS\n.SY \"slipway config\"\n.I COMMAND\n.YS\n"
+    assert_includes group, ".SH SYNOPSIS\n.SY \"slipway config\"\n.I COMMAND\n.RI [ flags ]\n.YS\n"
     assert_equal ".SH \"SEE ALSO\"\n.BR slipway (1),\n.BR slipway\\-config (1)\n", nested[/\.SH "SEE ALSO".*/m]
   end
 
   def test_option_notes_and_escaping
     page = @manpage.page(%w[create])
 
-    assert_includes page, "\\fB\\-\\-path\\fR \\fIDIR\\fR\nDirectory of the repository. Required.\n"
+    assert_includes page, "\\fB\\-\\-path\\fR \\fIDIR\\fR\nDirectory of the repository. (required)\n"
     assert_includes page, "\\fB\\-\\-dry\\-run\\fR \\fIMODE\\fR\nOnly print the object that would be sent. " \
-                          "One of: none, client. Default: none.\n"
+                          "One of: none, client. (default \"none\")\n"
+    assert_includes page, ".SH SYNOPSIS\n.SY \"slipway create\"\n.B \\-\\-path\n.I DIR\n.I TYPE\\&\n.I NAME\\&\n" \
+                          ".RI [ flags ]\n.YS\n"
     assert_includes page, '\fB\-\-label\fR \fIKEY=VALUE\fR'
   end
 
@@ -64,6 +66,13 @@ class ManpageTest < Minitest::Test
     assert_includes page, ".SH CONFIGURATION\n.TP\n\\fBkey\\fR\nFirst.\n.PP\nSecond paragraph.\n.SH \"EXIT STATUS\"\n"
     refute_includes page, 'SLIPWAY_THEME'
     refute_includes page, 'theme'
+  end
+
+  def test_paragraphs_turn_bullet_lines_into_indented_items_and_drop_leading_spaces
+    text = "Intro.\n\n  *  First item.\n  *  Second item.\n\n Indented prose."
+
+    assert_equal ['Intro.', '.IP \(bu 2', 'First item.', '.IP \(bu 2', 'Second item.', '.PP', 'Indented prose.'],
+                 Slipway::CLI::Roff.paragraphs(text)
   end
 
   def test_roff_text_escapes_control_characters

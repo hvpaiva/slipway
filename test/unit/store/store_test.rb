@@ -42,7 +42,7 @@ class StoreTest < Minitest::Test
   def test_create_project_requires_its_group_to_exist
     error = assert_raises(Slipway::Store::NotFound) { @store.create(project('hldr', group: 'work')) }
 
-    assert_equal 'group "work" not found', error.message
+    assert_equal 'groups "work" not found', error.message
     assert_equal 1, error.exit_status
     refute_path_exists @root
   end
@@ -91,7 +91,7 @@ class StoreTest < Minitest::Test
     error = assert_raises(Slipway::Store::NotFound) { @store.save(project('x', group: 'work')) }
 
     assert @store.exist?(GROUPS, 'default', group: nil)
-    assert_equal 'group "work" not found', error.message
+    assert_equal 'groups "work" not found', error.message
   end
 
   def test_list_sorts_projects_by_group_then_name
@@ -185,7 +185,7 @@ class StoreTest < Minitest::Test
     error = assert_raises(Slipway::Error) { @store.delete(GROUPS, 'default', group: nil) }
 
     assert_equal 'the default group cannot be deleted', error.message
-    @store.default_group!
+    @store.create(project('hldr'))
     assert_raises(Slipway::Error) { @store.delete(GROUPS, 'default', group: nil) }
     assert @store.exist?(GROUPS, 'default', group: nil)
   end
@@ -207,23 +207,31 @@ class StoreTest < Minitest::Test
     assert_equal 0, @store.project_count('none')
   end
 
-  def test_default_group_is_created_once
-    first = @store.default_group!
-    second = Slipway::Store.new(root: @root, clock: -> { NOW + 60 }).default_group!
+  def test_default_group_is_created_once_by_the_first_project_that_needs_it
+    @store.create(project('first'))
+    Slipway::Store.new(root: @root, clock: -> { NOW + 60 }).create(project('second'))
 
-    assert_equal Slipway::Group.new(name: 'default', created_at: NOW), first
-    assert_equal first, second
+    assert_equal Slipway::Group.new(name: 'default', created_at: NOW), @store.find(GROUPS, 'default')
   end
 
-  def test_ensure_group_returns_the_name_or_raises
+  def test_group_available_for_the_default_group_and_groups_on_disk
     @store.create(Slipway::Group.new(name: 'work'))
-    error = assert_raises(Slipway::Store::NotFound) { @store.ensure_group!('other') }
 
-    assert_equal 'work', @store.ensure_group!('work')
-    assert_equal 'default', @store.ensure_group!('default')
-    assert @store.exist?(GROUPS, 'default', group: nil)
-    assert_equal 'group "other" not found', error.message
-    assert_raises(Slipway::Error) { @store.ensure_group!('Bad') }
+    assert @store.group_available?('work')
+    assert @store.group_available?('default')
+    refute @store.group_available?('other')
+    refute @store.exist?(GROUPS, 'default')
+    assert_raises(Slipway::Names::Invalid) { @store.group_available?('Bad') }
+  end
+
+  def test_group_is_optional_and_means_the_default_group_for_projects
+    @store.create(project('hldr'))
+
+    assert_equal '/p/hldr', @store.find(PROJECTS, 'hldr').path
+    assert @store.exist?(PROJECTS, 'hldr')
+    error = assert_raises(Slipway::Error) { @store.delete(GROUPS, 'default') }
+
+    assert_equal 'the default group cannot be deleted', error.message
   end
 
   private

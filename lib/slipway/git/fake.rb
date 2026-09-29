@@ -30,10 +30,13 @@ module Slipway
         self
       end
 
+      # The canned Status for +path+, or the configured failure.
       def status(path) = entry(path).status
 
+      # The canned Commit for +path+ (nil for an unborn branch), or the configured failure.
       def last_commit(path) = entry(path).commit
 
+      # The canned origin URL for +path+ (nil when none), or the configured failure.
       def remote_url(path) = entry(path).remote
 
       private

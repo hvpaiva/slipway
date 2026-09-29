@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 require 'shellwords'
-require 'tmpdir'
+require_relative 'error'
 
 module Slipway
   # Opens text in the user's editor and returns what was saved.
   class Editor
-    # Raised when the editor cannot be started or exits unsuccessfully; exits with status 1.
+    # Raised when the editor cannot be started, exits unsuccessfully or leaves no file behind;
+    # exits with status 1.
     class Failed < Slipway::Error; end
 
     VARIABLE = 'SLIPWAY_EDITOR'
@@ -30,11 +31,12 @@ module Slipway
     # Writes +text+ to a fresh temporary directory as +filename+, runs the editor on it and
     # returns the file's content afterwards. The directory is removed on every path out.
     def edit(text, filename: 'resource.yaml')
+      require 'tmpdir'
       Dir.mktmpdir(TMPDIR_PREFIX) do |dir|
         path = File.join(dir, filename)
         File.write(path, text)
         run(command, path)
-        File.read(path)
+        read_back(path, filename)
       end
     end
 
@@ -60,6 +62,15 @@ module Slipway
       return "exited with status #{status.exitstatus}" if status.exited?
 
       "was killed by signal #{status.termsig}"
+    end
+
+    # An editor may delete or replace the file instead of saving over it.
+    def read_back(path, filename)
+      File.read(path)
+    rescue Errno::ENOENT
+      raise Failed, "editor removed #{filename}; edit cancelled"
+    rescue SystemCallError => e
+      raise Failed.from_system_call(e, path)
     end
   end
 end

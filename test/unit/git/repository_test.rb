@@ -117,13 +117,16 @@ class GitRepositoryTest < Minitest::Test
     assert_equal 'main', @repo.status('~/clean').branch
   end
 
-  def test_status_of_a_subdirectory_describes_the_enclosing_repository
+  def test_status_of_a_subdirectory_does_not_describe_the_enclosing_repository
     dir = fixture('untracked')
     sub = File.join(dir, 'sub')
     FileUtils.mkdir_p(sub)
     File.write(File.join(sub, 'deep.txt'), "deep\n")
 
-    assert_equal expected(dir, untracked: 2), @repo.status(sub)
+    error = assert_raises(Slipway::Git::NotARepository) { @repo.status(sub) }
+
+    assert_equal "#{sub}: not a git repository", error.message
+    assert_equal expected(dir, untracked: 2), @repo.status(dir)
   end
 
   def test_last_commit_reads_every_field_in_utc

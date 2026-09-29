@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'cli/errors'
+require_relative 'error'
 
 module Slipway
   # A registered git repository: the fields of a manifest of kind Project.
@@ -9,6 +9,7 @@ module Slipway
       super
     end
 
+    # The Kind word of the manifest.
     def kind = 'Project'
 
     # The manifest Hash with string keys, in the order it is written to disk.
@@ -18,6 +19,7 @@ module Slipway
       { 'kind' => kind, 'metadata' => metadata, 'spec' => { 'path' => path, 'description' => description }.compact }
     end
 
+    # A copy carrying +labels+ in place of the current ones.
     def with_labels(labels) = with(labels:)
   end
 
@@ -27,6 +29,7 @@ module Slipway
       super
     end
 
+    # The Kind word of the manifest.
     def kind = 'Group'
 
     # The manifest Hash with string keys, in the order it is written to disk.
@@ -36,6 +39,7 @@ module Slipway
       { 'kind' => kind, 'metadata' => metadata, 'spec' => { 'description' => description }.compact }
     end
 
+    # A copy carrying +labels+ in place of the current ones.
     def with_labels(labels) = with(labels:)
   end
 
@@ -46,6 +50,7 @@ module Slipway
       # Every word accepted for this kind, matched case-insensitively like kubectl.
       def names = [plural, singular, *aliases]
 
+      # True when +word+ names this kind in any letter case.
       def match?(word) = names.include?(word.downcase)
 
       # Projects live inside a group the way pods live inside a namespace.
@@ -55,22 +60,22 @@ module Slipway
       def title = singular.capitalize
     end
 
-    KINDS = [
-      Kind.new(plural: 'projects', singular: 'project', aliases: %w[proj], klass: Project),
-      Kind.new(plural: 'groups', singular: 'group', aliases: [], klass: Group)
-    ].freeze
+    PROJECTS = Kind.new(plural: 'projects', singular: 'project', aliases: %w[proj], klass: Project)
+    GROUPS = Kind.new(plural: 'groups', singular: 'group', aliases: [], klass: Group)
+    KINDS = [PROJECTS, GROUPS].freeze
+    # The group a project belongs to when no other is named; it comes into being on first use.
+    DEFAULT_GROUP = 'default'
 
-    # The Kind named by a command-line word, or Slipway::Error when no kind answers to it.
+    # The Kind named by a command-line word, or Slipway::Error naming the kinds that exist.
     def self.resolve(word)
-      KINDS.find { it.match?(word) } || raise(Error, "unknown resource type #{word.inspect}")
+      KINDS.find { it.match?(word) } ||
+        raise(Error, "unknown resource type #{word.inspect} (known types: #{KINDS.map(&:plural).join(', ')})")
     end
 
     # The Kind of a Project or Group value.
     def self.of(resource)
       KINDS.find { resource.is_a?(it.klass) } || raise(ArgumentError, "not a resource: #{resource.inspect}")
     end
-
-    def self.plurals = KINDS.map(&:plural)
 
     # RFC 3339 in UTC with second precision, or nil; the form creationTimestamp takes on disk.
     def self.timestamp(time) = time&.getutc&.iso8601

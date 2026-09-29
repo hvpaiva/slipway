@@ -4,6 +4,8 @@ Prints a table of the most important information about the specified resources. 
 
 Use -o wide to add the path, the head commit and the age of the last commit of each project, and -o json or -o yaml for the full object with its status.
 
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
 Examples:
   # List all projects in the current group
   slipway get projects
@@ -28,6 +30,6 @@ Options:
       --show-labels     When printing, show all labels as the last column.
 
 Usage:
-  slipway get TYPE [NAME...] [flags]
+  slipway get (TYPE [NAME...] | TYPE/NAME...) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

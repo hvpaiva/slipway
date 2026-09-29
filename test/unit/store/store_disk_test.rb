@@ -48,6 +48,48 @@ class StoreDiskTest < Minitest::Test
     assert_equal 0o644, File.stat(File.join(@root, 'groups', 'default.yaml')).mode & 0o777
   end
 
+  def test_a_root_holding_glob_metacharacters_still_lists
+    root = File.join(@dir, 'data[1]{*}')
+    store = Slipway::Store.new(root:, clock: -> { NOW })
+    store.create(Slipway::Group.new(name: 'work'))
+    store.create(Slipway::Project.new(name: 'alpha', group: 'work', path: '/p'))
+
+    assert_equal %w[work], store.names(GROUPS)
+    assert_equal %w[alpha], store.list(PROJECTS).map(&:name)
+    assert_equal 1, store.project_count('work')
+  end
+
+  def test_filesystem_failures_name_the_path_without_ruby_internals
+    File.write(@root, '')
+    error = assert_raises(Slipway::Error) { @store.create(Slipway::Group.new(name: 'g')) }
+
+    assert_equal "#{File.join(@root, 'groups', 'g.yaml')}: File exists", error.message
+    refute_instance_of Slipway::Store::NotFound, error
+  end
+
+  def test_an_unreadable_manifest_is_reported_with_its_path
+    skip 'root can read anything' if Process.uid.zero?
+
+    @store.create(Slipway::Project.new(name: 'hldr', path: '/p'))
+    file = File.join(@root, 'projects', 'default', 'hldr.yaml')
+    File.chmod(0o000, file)
+    error = assert_raises(Slipway::Error) { @store.find(PROJECTS, 'hldr') }
+    File.chmod(0o644, file)
+
+    assert_equal "#{file}: Permission denied", error.message
+  end
+
+  def test_list_hands_unreadable_manifests_to_the_block_and_raises_without_one
+    @store.create(Slipway::Project.new(name: 'hldr', path: '/p'))
+    File.write(File.join(@root, 'projects', 'default', 'stray.yaml'), "kind: Group\nmetadata:\n  name: x\n")
+    problems = []
+
+    assert_equal %w[hldr], @store.list(PROJECTS) { problems << it }.map(&:name)
+    assert_equal 1, problems.size
+    assert_match(/stray\.yaml: describes group "x", which does not belong at this path\z/, problems.first.message)
+    assert_raises(Slipway::Manifest::Invalid) { @store.list(PROJECTS) }
+  end
+
   def test_a_replaced_file_leaves_no_temporary_file_behind
     project = @store.create(Slipway::Project.new(name: 'hldr', path: '/p'))
     directory = File.join(@root, 'projects', 'default')

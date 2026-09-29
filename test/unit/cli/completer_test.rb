@@ -119,7 +119,7 @@ class CompleterTest < Minitest::Test
     out = StringIO.new
     context = Slipway::CLI::Context.new(out:, err: StringIO.new)
 
-    Slipway::CLI::Completer.new(failing).call(context, ['boom', ''])
+    Slipway::CLI::Completer.new(failing).call(context, ['boom', ''], {})
 
     assert_equal ":4\n", out.string
   end

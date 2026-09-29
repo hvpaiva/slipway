@@ -58,16 +58,6 @@ class StyleTest < Minitest::Test
     assert_equal "\e[34mPath\e[0m", light.paint_cycle(:describe_keys, 1, 'Path')
   end
 
-  def test_fetch_mode_accepts_the_three_modes_and_rejects_the_rest
-    assert_equal(%w[auto always never], Slipway::CLI::Style::MODES.map { Slipway::CLI::Style.fetch_mode(it) })
-    assert_equal 'auto', Slipway::CLI::Style::DEFAULT_MODE
-
-    error = assert_raises(Slipway::Error) { Slipway::CLI::Style.fetch_mode('blue') }
-
-    assert_equal 'unknown color mode "blue" (known modes: auto, always, never)', error.message
-    assert_equal 1, error.exit_status
-  end
-
   def test_unknown_roles_are_programming_errors
     style = Slipway::CLI::Style.for('always', tty: false, env: {})
 
@@ -109,15 +99,12 @@ class ThemeTest < Minitest::Test
     assert_equal %w[dark light], Slipway::CLI::Theme::NAMES
   end
 
-  def test_fetch_rejects_unknown_names_with_a_user_facing_error
-    error = assert_raises(Slipway::Error) { Slipway::CLI::Theme.fetch('solarized') }
-
-    assert_equal 'unknown theme "solarized" (known themes: dark, light)', error.message
-    assert_equal 1, error.exit_status
+  def test_fetch_of_an_unknown_name_is_a_programming_error
+    assert_raises(KeyError) { Slipway::CLI::Theme.fetch('solarized') }
   end
 
   def test_presets_share_the_same_roles
-    assert_equal Slipway::CLI::Theme.fetch('dark').roles, Slipway::CLI::Theme.fetch('light').roles
+    assert_equal Slipway::CLI::Theme::DARK.keys, Slipway::CLI::Theme::LIGHT.keys
   end
 
   def test_sgr_at_cycles_through_a_list_role

@@ -46,6 +46,7 @@ module Slipway
         @counts = Hash.new(0)
       end
 
+      # The Status read from one porcelain document; +text+ is the raw NUL separated output.
       def parse(text)
         records = text.split("\0")
         until records.empty?

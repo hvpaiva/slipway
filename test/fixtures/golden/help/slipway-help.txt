@@ -6,6 +6,6 @@ Examples:
   slipway help config view
 
 Usage:
-  slipway help [COMMAND...]
+  slipway help [COMMAND...] [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

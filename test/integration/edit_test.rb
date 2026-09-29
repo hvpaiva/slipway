@@ -26,7 +26,7 @@ class EditIntegrationTest < Minitest::Test
   TWO_STEP = <<~SH
     echo "---- round" >> "<log>"
     cat "$1" >> "<log>"
-    if grep -q '^# edited manifest' "$1"; then
+    if grep -q 'was not valid:' "$1"; then
       sed -i 's/^  path: .*/  path: "~\\/dev\\/moved"/' "$1"
     else
       printf 'spec:\\n  path: 1\\n' >> "$1"
@@ -79,7 +79,7 @@ class EditIntegrationTest < Minitest::Test
       editor = editor_script(env, 'empty.sh', %(: > "$1"))
       status, out, err = slipway('edit', 'project', 'clean', env: env.merge('EDITOR' => editor))
 
-      assert_equal [1, '', "error: Edit cancelled, no valid changes were saved.\n"], [status, out, err]
+      assert_equal [1, '', "error: Edit cancelled, saved file was empty.\n"], [status, out, err]
       assert_equal "lang=rust\n", slipway!('label', 'project', 'clean', '--list', env:)
     end
   end
@@ -96,8 +96,8 @@ class EditIntegrationTest < Minitest::Test
 
       assert_equal 2, rounds.size
       assert_equal "# file will be reopened with the relevant failures.\n#\n" \
-                   "# edited manifest: \"spec.path\" must be a string\n#\nkind: Project\n",
-                   rounds.last.lines[2..6].join
+                   "# projects \"clean\" was not valid:\n# * \"spec.path\" must be a string\n#\nkind: Project\n",
+                   rounds.last.lines[2..7].join
       assert_equal '~/dev/moved', table(slipway!('get', 'projects', '-o', 'wide', env:)).last[4]
     end
   end

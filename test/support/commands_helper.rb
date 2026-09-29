@@ -44,7 +44,7 @@ module CommandsHelper
   def register(runtime, name, group: 'default', labels: {}, description: nil, status: CLEAN, commit: COMMIT,
                remote: nil)
     path = "~/dev/#{name}"
-    directory = runtime.inspector.expand(path)
+    directory = Slipway::Paths.expand(path, home: runtime.paths.home)
     if status
       FileUtils.mkdir_p(directory)
       runtime.git.add(directory, status:, commit: status.unborn? ? nil : commit, remote:)
@@ -55,12 +55,17 @@ module CommandsHelper
   # Registers a project whose directory exists but whose git queries raise +error+.
   def register_failing(runtime, name, error, group: 'default')
     project = register(runtime, name, group:, status: UNBORN)
-    runtime.git.fail(runtime.inspector.expand(project.path), error)
+    runtime.git.fail(Slipway::Paths.expand(project.path, home: runtime.paths.home), error)
     project
   end
 
   def register_group(runtime, name, labels: {}, description: nil)
     runtime.store.create(Slipway::Group.new(name:, labels:, description:))
+  end
+
+  # Yields a runtime over a fresh sandbox and that sandbox's HOME.
+  def with_runtime
+    with_sandbox { |env| yield sandbox_runtime(env), env.fetch('HOME') }
   end
 
   # Runs +argv+ against a registry of the read verbs (or +commands+) bound to +runtime+.

@@ -53,6 +53,37 @@ class ContextTest < Minitest::Test
     assert_equal "oops\n", @err.string
   end
 
+  def test_a_stream_whose_reader_went_away_is_remembered_and_its_output_dropped
+    broken = Class.new(StringIO) do
+      def write(*)
+        raise Errno::EPIPE if string.include?('second')
+
+        super
+      end
+    end
+    context = Slipway::CLI::Context.new(out: broken.new, err: @err)
+    context.puts('first')
+    context.puts('second')
+    context.puts('third')
+    context.print('fourth')
+    context.warn('still reported')
+
+    assert_equal "first\nsecond\n", context.out.string
+    assert_equal "still reported\n", @err.string
+  end
+
+  def test_with_color_shares_the_memory_of_closed_streams
+    broken = Class.new(StringIO) { def write(*) = raise(Errno::EPIPE) }
+    context = Slipway::CLI::Context.new(out: broken.new, err: @err)
+    context.puts('lost')
+    painted = context.with_color('always')
+    painted.puts('also lost')
+    painted.warn('kept')
+
+    assert_equal "kept\n", @err.string
+    assert_predicate painted, :color?
+  end
+
   def test_system_context_wraps_the_process_streams
     context = Slipway::CLI::Context.system
 

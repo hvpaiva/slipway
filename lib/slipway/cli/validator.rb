@@ -49,7 +49,7 @@ module Slipway
           value = opts[opt.key]
           next if value.nil? || opt.enum.include?(value)
 
-          usage_error("invalid argument #{value.inspect} for #{opt.label.inspect}: #{allowed(opt.enum)}")
+          usage_error("invalid argument #{value.inspect} for --#{opt.long}: #{allowed(opt.enum)}")
         end
       end
 

@@ -24,7 +24,8 @@ module Slipway
         @registry = registry
       end
 
-      def call(context, words, _opts = {})
+      # The registry handler: prints the candidates for +words+ and the directive line.
+      def call(context, words, _opts)
         candidates, directive = safely { complete(words) }
         candidates.each { |value, description| context.puts(description ? "#{value}\t#{description}" : value) }
         context.puts(":#{directive}")
@@ -46,7 +47,10 @@ module Slipway
 
       private
 
+      # Where the replay of the typed words stands: the command reached, its positional
+      # arguments so far, an option still waiting for its value, and whether `--` was seen.
       State = Struct.new(:command, :args, :pending, :literal)
+      private_constant :State
 
       def safely
         yield

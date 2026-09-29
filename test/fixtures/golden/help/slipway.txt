@@ -1,8 +1,14 @@
-A kubectl-style registry for the git repositories on your machine
+A kubectl-style registry for the git repositories on your machine.
+
+ A project is a registered git repository: its path, an optional description
+ and labels. Projects live in groups the way pods live in namespaces; the group
+ is "default" unless -n is given, and -A lists every group.
+
+ Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
 
 Basic Commands:
   get             Display one or many resources
-  describe        Show details of a specific resource or group of resources
+  describe        Show details of one or many resources
   create          Create a resource by name
   apply           Apply a configuration to a resource by file name or stdin
   delete          Delete resources by type and name
@@ -16,10 +22,10 @@ Settings Commands:
 
 Other Commands:
   help            Help about any command
-  version         Print the client version
+  version         Print the version of slipway
 
 Options:
-      --color[=WHEN]   When to use color in the output (auto unless configured). One of: auto, always, never.
+      --color[=WHEN]   When to use color in the output; a bare --color means always. One of: auto, always, never.
   -n, --group NAME     The group scope for this request.
       --config PATH    Path to the configuration file.
   -h, --help           Print help and exit.

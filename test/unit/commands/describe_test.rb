@@ -54,7 +54,7 @@ class DescribeTest < Minitest::Test
         Path:         ~/dev/gone
         Description:  <none>
         Status:       Missing
-        Repository:   #{runtime.paths.home}/dev/gone: no such directory
+        Repository:   no such directory
         Last Commit:  <none>
       TEXT
 
@@ -127,8 +127,8 @@ class DescribeTest < Minitest::Test
 
       assert_equal 0, status
       assert_equal "warning: git did not finish within 10 seconds\n", err
-      assert_includes out, "Status:       Unknown\nRepository:   #{runtime.paths.home}/dev/slow: git did not finish " \
-                           "within 10 seconds\nLast Commit:  <none>\n"
+      assert_includes out, "Status:       Unknown\nRepository:   git did not finish within 10 seconds\n" \
+                           "Last Commit:  <none>\n"
     end
   end
 
@@ -146,7 +146,8 @@ class DescribeTest < Minitest::Test
 
       assert_equal [1, '', "error: projects \"nope\" not found\n"],
                    run_commands('describe', 'projects', 'nope', runtime:)
-      assert_equal [1, '', "error: unknown resource type \"pod\"\n"], run_commands('describe', 'pod', 'x', runtime:)
+      assert_equal [1, '', "error: unknown resource type \"pod\" (known types: projects, groups)\n"],
+                   run_commands('describe', 'pod', 'x', runtime:)
       assert_equal [2, '', "error: a resource cannot be retrieved by name across all groups\n" \
                            "See 'slipway describe --help' for usage.\n"],
                    run_commands('describe', 'projects', 'hldr', '-A', runtime:)
@@ -158,15 +159,9 @@ class DescribeTest < Minitest::Test
       status, out, err = run_commands('describe', '-h', runtime:)
 
       assert_equal [0, ''], [status, err]
-      assert_includes out, "Show details of a specific resource or group of resources.\n\nPrint a detailed"
-      assert_includes out, "Usage:\n  slipway describe TYPE [NAME...] [flags]\n"
+      assert_includes out, "Show details of one or many resources.\n\nPrint a detailed"
+      assert_includes out, "Usage:\n  slipway describe (TYPE [NAME...] | TYPE/NAME...) [flags]\n"
       refute_includes out, '--output'
     end
-  end
-
-  private
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env) }
   end
 end

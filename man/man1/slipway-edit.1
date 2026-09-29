@@ -4,15 +4,17 @@
 slipway\-edit \- Edit a resource from the default editor
 .SH SYNOPSIS
 .SY "slipway edit"
-.I TYPE
-.I NAME
+.I "(TYPE NAME | TYPE/NAME)"\&
+.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Edit a resource from the default editor.
 .PP
 The edit command allows you to directly edit any resource in the registry. It will open the editor named by the SLIPWAY_EDITOR environment variable, then the editor key of the configuration file, then VISUAL or EDITOR, or fall back to 'vi'.
 .PP
-The kind, name and group of a resource cannot be changed. If an error occurs while saving, the file is reopened with the relevant failures as comments at the top; saving it again without changes cancels the edit.
+The kind, name, group and creation timestamp of a resource cannot be changed. If an error occurs while saving, the file is reopened with the relevant failures as comments at the top; saving it again without changes cancels the edit.
+.PP
+Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH EXAMPLES
 .EX
 # Edit the project named 'hldr'

@@ -13,7 +13,9 @@ class CommandsRegistryTest < Minitest::Test
                  registry.root.subcommands.map(&:name)
     assert_equal ['slipway', Slipway::VERSION, 'A kubectl-style registry for the git repositories on your machine'],
                  [registry.program, registry.version, registry.description]
-    assert_same Slipway::CLI::Globals::ALL, registry.globals
+    assert_equal Slipway::CLI::Globals::ALL.map(&:long), registry.globals.map(&:long)
+    assert_equal 'Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.',
+                 registry.root.description.lines.last.strip
   end
 
   def test_verbs_sit_in_their_help_sections

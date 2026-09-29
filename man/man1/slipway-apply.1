@@ -4,6 +4,8 @@
 slipway\-apply \- Apply a configuration to a resource by file name or stdin
 .SH SYNOPSIS
 .SY "slipway apply"
+.B \-f
+.I FILE
 .RI [ flags ]
 .YS
 .SH DESCRIPTION
@@ -15,10 +17,10 @@ YAML is accepted, with several documents per file. Documents are applied in orde
 .SH OPTIONS
 .TP
 \fB\-f\fR, \fB\-\-filename\fR \fIFILE\fR
-The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '\-' reads stdin. Required.
+The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '\-' reads stdin. (required)
 .TP
 \fB\-\-dry\-run\fR \fISTRATEGY\fR
-If client, only print what would change without writing anything. One of: none, client. Default: none.
+Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 .SH EXAMPLES
 .EX
 # Apply the configuration in hldr.yaml to a project

@@ -4,15 +4,21 @@
 slipway\-completion \- Output shell completion code for the specified shell (bash, zsh, fish)
 .SH SYNOPSIS
 .SY "slipway completion"
-.I SHELL
+.I SHELL\&
+.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Output shell completion code for the specified shell (bash, zsh, fish).
 The shell code must be evaluated to provide interactive completion of commands, resource types and names.
 .SH EXAMPLES
 .EX
-# Load completions into the current bash session
-slipway completion bash | source /dev/stdin
+# Install bash completions where bash\-completion loads them
+slipway completion bash > "${XDG_DATA_HOME:\-$HOME/.local/share}/bash\-completion/completions/slipway"
+.EE
+.PP
+.EX
+# Install zsh completions in a directory on your fpath
+slipway completion zsh > ~/.zfunc/_slipway
 .EE
 .PP
 .EX

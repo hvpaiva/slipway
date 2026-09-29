@@ -17,10 +17,10 @@ class HelpRendererTest < Minitest::Test
 
     Other Commands:
       help            Help about any command
-      version         Print the client version
+      version         Print the version of slipway
 
     Options:
-          --color[=WHEN]   When to use color in the output (auto unless configured). One of: auto, always, never.
+          --color[=WHEN]   When to use color in the output; a bare --color means always. One of: auto, always, never.
       -n, --group NAME     The group scope for this request.
           --config PATH    Path to the configuration file.
       -h, --help           Print help and exit.
@@ -61,7 +61,7 @@ class HelpRendererTest < Minitest::Test
       path            Print the configuration file path
 
     Usage:
-      slipway config COMMAND
+      slipway config COMMAND [flags]
 
     Use "slipway config <command> --help" for more information about a given command.
     Use "slipway --help" for a list of global options (applies to all commands).
@@ -93,6 +93,16 @@ class HelpRendererTest < Minitest::Test
 
   def test_long_only_options_are_padded_to_the_short_flag_column
     assert_includes @plain.command(*@fixture.registry.resolve(%w[create])), CREATE_OPTIONS
+  end
+
+  def test_required_options_lead_the_usage_line_and_flags_always_close_it
+    create = @plain.command(*@fixture.registry.resolve(%w[create]))
+    view = @plain.command(*@fixture.registry.resolve(%w[config view]))
+    own = Slipway::CLI::Command.new(name: 'x', summary: 'X', usage: '(A | B/C)')
+
+    assert_includes create, "Usage:\n  slipway create --path DIR TYPE NAME [flags]\n"
+    assert_includes view, "Usage:\n  slipway config view [flags]\n"
+    assert_includes @plain.command(own, %w[x]), "Usage:\n  slipway x (A | B/C) [flags]\n"
   end
 
   def test_labels_wider_than_the_flag_column_wrap_their_description

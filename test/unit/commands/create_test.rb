@@ -69,7 +69,7 @@ class CreateTest < Minitest::Test
 
   def test_a_project_needs_its_group_to_exist
     with_runtime do |runtime|
-      assert_equal [1, '', "error: group \"work\" not found\n"],
+      assert_equal [1, '', "error: groups \"work\" not found\n"],
                    run_create('project', 'hldr', '--path', '~/dev/hldr', '-n', 'work', runtime:)
       assert_empty runtime.store.list(PROJECTS)
     end
@@ -79,13 +79,14 @@ class CreateTest < Minitest::Test
     with_runtime do |runtime|
       rule = Slipway::Names::RULE
 
-      assert_equal [1, '', "error: \"Bad_Name\" is not a valid project name: #{rule}\n"],
+      assert_equal [2, '', "error: \"Bad_Name\" is not a valid project name: #{rule}\n#{HINT}"],
                    run_create('project', 'Bad_Name', '--path', '~/x', runtime:)
       assert_equal [2, '', "error: invalid label \"lang\": expected KEY=VALUE\n#{HINT}"],
                    run_create('project', 'hldr', '--path', '~/x', '--label', 'lang', runtime:)
       assert_equal [2, '', "error: label \"lang\" is given more than once\n#{HINT}"],
                    run_create('group', 'work', '--label', 'lang=go', '--label', 'lang=rust', runtime:)
-      assert_equal [1, '', "error: unknown resource type \"pods\"\n"], run_create('pods', 'x', runtime:)
+      assert_equal [1, '', "error: unknown resource type \"pods\" (known types: projects, groups)\n"],
+                   run_create('pods', 'x', runtime:)
     end
   end
 
@@ -108,11 +109,11 @@ class CreateTest < Minitest::Test
 
       assert_equal [0, "project/api created (dry run)\n", ''],
                    run_create('project', 'api', '--path', '~/x', '-n', 'work', *dry, runtime:)
-      assert_equal [1, '', "error: group \"home\" not found\n"],
+      assert_equal [1, '', "error: groups \"home\" not found\n"],
                    run_create('project', 'api', '--path', '~/x', '-n', 'home', *dry, runtime:)
-      assert_equal [1, '', "error: \"Bad\" is not a valid project name: #{Slipway::Names::RULE}\n"],
+      assert_equal [2, '', "error: \"Bad\" is not a valid project name: #{Slipway::Names::RULE}\n#{HINT}"],
                    run_create('project', 'Bad', '--path', '~/x', *dry, runtime:)
-      assert_equal [1, '', "error: \"Bad\" is not a valid group name: #{Slipway::Names::RULE}\n"],
+      assert_equal [2, '', "error: \"Bad\" is not a valid group name: #{Slipway::Names::RULE}\n#{HINT}"],
                    run_create('project', 'api', '--path', '~/x', '-n', 'Bad', *dry, runtime:)
       assert_equal [2, '', "error: invalid label \"x\": expected KEY=VALUE\n#{HINT}"],
                    run_create('group', 'team', '--label', 'x', *dry, runtime:)
@@ -138,9 +139,5 @@ class CreateTest < Minitest::Test
 
   def run_create(*argv, runtime:, **)
     run_commands('create', *argv, runtime:, commands: [Slipway::Commands::Create], **)
-  end
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env) }
   end
 end

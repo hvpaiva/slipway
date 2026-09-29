@@ -49,7 +49,7 @@ class CreateIntegrationTest < Minitest::Test
     with_home do |env|
       status, out, err = slipway('create', 'project', 'x', '--path', '~/dev/x', '-n', 'nope', env:)
 
-      assert_equal [1, '', "error: group \"nope\" not found\n"], [status, out, err]
+      assert_equal [1, '', "error: groups \"nope\" not found\n"], [status, out, err]
       refute_path_exists File.join(data_home(env), 'projects')
     end
   end
@@ -79,7 +79,30 @@ class CreateIntegrationTest < Minitest::Test
       status, _, err = slipway('create', 'project', 'dry', '--path', '~/dev/dry', '-n', 'nope', '--dry-run=client',
                                env:)
 
-      assert_equal [1, "error: group \"nope\" not found\n"], [status, err]
+      assert_equal [1, "error: groups \"nope\" not found\n"], [status, err]
+    end
+  end
+
+  def test_a_relative_path_is_stored_resolved_against_the_current_directory
+    with_home do |env|
+      dir = File.join(env['HOME'], 'dev', 'here')
+      build_repo(dir, 'clean')
+      status, out, err = slipway('create', 'project', 'here', '--path', '.', env:, chdir: dir)
+
+      assert_equal [0, "project/here created\n", ''], [status, out, err]
+      assert_includes File.read(File.join(data_home(env), 'projects', 'default', 'here.yaml')), "path: \"#{dir}\"\n"
+      assert_equal 'Clean', table(slipway!('get', 'projects', env:)).last[2]
+    end
+  end
+
+  def test_a_tilde_path_is_kept_as_written_and_an_empty_one_is_refused
+    with_home do |env|
+      slipway!('create', 'project', 'tilde', '--path', '~/dev/tilde', env:)
+      status, out, err = slipway('create', 'project', 'empty', '--path', '', env:)
+
+      assert_includes File.read(File.join(data_home(env), 'projects', 'default', 'tilde.yaml')), 'path: "~/dev/tilde"'
+      assert_equal [2, '', "error: flag --path must not be empty\nSee 'slipway create --help' for usage.\n"],
+                   [status, out, err]
     end
   end
 
@@ -87,10 +110,11 @@ class CreateIntegrationTest < Minitest::Test
     with_home do |env|
       status, out, err = slipway('create', 'project', 'Bad_Name', '--path', '~/dev/x', env:)
 
-      assert_equal 1, status
+      assert_equal 2, status
       assert_empty out
       assert_equal 'error: "Bad_Name" is not a valid project name: lowercase letters, digits and dashes, ' \
-                   "starting and ending with a letter or digit, at most 63 characters\n", err
+                   "starting and ending with a letter or digit, at most 63 characters\n" \
+                   "See 'slipway create --help' for usage.\n", err
     end
   end
 

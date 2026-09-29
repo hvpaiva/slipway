@@ -5,6 +5,8 @@ Update the labels on a resource.
   *  If --overwrite is true, then existing labels can be overwritten, otherwise attempting to overwrite a label will result in an error.
   *  KEY- removes the label KEY; removing a label that is not set changes nothing.
 
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
 Examples:
   # Update project 'hldr' with the label 'lang' and the value 'rust'
   slipway label project hldr lang=rust
@@ -21,9 +23,9 @@ Examples:
 Options:
       --overwrite          If true, allow labels to be overwritten, otherwise reject label updates that overwrite existing labels.
       --list               If true, display the labels for a given resource instead of writing them.
-      --dry-run STRATEGY   If client, only print what would change without writing anything. One of: none, client. (default "none")
+      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 
 Usage:
-  slipway label TYPE NAME [KEY=VALUE...] [flags]
+  slipway label (TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY-...] [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

@@ -5,11 +5,11 @@ module Slipway
     # Renders kubectl-shaped help straight from the registry. Alignment is computed on
     # plain text and color is applied afterwards, so ANSI escapes never skew columns.
     class HelpRenderer
-      SECTION_ORDER = ['Basic Commands', 'Settings Commands', 'Other Commands'].freeze
       COMMAND_COLUMN = 16
       FLAG_COLUMN = 30
       GAP = '   '
       INDENT = '  '
+      FLAGS = '[flags]'
       # Width of "-x, ", so long-only options line up with the long form of short ones.
       SHORT_PREFIX = ' ' * 4
 
@@ -21,10 +21,10 @@ module Slipway
       # The page for the bare program: description, command sections, global options, usage.
       def root
         join([
-               @registry.description,
+               @registry.root.description,
                *command_sections(@registry.root),
                option_section('Options', @registry.globals),
-               usage("#{@registry.program} [flags] COMMAND [ARGS...]"),
+               usage("#{@registry.program} #{FLAGS} COMMAND [ARGS...]"),
                command_trailer([])
              ])
       end
@@ -48,17 +48,12 @@ module Slipway
       def header(text) = @style.paint(:help_header, "#{text}:")
 
       def command_sections(command)
-        sections = command.visible_subcommands.group_by(&:section)
-        ordered = sections.sort_by.with_index { |(name, _), seen| [section_rank(name), seen] }
-        ordered.map do |section, commands|
+        command.sections.map do |section, commands|
           width = [COMMAND_COLUMN, *commands.map { it.name.size + GAP.size }].max
           rows = commands.map { "#{INDENT}#{it.name.ljust(width)}#{it.summary}" }
           "#{header(section)}\n#{rows.join("\n")}"
         end
       end
-
-      # Known sections keep kubectl's order; any other section follows in order of appearance.
-      def section_rank(name) = SECTION_ORDER.index(name) || SECTION_ORDER.size
 
       def examples(examples)
         return nil if examples.empty?
@@ -88,7 +83,7 @@ module Slipway
 
       def option_row(option, label, width)
         painted = paint_label(label)
-        text = option_description(option)
+        text = option.description_parts.join(' ')
         return "#{INDENT}#{painted}\n#{INDENT}#{' ' * width}#{GAP}#{text}" if label.size > width
 
         "#{INDENT}#{painted}#{' ' * (width - label.size)}#{GAP}#{text}"
@@ -100,19 +95,13 @@ module Slipway
         "#{label[0, label.size - stripped.size]}#{@style.paint(:help_flag, stripped)}"
       end
 
-      def option_description(option)
-        parts = [option.description]
-        parts << "One of: #{option.enum.join(', ')}." if option.enum
-        parts << "(default #{option.default.inspect})" unless option.default.nil? || option.default == false
-        parts << '(required)' if option.required
-        parts.join(' ')
-      end
-
       def usage(line) = "#{header('Usage')}\n#{INDENT}#{line}"
 
+      # Required options come before the positionals, as kubectl writes `apply -f FILENAME`;
+      # `[flags]` is always there because the global options apply to every command.
       def command_usage(command, path)
-        flags = command.options.empty? ? nil : '[flags]'
-        [@registry.program, *path, command.usage_args, flags].compact.reject(&:empty?).join(' ')
+        required = command.options.select(&:required).map { "#{it.switches.first} #{it.argument}" }
+        [@registry.program, *path, *required, command.usage_args, FLAGS].reject(&:empty?).join(' ')
       end
 
       def trailer(command, path)

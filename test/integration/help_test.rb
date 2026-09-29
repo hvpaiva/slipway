@@ -16,7 +16,7 @@ class HelpIntegrationTest < Minitest::Test
       assert_equal [0, root, ''], slipway('--help', env:)
       assert_equal [0, root, ''], slipway('-h', env:)
       assert_equal [0, root, ''], slipway('help', env:)
-      assert_equal 'A kubectl-style registry for the git repositories on your machine', root.lines.first.chomp
+      assert_equal 'A kubectl-style registry for the git repositories on your machine.', root.lines.first.chomp
     end
   end
 
@@ -67,7 +67,7 @@ class HelpIntegrationTest < Minitest::Test
 
   def test_an_invalid_global_value_is_a_usage_error
     with_home do |env|
-      assert_equal [2, '', 'error: invalid argument "maybe" for "--color[=WHEN]": must be one of auto, always, ' \
+      assert_equal [2, '', 'error: invalid argument "maybe" for --color: must be one of auto, always, ' \
                            "never\nSee 'slipway get --help' for usage.\n"],
                    slipway('--color=maybe', 'get', 'projects', env:)
     end

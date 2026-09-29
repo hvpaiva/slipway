@@ -3,22 +3,20 @@
 module Slipway
   # The one-word STATUS shown for a project: the most actionable fact about its repository.
   module State
-    WORDS = %w[Missing NotARepo Unsafe Conflicted Detached Unborn Dirty Gone Diverged Ahead Behind
-               Clean Unknown].freeze
-
+    # Every word, in precedence order, with the theme role that paints it.
     ROLES = {
-      'Clean' => :status_success,
-      'Dirty' => :status_warning,
-      'Ahead' => :status_warning,
-      'Behind' => :status_warning,
-      'Diverged' => :status_warning,
-      'Detached' => :status_warning,
-      'Gone' => :status_warning,
-      'Unborn' => :status_warning,
       'Missing' => :status_danger,
       'NotARepo' => :status_danger,
       'Unsafe' => :status_danger,
       'Conflicted' => :status_danger,
+      'Detached' => :status_warning,
+      'Unborn' => :status_warning,
+      'Dirty' => :status_warning,
+      'Gone' => :status_warning,
+      'Diverged' => :status_warning,
+      'Ahead' => :status_warning,
+      'Behind' => :status_warning,
+      'Clean' => :status_success,
       'Unknown' => :muted
     }.freeze
 

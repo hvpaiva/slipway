@@ -8,6 +8,16 @@ class GlobalsTest < Minitest::Test
     assert_predicate Slipway::CLI::Globals::ALL, :frozen?
   end
 
+  def test_all_with_a_group_completer_attaches_it_to_the_group_option_only
+    globals = Slipway::CLI::Globals.all(group_completer: ->(_given) { %w[default work] })
+    group = globals.find { it.long == 'group' }
+
+    assert_equal %w[default work], group.candidates([])
+    assert_equal Slipway::CLI::Globals::ALL.map(&:long), globals.map(&:long)
+    assert_equal([group], globals.reject { it.completer.nil? })
+    assert_predicate globals, :frozen?
+  end
+
   def test_keys_match_what_the_runner_reads
     assert_equal %i[color group config help version], Slipway::CLI::Globals::ALL.map(&:key)
   end

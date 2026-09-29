@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'yaml'
-require_relative 'cli/errors'
+require_relative 'error'
 require_relative 'cli/theme'
 require_relative 'cli/style'
 require_relative 'names'
@@ -26,7 +26,7 @@ module Slipway
         raise Error, "#{prefix}: #{subject}#{expectation}"
       end
 
-      # The description followed by the default, when there is one.
+      # The CONFIGURATION entry of the man page for this key.
       def documentation = [description, default && "Default: #{default}."].compact.join(' ')
     end
 
@@ -41,7 +41,7 @@ module Slipway
       Setting.new(key: 'group', variable: 'SLIPWAY_GROUP', default: 'default',
                   description: 'Group used when -n is not given.',
                   valid: ->(value) { Names.valid?(value) },
-                  expectation: 'must be a lowercase name of letters, digits and dashes'),
+                  expectation: "must be a valid group name: #{Names::RULE}"),
       Setting.new(key: 'theme', variable: 'SLIPWAY_THEME', default: CLI::Theme::DEFAULT_NAME,
                   description: 'Color theme: dark or light.',
                   valid: ->(value) { CLI::Theme::NAMES.include?(value) },
@@ -64,7 +64,7 @@ module Slipway
 
         Contents.new(values: {}, exists: false)
       rescue SystemCallError => e
-        raise Error, "#{path}: #{e.message.sub(/ @ \S+ - .*\z/m, '')}"
+        raise Error.from_system_call(e, path)
       else
         Contents.new(values: new(path, text).values, exists: true)
       end
@@ -117,6 +117,7 @@ module Slipway
     end
     private_class_method :resolve
 
+    # True when the configuration file was present, whatever it held.
     def exists? = exists
 
     # String keys in the documented order, as `config view` prints them.

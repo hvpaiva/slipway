@@ -1,14 +1,8 @@
 # frozen_string_literal: true
 
+require_relative '../error'
+
 module Slipway
-  # Base class for every failure Slipway reports to the user; exits with status 1.
-  class Error < StandardError
-    def exit_status = 1
-
-    # Usage errors point at a help page; every other error prints its message alone.
-    def hint = nil
-  end
-
   module CLI
     # Raised when the command line itself is wrong; exits with status 2.
     class UsageError < Slipway::Error
@@ -21,6 +15,7 @@ module Slipway
         @hint = hint
       end
 
+      # Usage errors exit with 2, the status the man page reserves for a wrong command line.
       def exit_status = 2
     end
   end

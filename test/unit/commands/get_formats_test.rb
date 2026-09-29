@@ -22,18 +22,7 @@ class GetFormatsTest < Minitest::Test
     spec:
       path: "~/dev/gone"
     status:
-      branch:
-      head:
-      upstream:
-      ahead:
-      behind:
-      staged:
-      unstaged:
-      untracked:
-      conflicted:
-      stashes:
       state: Missing
-      lastCommit:
   YAML
   GROUP_YAML = <<~YAML
     kind: Group
@@ -152,21 +141,22 @@ class GetFormatsTest < Minitest::Test
     end
   end
 
-  def test_a_missing_name_is_a_runtime_error_and_nothing_is_printed
+  def test_a_missing_name_is_a_runtime_error_reported_after_the_names_that_exist
     with_runtime do |runtime|
       register(runtime, 'hldr')
 
       assert_equal [1, '', "error: projects \"hldr\" not found\n"],
                    run_commands('get', 'projects', 'hldr', '-n', 'work', runtime:)
-      assert_equal [1, '', "error: projects \"nope\" not found\n"],
-                   run_commands('get', 'projects', 'hldr', 'nope', runtime:)
+      assert_equal [1, "NAME   BRANCH   STATUS   AGE\nhldr   main     Clean    3h\n",
+                    "error: projects \"nope\" not found\n"], run_commands('get', 'projects', 'hldr', 'nope', runtime:)
       assert_equal [1, '', "error: groups \"work\" not found\n"], run_commands('get', 'groups', 'work', runtime:)
     end
   end
 
   def test_an_unknown_type_is_a_runtime_error
     with_runtime do |runtime|
-      assert_equal [1, '', "error: unknown resource type \"pods\"\n"], run_commands('get', 'pods', runtime:)
+      assert_equal [1, '', "error: unknown resource type \"pods\" (known types: projects, groups)\n"],
+                   run_commands('get', 'pods', runtime:)
     end
   end
 
@@ -191,11 +181,5 @@ class GetFormatsTest < Minitest::Test
                            "See 'slipway get --help' for usage.\n"],
                    run_commands('get', 'projects', 'hldr', '-A', runtime:)
     end
-  end
-
-  private
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env) }
   end
 end

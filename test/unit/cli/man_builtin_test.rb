@@ -181,6 +181,18 @@ class ManBuiltinTest < Minitest::Test
     end
   end
 
+  def test_install_without_a_paths_factory_needs_an_explicit_directory
+    with_pages do |dir, env|
+      man = Slipway::CLI::Builtins.man(program: 'slipway', resolve: -> {}, man_dir: dir, exec: @exec)
+      registry = Slipway::CLI::Registry.new(program: 'slipway', version: '0.1.0', description: 'Slipway.',
+                                            globals: Slipway::CLI::Globals::ALL, builtins: false, commands: [man])
+      status, _, err = run_cli('man', '--install', registry:, env:)
+
+      assert_equal 1, status
+      assert_equal "error: no default install directory is configured; pass --install=DIR\n", err
+    end
+  end
+
   def test_production_defaults_point_at_the_bundled_directory_and_kernel_exec
     man = Slipway::CLI::Builtins.man(program: 'slipway', resolve: -> { FixtureRegistry.new.registry })
 
@@ -194,7 +206,8 @@ class ManBuiltinTest < Minitest::Test
   def registry(dir)
     fixture = FixtureRegistry.new
     registry = nil
-    man = Slipway::CLI::Builtins.man(program: 'slipway', resolve: -> { registry }, man_dir: dir, exec: @exec)
+    man = Slipway::CLI::Builtins.man(program: 'slipway', resolve: -> { registry }, man_dir: dir, exec: @exec,
+                                     paths: Slipway::Paths.method(:new))
     registry = Slipway::CLI::Registry.new(program: 'slipway', version: '0.1.0', description: 'Slipway.',
                                           globals: Slipway::CLI::Globals::ALL, builtins: false,
                                           commands: [fixture.command('get'), fixture.command('config'), man])

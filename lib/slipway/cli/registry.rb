@@ -2,6 +2,10 @@
 
 module Slipway
   module CLI
+    # Help and man pages list command sections in this order; any other section follows in
+    # order of appearance.
+    SECTION_ORDER = ['Basic Commands', 'Settings Commands', 'Other Commands'].freeze
+
     # One command-line option. +long+ is the name without dashes and +argument+ the
     # placeholder shown in help (nil for a boolean flag). An +optional+ option takes its
     # argument only as --long=VALUE and stores +implicit+ when the value is omitted;
@@ -16,8 +20,10 @@ module Slipway
       # The Hash key parsed values are stored under: --no-headers becomes :no_headers.
       def key = long.tr('-', '_').to_sym
 
+      # True for a boolean option, which takes no argument.
       def flag? = argument.nil?
 
+      # The switches as typed, short first: ["-o", "--output"].
       def switches = [short && "-#{short}", "--#{long}"].compact
 
       # The spec OptionParser#on understands: ["-o", "--output FORMAT"].
@@ -37,6 +43,16 @@ module Slipway
         optional ? "#{text}[=#{argument}]" : "#{text} #{argument}"
       end
 
+      # The sentences help and man pages print after the switch: the description, the
+      # accepted values, the default and whether the option is required.
+      def description_parts
+        parts = [description]
+        parts << "One of: #{enum.join(', ')}." if enum
+        parts << "(default #{default.inspect})" unless default.nil? || default == false
+        parts << '(required)' if required
+        parts
+      end
+
       # Folds one parsed occurrence into the value stored so far.
       def accept(current, raw)
         return true if flag?
@@ -48,11 +64,6 @@ module Slipway
 
       # Completion values: the enum when there is one, else whatever the completer returns.
       def candidates(given = []) = enum || completer&.call(given) || []
-
-      # Plain data for generators; the completer proc becomes a marker.
-      def manifest
-        to_h.except(:completer).merge(key: key, completer: completer ? 'dynamic' : nil)
-      end
     end
 
     # One positional argument. A variadic positional absorbs every remaining word.
@@ -67,9 +78,9 @@ module Slipway
         required ? token : "[#{token}]"
       end
 
+      # Completion values: the enum when there is one, else whatever the completer returns
+      # for the words +given+ before this one.
       def candidates(given = []) = enum || completer&.call(given) || []
-
-      def manifest = to_h.except(:completer).merge(completer: completer ? 'dynamic' : nil)
     end
 
     # A help example: a comment line and the command line it illustrates, without the program name.
@@ -77,44 +88,51 @@ module Slipway
 
     # A verb, or a group of verbs when +subcommands+ is non-empty. +handler+ responds to
     # call(context, args, opts). A +raw+ command receives argv untouched, with no option
-    # parsing, which is what the completion endpoint needs.
+    # parsing, which is what the completion endpoint needs. +usage+ replaces the positional
+    # list in the Usage line when the accepted forms cannot be read off the positionals.
     Command = Data.define(:name, :aliases, :summary, :description, :section, :examples,
-                          :positionals, :options, :subcommands, :hidden, :raw, :handler) do
+                          :positionals, :options, :subcommands, :hidden, :raw, :handler, :usage) do
       def initialize(name:, summary:, description: nil, aliases: [], section: 'Available Commands', examples: [],
-                     positionals: [], options: [], subcommands: [], hidden: false, raw: false, handler: nil)
+                     positionals: [], options: [], subcommands: [], hidden: false, raw: false, handler: nil,
+                     usage: nil)
         super(name:, summary:, description: description || summary, aliases:, section:, examples:,
-              positionals:, options:, subcommands:, hidden:, raw:, handler:)
+              positionals:, options:, subcommands:, hidden:, raw:, handler:, usage:)
       end
 
+      # True when the command only dispatches to subcommands.
       def group? = !subcommands.empty?
 
+      # The name and every alias, the words that reach this command.
       def names = [name, *aliases]
 
       # The subcommand called +word+ by name or alias, or nil.
       def find(word) = subcommands.find { it.names.include?(word) }
 
+      # The subcommands help, man pages and completion show.
       def visible_subcommands = subcommands.reject(&:hidden)
+
+      # The visible subcommands as [section, commands] pairs in SECTION_ORDER, other sections
+      # after them as they appear.
+      def sections
+        visible_subcommands.group_by(&:section).sort_by.with_index do |(name, _), seen|
+          [SECTION_ORDER.index(name) || SECTION_ORDER.size, seen]
+        end
+      end
 
       # The positional that receives the argument at +index+; a variadic tail absorbs the rest.
       def positional_at(index) = positionals[index] || (positionals.last if positionals.last&.variadic)
 
+      # How many positional arguments must be given.
       def min_args = positionals.count(&:required)
 
+      # How many positional arguments may be given, or nil when the last one is variadic.
       def max_args = positionals.last&.variadic ? nil : positionals.size
 
+      # The argument part of the Usage line: COMMAND for a group, else +usage+ or the positionals.
       def usage_args
         return 'COMMAND' if group?
 
-        positionals.map(&:usage).join(' ')
-      end
-
-      # Plain data for generators, without the handler.
-      def manifest
-        to_h.except(:handler).merge(
-          positionals: positionals.map(&:manifest),
-          options: options.map(&:manifest),
-          subcommands: subcommands.map(&:manifest)
-        )
+        usage || positionals.map(&:usage).join(' ')
       end
     end
 
@@ -122,14 +140,17 @@ module Slipway
     class Registry
       attr_reader :program, :version, :description, :globals, :root
 
-      # +builtins+ appends help, version, completion and __complete (see Builtins).
-      def initialize(program:, version:, description:, globals:, commands:, builtins: true)
+      # +description+ is the one-line summary; +long_description+, when given, is what the
+      # root help and man page print instead. +builtins+ adds help, version, completion, man
+      # and __complete (see Builtins); a Hash passes options on to the man builtin.
+      def initialize(program:, version:, description:, globals:, commands:, long_description: nil, builtins: true)
         @program = program
         @version = version
         @description = description
         @globals = globals
-        extra = builtins ? Builtins.all(program:, version:, resolve: -> { self }) : []
-        @root = Command.new(name: program, summary: description, subcommands: commands + extra)
+        extra = builtins ? Builtins.all(program:, version:, resolve: -> { self }, **man_options(builtins)) : []
+        @root = Command.new(name: program, summary: description, description: long_description,
+                            subcommands: commands + extra)
       end
 
       # Follows +words+ down the command tree and returns [command, path], where +path+
@@ -165,13 +186,9 @@ module Slipway
       # The hint for an unknown command, in kubectl's form.
       def run_hint(path) = "Run '#{[program, *path, '--help'].join(' ')}' for usage."
 
-      # Plain data describing the whole command tree, for the man page generator.
-      def manifest
-        { program:, version:, description:, globals: globals.map(&:manifest),
-          commands: root.subcommands.map(&:manifest) }
-      end
-
       private
+
+      def man_options(builtins) = builtins == true ? {} : builtins
 
       def with_guesses(message, word, dictionary)
         guesses = Suggest.similar(word, dictionary)

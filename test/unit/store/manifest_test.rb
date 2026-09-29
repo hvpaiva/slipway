@@ -159,12 +159,22 @@ class ManifestTest < Minitest::Test
     assert_equal "#{SOURCE}: did not find expected node content at line 2, column 1", error.message
   end
 
+  def test_an_empty_path_is_rejected
+    error = assert_raises(Slipway::Manifest::Invalid) do
+      Slipway::Manifest.parse({ 'kind' => 'Project', 'metadata' => { 'name' => 'x' }, 'spec' => { 'path' => ' ' } },
+                              source: SOURCE)
+    end
+
+    assert_equal "#{SOURCE}: \"spec.path\" must not be empty", error.message
+  end
+
   def test_load_documents_rejects_types_outside_the_safe_set
     error = assert_raises(Slipway::Manifest::Invalid) do
       Slipway::Manifest.load_documents("creationTimestamp: 2026-09-29T00:12:33Z\n", source: SOURCE)
     end
 
-    assert_equal "#{SOURCE}: Tried to load unspecified class: Time", error.message
+    assert_equal "#{SOURCE}: Time values are not accepted; timestamps, dates and symbols must be quoted strings",
+                 error.message
     assert_raises(Slipway::Manifest::Invalid) { Slipway::Manifest.load_documents("a: &x 1\nb: *x\n", source: SOURCE) }
   end
 

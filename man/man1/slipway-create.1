@@ -4,8 +4,8 @@
 slipway\-create \- Create a resource by name
 .SH SYNOPSIS
 .SY "slipway create"
-.I TYPE
-.I NAME
+.I TYPE\&
+.I NAME\&
 .RI [ flags ]
 .YS
 .SH DESCRIPTION
@@ -14,10 +14,12 @@ Create a resource by name.
 A project registers the git repository at \-\-path in the current group, which must exist unless it is the default group. A group is created empty and holds the projects you register with \-\-group later.
 .PP
 Use \-\-dry\-run=client to check the arguments without writing anything.
+.PP
+Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
 .TP
 \fB\-\-path\fR \fIDIR\fR
-Directory of the git repository to register; required for projects and stored as written.
+Directory of the git repository to register; required for projects. A relative directory is stored resolved against the current directory, a ~ path as written.
 .TP
 \fB\-\-description\fR \fITEXT\fR
 A short description of the resource.
@@ -26,16 +28,16 @@ A short description of the resource.
 A label to set on the new resource; may be repeated.
 .TP
 \fB\-\-dry\-run\fR \fISTRATEGY\fR
-If client, only print what would change without writing anything. One of: none, client. Default: none.
+Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 .SH EXAMPLES
 .EX
 # Register the repository at ~/dev/hldr as a project in the current group
-slipway create project hldr \-\-path ~/dev/hldr
+slipway create project hldr \-\-path '~/dev/hldr'
 .EE
 .PP
 .EX
 # Register a project in the work group with two labels
-slipway create project api \-\-path ~/work/api \-n work \-\-label lang=go \-\-label tier=api
+slipway create project api \-\-path '~/work/api' \-n work \-\-label lang=go \-\-label tier=api
 .EE
 .PP
 .EX
@@ -45,7 +47,7 @@ slipway create group work \-\-description "Projects for the day job"
 .PP
 .EX
 # Check the arguments without writing the project
-slipway create project hldr \-\-path ~/dev/hldr \-\-dry\-run=client
+slipway create project hldr \-\-path '~/dev/hldr' \-\-dry\-run=client
 .EE
 .SH "SEE ALSO"
 .BR slipway (1)

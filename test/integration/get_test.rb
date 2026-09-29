@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require_relative 'get_registry'
 
 class GetIntegrationTest < Minitest::Test
   include IntegrationHelper
@@ -113,7 +112,8 @@ class GetIntegrationTest < Minitest::Test
 
       assert_equal [1, '', "error: projects \"nothere\" not found\n"], slipway('get', 'project', 'nothere', env:)
       assert_equal [1, '', "error: groups \"nothere\" not found\n"], slipway('get', 'group', 'nothere', env:)
-      assert_equal [1, '', "error: unknown resource type \"pods\"\n"], slipway('get', 'pods', env:)
+      assert_equal [1, '', "error: unknown resource type \"pods\" (known types: projects, groups)\n"],
+                   slipway('get', 'pods', env:)
     end
   end
 
@@ -134,7 +134,7 @@ class GetIntegrationTest < Minitest::Test
       hint = "See 'slipway get --help' for usage.\n"
 
       assert_equal [2, '', "error: missing required argument \"TYPE\"\n#{hint}"], slipway('get', env:)
-      assert_equal [2, '', 'error: invalid argument "xml" for "-o, --output FORMAT": must be one of table, ' \
+      assert_equal [2, '', 'error: invalid argument "xml" for --output: must be one of table, ' \
                            "wide, json, yaml, name\n#{hint}"], slipway('get', 'projects', '-o', 'xml', env:)
       assert_equal [2, '', "error: unknown flag: --bogus\n#{hint}"], slipway('get', 'projects', '--bogus', env:)
       assert_equal [2, '', "error: unknown flag: -x\n#{hint}"], slipway('get', 'projects', '-x', env:)

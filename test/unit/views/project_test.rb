@@ -69,7 +69,7 @@ class ViewsProjectTest < Minitest::Test
   end
 
   def test_roles_paint_only_the_status_column
-    roles = Slipway::Views::Project.roles
+    roles = Slipway::Views::Project::ROLES
 
     assert_equal :status_success, roles.call('STATUS', 'Clean')
     assert_equal :status_danger, roles.call('STATUS', 'Missing')
@@ -102,7 +102,7 @@ class ViewsProjectTest < Minitest::Test
       Path:         ~/dev/gone
       Description:  <none>
       Status:       Missing
-      Repository:   /home/me/dev/gone: no such directory
+      Repository:   no such directory
       Last Commit:  <none>
     TEXT
 
@@ -131,15 +131,34 @@ class ViewsProjectTest < Minitest::Test
     assert_equal expected.fetch('status').keys, Slipway::Views::Project.object(inspection).fetch('status').keys
   end
 
-  def test_object_keeps_the_status_keys_with_nil_values_when_git_could_not_answer
+  def test_object_leaves_out_the_status_fields_git_could_not_answer
     inspection = Slipway::Inspection.failed(PROJECT, Slipway::Git::NotARepository.new('/x'))
+    unborn = inspected(CommandsHelper::UNBORN)
 
-    status = Slipway::Views::Project.object(inspection).fetch('status')
+    assert_equal({ 'state' => 'NotARepo' }, Slipway::Views::Project.object(inspection).fetch('status'))
+    assert_equal %w[branch staged unstaged untracked conflicted stashes state],
+                 Slipway::Views::Project.object(unborn).fetch('status').keys
+  end
 
-    assert_equal 'NotARepo', status.fetch('state')
-    assert_nil status.fetch('lastCommit')
-    assert_equal 12, status.size
-    assert_equal ['state'], status.compact.keys
+  def test_describe_adds_the_remedy_under_the_reason_when_the_error_has_one
+    inspection = Slipway::Inspection.failed(PROJECT, Slipway::Git::UnsafeRepository.new('/srv/x y'))
+
+    rendered = render(Slipway::Views::Project.describe(inspection, now: NOW))
+
+    assert_includes rendered, "Repository:   repository has dubious ownership\n              " \
+                              "Run 'git config --global --add safe.directory /srv/x\\ y' to trust it.\n"
+  end
+
+  def test_describe_and_rows_make_control_characters_visible
+    commit = CommandsHelper::COMMIT.with(subject: "fix\e[2Jall", author: "Mallory\e]0;x\a")
+    inspection = inspected(CommandsHelper::CLEAN, commit:)
+    project = PROJECT.with(description: "nice\u0085done")
+
+    rendered = render(Slipway::Views::Project.describe(inspection.with(project:), now: NOW))
+
+    assert_includes rendered, "Description:  nice\uFFFDdone\n"
+    assert_includes rendered, "  Author:   Mallory^[]0;x^G <ada@example.com>\n"
+    assert_includes rendered, "  Subject:  fix^[[2Jall\n"
   end
 
   private

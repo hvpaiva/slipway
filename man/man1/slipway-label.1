@@ -4,18 +4,21 @@
 slipway\-label \- Update the labels on a resource
 .SH SYNOPSIS
 .SY "slipway label"
-.I TYPE
-.I NAME
-.RI [ KEY=VALUE... ]\&
+.I "(TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY\-...]"\&
 .RI [ flags ]
 .YS
 .SH DESCRIPTION
 Update the labels on a resource.
+.IP \(bu 2
+A label key and value must begin with a letter or number, and may contain letters, numbers, hyphens, dots, and underscores, up to 63 characters each.
+.IP \(bu 2
+Optionally, the key can begin with a DNS subdomain prefix and a single '/', like example.com/my\-app.
+.IP \(bu 2
+If \-\-overwrite is true, then existing labels can be overwritten, otherwise attempting to overwrite a label will result in an error.
+.IP \(bu 2
+KEY\- removes the label KEY; removing a label that is not set changes nothing.
 .PP
-  *  A label key and value must begin with a letter or number, and may contain letters, numbers, hyphens, dots, and underscores, up to 63 characters each.
-  *  Optionally, the key can begin with a DNS subdomain prefix and a single '/', like example.com/my\-app.
-  *  If \-\-overwrite is true, then existing labels can be overwritten, otherwise attempting to overwrite a label will result in an error.
-  *  KEY\- removes the label KEY; removing a label that is not set changes nothing.
+Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
 .TP
 \fB\-\-overwrite\fR
@@ -25,7 +28,7 @@ If true, allow labels to be overwritten, otherwise reject label updates that ove
 If true, display the labels for a given resource instead of writing them.
 .TP
 \fB\-\-dry\-run\fR \fISTRATEGY\fR
-If client, only print what would change without writing anything. One of: none, client. Default: none.
+Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 .SH EXAMPLES
 .EX
 # Update project 'hldr' with the label 'lang' and the value 'rust'

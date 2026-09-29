@@ -5,6 +5,6 @@ Examples:
   slipway version
 
 Usage:
-  slipway version
+  slipway version [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

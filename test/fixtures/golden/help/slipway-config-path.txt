@@ -7,6 +7,6 @@ Examples:
   slipway config path
 
 Usage:
-  slipway config path
+  slipway config path [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

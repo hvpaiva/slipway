@@ -8,8 +8,8 @@ module Slipway
   module Commands
     # `slipway apply -f FILE`: creates or updates resources from manifests, one result line each.
     class Apply < Base
-      # Every problem met during one apply, raised once after the successful documents so
-      # the message prints as one `error:` line per problem.
+      # Every problem met during one apply, raised once after the successful documents; the
+      # front controller prints one `error:` line per problem.
       class Failed < Error; end
 
       DESCRIPTION = "Apply a configuration to a resource by file name or stdin.\n\n" \
@@ -28,6 +28,7 @@ module Slipway
                                  description: 'The file that contains the manifests to apply; may be repeated. ' \
                                               "A directory reads its *.yaml and *.yml files, '-' reads stdin.")
 
+      # The registry entry for `apply`: repeatable -f completing file names, and --dry-run.
       def self.command(factory)
         CLI::Command.new(
           name: 'apply', summary: 'Apply a configuration to a resource by file name or stdin',
@@ -47,23 +48,23 @@ module Slipway
                            command: 'apply -f hldr.yaml --dry-run=client')
         ]
       end
+      private_class_method :examples
 
+      # Applies every document of every -f source in order, then raises the collected problems.
       def run(runtime, context, _args, opts)
         dry_run = opts[:dry_run] == 'client'
-        session = Session.new(runtime.store, default_group: scope(runtime, opts).group, dry_run:)
+        session = Session.new(runtime.store, default_group: scope(runtime, context, opts).group, dry_run:)
         opts[:filename].each do |file|
           session.apply(file) { |kind, name, word, role| result_line(context, kind, name, word, role, dry_run:) }
         end
-        finish(context, session)
+        finish(session)
       end
 
       private
 
-      def finish(context, session)
+      def finish(session)
         raise Failed, NO_OBJECTS if session.problems.empty? && session.applied.zero?
-        return if session.problems.empty?
-
-        raise Failed, session.problems.join("\n#{context.paint_err(:error, 'error:')} ")
+        raise Failed.new(problems: session.problems) unless session.problems.empty?
       end
 
       # One run over every source in order. Each applied document is reported to the block
@@ -71,7 +72,6 @@ module Slipway
       class Session
         STDIN_SOURCE = 'STDIN'
         EXTENSIONS = %w[.yaml .yml].freeze
-        GROUPS = Resources.resolve('groups')
 
         attr_reader :problems, :applied
 
@@ -101,6 +101,8 @@ module Slipway
           [[name, File.read(name)]]
         rescue Errno::ENOENT
           raise Error, "#{name}: no such file"
+        rescue SystemCallError => e
+          raise Error.from_system_call(e, name)
         end
 
         def directory(name)
@@ -159,13 +161,12 @@ module Slipway
         end
 
         # A dry run writes nothing, so a group created earlier in the same run is remembered
-        # here for the projects that follow it. The default group always counts as present.
+        # here for the projects that follow it.
         def check_group(project)
           group = project.group
-          return if group == Store::DEFAULT_GROUP || @dry_run_groups.include?(group)
-          return if @store.exist?(GROUPS, group, group: nil)
+          return if @dry_run_groups.include?(group) || @store.group_available?(group)
 
-          raise Store::NotFound, "group #{group.inspect} not found"
+          raise Store::NotFound.of(Resources::GROUPS, group)
         end
       end
 

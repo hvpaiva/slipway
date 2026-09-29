@@ -34,11 +34,11 @@ Show the manual page of a command
 Help about any command
 .TP 12
 \fBversion\fR
-Print the client version
+Print the version of slipway
 .SH OPTIONS
 .TP
 \fB\-\-color\fR[=\fIWHEN\fR]
-When to use color in the output (auto unless configured). One of: auto, always, never.
+When to use color in the output; a bare \-\-color means always. One of: auto, always, never.
 .TP
 \fB\-n\fR, \fB\-\-group\fR \fINAME\fR
 The group scope for this request.
@@ -102,18 +102,6 @@ Configuration file; see CONFIGURATION. Also set by \-\-config or SLIPWAY_CONFIG.
 \fI$XDG_DATA_HOME/slipway/\fR
 Registry data: groups/NAME.yaml and projects/GROUP/NAME.yaml. Also set by SLIPWAY_DATA_HOME.
 .SH CONFIGURATION
-.TP
-\fBcolor\fR
-When to color output: auto, always or never. Default: auto.
-.TP
-\fBeditor\fR
-Command line of the editor that slipway edit opens.
-.TP
-\fBgroup\fR
-Group used when \-n is not given. Default: default.
-.TP
-\fBtheme\fR
-Color theme: dark or light. Default: dark.
 .SH "EXIT STATUS"
 .TP
 \fB0\fR

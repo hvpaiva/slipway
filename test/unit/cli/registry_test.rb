@@ -57,21 +57,31 @@ class RegistryTest < Minitest::Test
     assert_equal "Run 'slipway config --help' for usage.", @registry.run_hint(%w[config])
   end
 
-  def test_manifest_lists_every_command_with_the_program_data
-    manifest = @registry.manifest
+  def test_sections_follow_kubectl_order_and_leave_hidden_commands_out
+    sections = @registry.root.sections
 
-    assert_equal(%w[get create config raw help version completion man __complete],
-                 manifest[:commands].map { it[:name] })
-    assert_equal({ program: 'slipway', version: '0.1.0' }, manifest.slice(:program, :version))
+    assert_equal ['Basic Commands', 'Settings Commands', 'Other Commands'], sections.map(&:first)
+    assert_equal [%w[get create], %w[config completion man], %w[help version]],
+                 sections.map { |_, commands| commands.map(&:name) }.to_a
   end
 
-  def test_manifest_replaces_procs_with_plain_markers
-    get = @registry.manifest[:commands].first
+  def test_long_description_replaces_the_summary_on_the_root_command_only
+    registry = Slipway::CLI::Registry.new(program: 'x', version: '0', description: 'Short.', globals: [], commands: [],
+                                          long_description: "Short.\n\n Long.", builtins: false)
 
-    assert_equal 'dynamic', get[:positionals].last[:completer]
-    assert_nil get[:options].first[:completer]
-    assert_equal :no_headers, get[:options][1][:key]
-    refute get.key?(:handler)
+    assert_equal "Short.\n\n Long.", registry.root.description
+    assert_equal 'Short.', registry.root.summary
+    assert_equal FixtureRegistry::DESCRIPTION, @registry.root.description
+  end
+
+  def test_description_parts_spell_the_enum_the_default_and_the_requirement
+    output, no_headers = @registry.resolve(%w[get]).first.options
+    path = @registry.resolve(%w[create]).first.options.first
+
+    assert_equal ['Output format.', 'One of: table, wide, json, yaml, name.', '(default "table")'],
+                 output.description_parts
+    assert_equal ["When using the default output format, don't print headers."], no_headers.description_parts
+    assert_equal ['Directory of the repository.', '(required)'], path.description_parts
   end
 
   def test_builtins_can_be_left_out

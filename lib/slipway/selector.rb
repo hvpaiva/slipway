@@ -8,6 +8,7 @@ module Slipway
   class Selector
     # One requirement. +values+ is sorted and holds one value for =, != and none for existence checks.
     Requirement = Data.define(:key, :operator, :values) do
+      # True when +labels+ satisfies this requirement alone.
       def match?(labels)
         case operator
         when :equals, :in then labels.key?(key) && values.include?(labels[key])
@@ -17,6 +18,7 @@ module Slipway
         end
       end
 
+      # The normalized spelling, which also orders requirements of one key.
       def to_s
         case operator
         when :equals then "#{key}=#{values.first}"
@@ -42,6 +44,7 @@ module Slipway
         @position = 0
       end
 
+      # The requirements of the expression sorted by key, or UsageError at the first bad token.
       def parse
         return [] if @tokens.empty?
 
@@ -133,20 +136,17 @@ module Slipway
       end
     end
 
-    attr_reader :requirements
-
+    # Parses +expression+; nil or a blank string selects everything.
     def self.parse(expression) = new(Parser.new(expression.to_s).parse)
 
     def initialize(requirements)
       @requirements = requirements.freeze
     end
 
-    def match?(labels) = requirements.all? { it.match?(labels) }
-
-    # A blank expression selects everything.
-    def empty? = requirements.empty?
+    # True when +labels+ satisfies every requirement.
+    def match?(labels) = @requirements.all? { it.match?(labels) }
 
     # The normalized form: requirements sorted by key, values sorted, == written as =.
-    def to_s = requirements.join(',')
+    def to_s = @requirements.join(',')
   end
 end

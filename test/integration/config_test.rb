@@ -40,11 +40,11 @@ class ConfigIntegrationTest < Minitest::Test
   # loads, so their errors name the value; SLIPWAY_GROUP is validated with the file's wording.
   def test_an_invalid_variable_is_a_runtime_error
     with_home do |env|
-      assert_equal [1, '', "error: unknown theme \"solarized\" (known themes: dark, light)\n"],
+      assert_equal [1, '', "error: SLIPWAY_THEME: must be one of dark, light\n"],
                    slipway('config', 'view', env: env.merge('SLIPWAY_THEME' => 'solarized'))
-      assert_equal [1, '', "error: unknown color mode \"sometimes\" (known modes: auto, always, never)\n"],
+      assert_equal [1, '', "error: SLIPWAY_COLOR: must be one of auto, always, never\n"],
                    slipway('config', 'view', env: env.merge('SLIPWAY_COLOR' => 'sometimes'))
-      assert_equal [1, '', "error: SLIPWAY_GROUP: must be a lowercase name of letters, digits and dashes\n"],
+      assert_equal [1, '', "error: SLIPWAY_GROUP: must be a valid group name: #{Slipway::Names::RULE}\n"],
                    slipway('config', 'view', env: env.merge('SLIPWAY_GROUP' => 'Bad_Group'))
     end
   end
@@ -102,7 +102,7 @@ class ConfigIntegrationTest < Minitest::Test
           path            Display the path of the configuration file
 
         Usage:
-          slipway config COMMAND
+          slipway config COMMAND [flags]
 
         Use "slipway config <command> --help" for more information about a given command.
         Use "slipway --help" for a list of global options (applies to all commands).

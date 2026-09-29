@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'fileutils'
-require_relative '../paths'
 
 module Slipway
   module CLI
@@ -10,8 +9,9 @@ module Slipway
     module Builtins
       MAN_DIR = File.expand_path('../../../man/man1', __dir__)
 
-      def self.all(program:, version:, resolve:)
-        [help(program:, resolve:), version(program:, version:), completion(program:), man(program:, resolve:),
+      # The five builtins in the order they are listed; +man+ options are passed on to .man.
+      def self.all(program:, version:, resolve:, **man)
+        [help(program:, resolve:), version(program:, version:), completion(program:), man(program:, resolve:, **man),
          complete(resolve:)]
       end
 
@@ -20,6 +20,7 @@ module Slipway
         "#{program} #{version} (ruby #{RUBY_VERSION}) [#{Gem::Platform.local}]"
       end
 
+      # `help [COMMAND...]`, which prints the same page as `COMMAND --help`.
       def self.help(program:, resolve:)
         Command.new(
           name: 'help', summary: 'Help about any command', section: 'Other Commands',
@@ -28,19 +29,21 @@ module Slipway
           examples: [Example.new(comment: 'Show the help of a nested command', command: 'help config view')],
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
                                        completer: ->(given) { subcommand_names(resolve.call, given) })],
-          handler: ->(context, args, _opts) { HelpCommand.new(resolve.call).call(context, args) }
+          handler: HelpCommand.new(resolve)
         )
       end
 
+      # `version`, which prints the program, Ruby and platform on one line.
       def self.version(program:, version:)
         Command.new(
-          name: 'version', summary: 'Print the client version', section: 'Other Commands',
+          name: 'version', summary: "Print the version of #{program}", section: 'Other Commands',
           description: "Print the version of #{program}, the Ruby it runs on and the platform.",
           examples: [Example.new(comment: 'Print the version', command: 'version')],
           handler: ->(context, _args, _opts) { context.puts(version_line(program, version)) }
         )
       end
 
+      # `completion SHELL`, which prints the script for bash, zsh or fish.
       def self.completion(program:)
         shells = CompletionScripts::SHELLS.join(', ')
         Command.new(
@@ -55,18 +58,23 @@ module Slipway
         )
       end
 
+      # One install example per shell, in the same form the script headers describe.
       def self.completion_examples(program)
         [
-          Example.new(comment: 'Load completions into the current bash session',
-                      command: 'completion bash | source /dev/stdin'),
+          Example.new(comment: 'Install bash completions where bash-completion loads them',
+                      command: 'completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/' \
+                               "#{program}\""),
+          Example.new(comment: 'Install zsh completions in a directory on your fpath',
+                      command: "completion zsh > ~/.zfunc/_#{program}"),
           Example.new(comment: 'Install fish completions',
                       command: "completion fish > ~/.config/fish/completions/#{program}.fish")
         ]
       end
 
-      # +man_dir+ holds the bundled pages and +exec+ replaces the process; both are
-      # injectable so tests can observe the call instead of losing the process to man.
-      def self.man(program:, resolve:, man_dir: MAN_DIR, exec: Kernel.method(:exec))
+      # `man [COMMAND...]`. +man_dir+ holds the bundled pages, +exec+ replaces the process
+      # and +paths+, called with the environment, answers man_install_dir and man_db_dir
+      # for a bare --install; all three are injectable so tests can observe the calls.
+      def self.man(program:, resolve:, man_dir: MAN_DIR, exec: Kernel.method(:exec), paths: nil)
         Command.new(
           name: 'man', section: 'Settings Commands', summary: 'Show the manual page of a command',
           description: "Show the manual page of #{program} or of one of its commands with man(1).\n" \
@@ -75,10 +83,11 @@ module Slipway
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
                                        completer: ->(given) { subcommand_names(resolve.call, given) })],
           options: man_options,
-          handler: ->(context, args, opts) { ManCommand.new(resolve.call, man_dir:, exec:).call(context, args, opts) }
+          handler: ManCommand.new(resolve, man_dir:, exec:, paths:)
         )
       end
 
+      # The three ways to use `man`: read a page, install every page, find the directory.
       def self.man_examples
         [
           Example.new(comment: 'Read the page of a command', command: 'man get'),
@@ -87,6 +96,7 @@ module Slipway
         ]
       end
 
+      # `--path` and `--install[=DIR]`.
       def self.man_options
         [
           Option.new(long: 'path', description: 'Print the directory of the bundled pages and exit.'),
@@ -96,27 +106,33 @@ module Slipway
         ]
       end
 
+      # The hidden `__complete WORDS...` endpoint the shell scripts call.
       def self.complete(resolve:)
         Command.new(
           name: '__complete', summary: 'Print completion candidates for the given words', hidden: true, raw: true,
           positionals: [Positional.new(name: 'WORDS', required: false, variadic: true)],
-          handler: ->(context, words, _opts) { Completer.new(resolve.call).call(context, words) }
+          handler: ->(context, words, opts) { Completer.new(resolve.call).call(context, words, opts) }
         )
       end
 
+      # The names of the visible subcommands under the command +given+ names, for completion.
       def self.subcommand_names(registry, given)
         registry.resolve(given).first.visible_subcommands.map(&:name)
       end
 
       # `slipway help [COMMAND...]` renders the same page as `slipway COMMAND... --help`.
+      # +resolve+ returns the registry when called, since the builtin is built before the
+      # registry that holds it exists.
       class HelpCommand
-        def initialize(registry)
-          @registry = registry
+        def initialize(resolve)
+          @resolve = resolve
         end
 
-        def call(context, words)
-          renderer = HelpRenderer.new(@registry, context.style)
-          command, path = @registry.resolve(words)
+        # The registry handler: prints the page for the command +words+ name, or the root page.
+        def call(context, words, _opts)
+          registry = @resolve.call
+          renderer = HelpRenderer.new(registry, context.style)
+          command, path = registry.resolve(words)
           context.print(words.empty? ? renderer.root : renderer.command(command, path))
         end
       end
@@ -127,13 +143,16 @@ module Slipway
         # Any of these means the user configured the pager's look, so it is left alone.
         USER_PAGER_VARIABLES = %w[LESS_TERMCAP_md MANPAGER MANROFFOPT GROFF_NO_SGR].freeze
         RESET = "\e[0m"
+        NO_DEFAULT_DIR = 'no default install directory is configured; pass --install=DIR'
 
-        def initialize(registry, man_dir:, exec:)
-          @registry = registry
+        def initialize(resolve, man_dir:, exec:, paths:)
+          @resolve = resolve
           @man_dir = man_dir
           @exec = exec
+          @paths = paths
         end
 
+        # The registry handler: --path, --install, or the page for +args+.
         def call(context, args, opts)
           return context.puts(@man_dir) if opts[:path]
           return install(context, opts[:install]) if opts[:install]
@@ -143,9 +162,11 @@ module Slipway
 
         private
 
+        def registry = @resolve.call
+
         def show(context, words)
-          _, path = @registry.resolve(words)
-          file = File.join(@man_dir, "#{[@registry.program, *path].join('-')}.1")
+          _, path = registry.resolve(words)
+          file = File.join(@man_dir, "#{[registry.program, *path].join('-')}.1")
           raise Slipway::Error, "manual page #{File.basename(file)} not found in #{@man_dir}" unless File.file?(file)
           raise Slipway::Error, missing_man_message(path) unless man?(context.env)
 
@@ -153,7 +174,7 @@ module Slipway
         end
 
         def missing_man_message(path)
-          "man(1) not found; run '#{[@registry.program, 'help', *path].join(' ')}' instead"
+          "man(1) not found; run '#{[registry.program, 'help', *path].join(' ')}' instead"
         end
 
         def man?(env)
@@ -177,7 +198,9 @@ module Slipway
         def set?(value) = !value.to_s.empty?
 
         def install(context, target)
-          paths = Paths.new(context.env)
+          paths = @paths&.call(context.env)
+          raise Slipway::Error, NO_DEFAULT_DIR if target == true && paths.nil?
+
           dir = target == true ? paths.man_install_dir : File.expand_path(target)
           pages = Dir[File.join(@man_dir, '*.1')]
           raise Slipway::Error, "no manual pages found in #{@man_dir}" if pages.empty?
@@ -192,7 +215,7 @@ module Slipway
 
         # man-db adds ~/.local/share/man on its own only when ~/.local/bin is on PATH.
         def install_note(paths, dir)
-          if dir == File.join(paths.home, Paths::XDG_DEFAULTS.fetch(Paths::XDG_DATA_HOME), Paths::MAN_SECTION)
+          if paths && dir == paths.man_db_dir
             'man-db searches ~/.local/share/man when ~/.local/bin is on PATH; otherwise add it to MANPATH.'
           else
             %(export MANPATH="#{File.dirname(dir)}:$MANPATH")

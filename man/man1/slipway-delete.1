@@ -4,8 +4,7 @@
 slipway\-delete \- Delete resources by type and name
 .SH SYNOPSIS
 .SY "slipway delete"
-.I TYPE
-.I NAME...
+.I "(TYPE NAME... | TYPE/NAME...)"\&
 .RI [ flags ]
 .YS
 .SH DESCRIPTION
@@ -14,10 +13,12 @@ Delete resources by type and name.
 Every name is resolved before anything is deleted, so a name that does not exist leaves the others untouched unless \-\-ignore\-not\-found is set. Deleting a group also deletes the registrations of its projects; the default group cannot be deleted.
 .PP
 Deleting a project removes its registration only. The repository on disk is not touched.
+.PP
+Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
 .TP
 \fB\-\-dry\-run\fR \fISTRATEGY\fR
-If client, only print what would change without writing anything. One of: none, client. Default: none.
+Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 .TP
 \fB\-\-ignore\-not\-found\fR
 Treat "resource not found" as a successful delete.

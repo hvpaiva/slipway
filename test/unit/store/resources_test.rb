@@ -85,7 +85,7 @@ class ResourcesTest < Minitest::Test
   def test_resolve_rejects_unknown_words
     error = assert_raises(Slipway::Error) { Slipway::Resources.resolve('pods') }
 
-    assert_equal 'unknown resource type "pods"', error.message
+    assert_equal 'unknown resource type "pods" (known types: projects, groups)', error.message
     assert_equal 1, error.exit_status
   end
 
@@ -101,8 +101,9 @@ class ResourcesTest < Minitest::Test
     assert_equal [Slipway::Project, Slipway::Group], [projects.klass, groups.klass]
   end
 
-  def test_plurals_lists_every_kind
-    assert_equal %w[projects groups], Slipway::Resources.plurals
+  def test_kinds_are_exposed_as_constants_in_plural_order
+    assert_equal [Slipway::Resources::PROJECTS, Slipway::Resources::GROUPS], Slipway::Resources::KINDS
+    assert_equal 'default', Slipway::Resources::DEFAULT_GROUP
   end
 
   def test_of_finds_the_kind_of_a_resource

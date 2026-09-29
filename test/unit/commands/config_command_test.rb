@@ -109,8 +109,8 @@ class ConfigCommandTest < Minitest::Test
       assert_includes out, 'Inspect the configuration that slipway resolved from flags, environment variables and ' \
                            "the configuration file.\n\nAvailable Commands:\n  view            Display the " \
                            "configuration in effect\n  path            Display the path of the configuration file\n"
-      assert_includes out, "Usage:\n  slipway config COMMAND\n\nUse \"slipway config <command> --help\" for more " \
-                           'information about a given command.'
+      assert_includes out, "Usage:\n  slipway config COMMAND [flags]\n\nUse \"slipway config <command> --help\" for " \
+                           'more information about a given command.'
     end
   end
 
@@ -120,7 +120,7 @@ class ConfigCommandTest < Minitest::Test
       _, path_help, = run_config('config', 'path', '--help', env:)
 
       assert_includes view_help, "Display the configuration in effect.\n\nPrints every setting as YAML"
-      assert_includes view_help, "Usage:\n  slipway config view\n"
+      assert_includes view_help, "Usage:\n  slipway config view [flags]\n"
       assert_includes path_help, "Examples:\n  # Print the path of the configuration file\n  slipway config path\n"
       assert_equal [2, '', "error: unknown command \"vew\" for \"slipway config\"\n\nDid you mean this?\n\tview\n\n" \
                            "Run 'slipway config --help' for usage.\n"], run_config('config', 'vew', env:)
@@ -143,7 +143,7 @@ class ConfigCommandTest < Minitest::Test
     registry = Slipway::CLI::Registry.new(program: Slipway::Commands::PROGRAM, version: Slipway::VERSION,
                                           description: Slipway::Commands::DESCRIPTION,
                                           globals: Slipway::CLI::Globals::ALL,
-                                          commands: [Slipway::Commands::Config.command(Slipway::Runtime.method(:build))])
+                                          commands: [Slipway::Commands::ConfigCommand.command(Slipway::Runtime.method(:build))])
     run_cli(*argv, env:, registry:)
   end
 

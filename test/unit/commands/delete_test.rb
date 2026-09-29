@@ -116,10 +116,12 @@ class DeleteTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Delete resources by type and name.\n\n"
-      assert_includes out, "Usage:\n  slipway delete TYPE NAME... [flags]\n"
+      assert_includes out, "Usage:\n  slipway delete (TYPE NAME... | TYPE/NAME...) [flags]\n"
       assert_includes out, '      --ignore-not-found'
-      assert_equal [2, '', "error: missing required argument \"NAME\"\n#{HINT}"], run_delete('projects', runtime:)
-      assert_equal [1, '', "error: unknown resource type \"pods\"\n"], run_delete('pods', 'x', runtime:)
+      assert_equal [2, '', "error: resource(s) were provided, but no name was specified\n#{HINT}"],
+                   run_delete('projects', runtime:)
+      assert_equal [1, '', "error: unknown resource type \"pods\" (known types: projects, groups)\n"],
+                   run_delete('pods', 'x', runtime:)
     end
   end
 
@@ -127,9 +129,5 @@ class DeleteTest < Minitest::Test
 
   def run_delete(*argv, runtime:, **)
     run_commands('delete', *argv, runtime:, commands: [Slipway::Commands::Delete], **)
-  end
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env) }
   end
 end

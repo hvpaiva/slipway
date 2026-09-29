@@ -10,6 +10,6 @@ Examples:
   slipway config view --config ~/work/slipway.yaml
 
 Usage:
-  slipway config view
+  slipway config view [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

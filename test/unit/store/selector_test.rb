@@ -98,20 +98,9 @@ class SelectorTest < Minitest::Test
     [nil, '', "  \t "].each do |expression|
       selector = Slipway::Selector.parse(expression)
 
-      assert_predicate selector, :empty?
       assert_equal '', selector.to_s
       assert selects?(expression, {})
     end
-  end
-
-  def test_requirements_are_exposed_as_frozen_data
-    selector = Slipway::Selector.parse('!legacy,lang in (rust,go)')
-    summary = selector.requirements.map { [it.key, it.operator.to_s] }
-
-    assert_predicate selector.requirements, :frozen?
-    assert_equal [%w[lang in], %w[legacy does_not_exist]], summary
-    assert_equal %w[go rust], selector.requirements.first.values
-    refute_predicate selector, :empty?
   end
 
   private

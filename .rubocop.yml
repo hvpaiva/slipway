@@ -17,10 +17,6 @@ AllCops:
   Exclude:
     - vendor/**/*
 
-Layout/LineLength:
-  # Restated so the limit is visible next to the Metrics settings it pairs with.
-  Max: 120
-
 Metrics/AbcSize:
   # Command handlers and parsers branch on user input; 25 keeps them readable without splitting on ceremony.
   Max: 25
@@ -47,7 +43,3 @@ Metrics/ParameterLists:
 Minitest/MultipleAssertions:
   # A CLI test asserts status, stdout and stderr, often for two invocations.
   Max: 6
-
-Style/Documentation:
-  # Every public class and module carries a one-sentence comment.
-  Enabled: true

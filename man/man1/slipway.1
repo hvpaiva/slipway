@@ -9,7 +9,13 @@ slipway \- A kubectl\-style registry for the git repositories on your machine
 .RI [ ARGS... ]\&
 .YS
 .SH DESCRIPTION
-A kubectl\-style registry for the git repositories on your machine
+A kubectl\-style registry for the git repositories on your machine.
+.PP
+A project is a registered git repository: its path, an optional description
+and labels. Projects live in groups the way pods live in namespaces; the group
+is "default" unless \-n is given, and \-A lists every group.
+.PP
+Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH COMMANDS
 .SS "Basic Commands"
 .TP 12
@@ -17,7 +23,7 @@ A kubectl\-style registry for the git repositories on your machine
 Display one or many resources
 .TP 12
 \fBdescribe\fR
-Show details of a specific resource or group of resources
+Show details of one or many resources
 .TP 12
 \fBcreate\fR
 Create a resource by name
@@ -49,11 +55,11 @@ Show the manual page of a command
 Help about any command
 .TP 12
 \fBversion\fR
-Print the client version
+Print the version of slipway
 .SH OPTIONS
 .TP
 \fB\-\-color\fR[=\fIWHEN\fR]
-When to use color in the output (auto unless configured). One of: auto, always, never.
+When to use color in the output; a bare \-\-color means always. One of: auto, always, never.
 .TP
 \fB\-n\fR, \fB\-\-group\fR \fINAME\fR
 The group scope for this request.

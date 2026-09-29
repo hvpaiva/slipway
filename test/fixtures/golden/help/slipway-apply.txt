@@ -19,9 +19,9 @@ Examples:
 
 Options:
   -f, --filename FILE      The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '-' reads stdin. (required)
-      --dry-run STRATEGY   If client, only print what would change without writing anything. One of: none, client. (default "none")
+      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 
 Usage:
-  slipway apply [flags]
+  slipway apply -f FILE [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

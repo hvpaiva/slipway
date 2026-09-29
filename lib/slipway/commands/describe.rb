@@ -8,15 +8,17 @@ module Slipway
     # `slipway describe TYPE [NAME...]`: every field of the selected resources, one block per
     # object, separated by a blank line.
     class Describe < Base
-      DESCRIPTION = "Show details of a specific resource or group of resources.\n\n" \
+      DESCRIPTION = "Show details of one or many resources.\n\n" \
                     'Print a detailed description of the selected resources, including the state of the ' \
                     'repository at the registered path. You may select a single object by name, all objects ' \
-                    'of that type, or use a label selector.'
+                    "of that type, or use a label selector.\n\n" \
+                    "#{Options::TYPES_SENTENCE}".freeze
 
+      # The registry entry for `describe`: a selector and -A, and NAME completed from the store.
       def self.command(factory)
         CLI::Command.new(
-          name: 'describe', summary: 'Show details of a specific resource or group of resources',
-          section: 'Basic Commands', description: DESCRIPTION, examples:,
+          name: 'describe', summary: 'Show details of one or many resources',
+          section: 'Basic Commands', description: DESCRIPTION, examples:, usage: Get::USAGE,
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: false)],
           options: [Options::SELECTOR, Options::ALL_GROUPS],
           handler: new(factory)
@@ -32,24 +34,25 @@ module Slipway
           CLI::Example.new(comment: 'Describe a group', command: 'describe group work')
         ]
       end
+      private_class_method :examples
 
+      # Selects the resources and prints one describe block per resource.
       def run(runtime, context, args, opts)
-        type, *names = args
-        scope = scope(runtime, opts)
-        kind = scope.kind(type)
-        resources = scope.select(kind, names)
-        return context.warn(scope.none_message(kind)) if resources.empty?
+        scope = scope(runtime, context, opts)
+        kind, names = scope.targets(args)
+        scope.select(kind, names) do |resources|
+          next scope.report_none(kind) if resources.empty?
 
-        blocks = kind.namespaced? ? projects(runtime, context, resources) : groups(runtime, resources)
-        renderer = Output::Describe.new(context)
-        context.print(blocks.map { renderer.render(it) }.join("\n"))
+          blocks = kind.namespaced? ? projects(runtime, context, resources) : groups(runtime, resources)
+          renderer = Output::Describe.new(context)
+          context.print(blocks.map { renderer.render(it) }.join("\n"))
+        end
       end
 
       private
 
       def projects(runtime, context, resources)
-        inspections = runtime.inspector.inspect_all(resources)
-        runtime.inspector.warnings.each { context.warn("#{context.paint_err(:warning, 'warning:')} #{it}") }
+        inspections = Base.examine(runtime, context, resources)
         now = runtime.clock.call
         inspections.map { Views::Project.describe(it, now:) }
       end

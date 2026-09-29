@@ -8,7 +8,7 @@ class CompletionIntegrationTest < Minitest::Test
   # What the shell is offered at the root: every visible command with its summary.
   ROOT = <<~TEXT
     get\tDisplay one or many resources
-    describe\tShow details of a specific resource or group of resources
+    describe\tShow details of one or many resources
     create\tCreate a resource by name
     apply\tApply a configuration to a resource by file name or stdin
     delete\tDelete resources by type and name
@@ -16,7 +16,7 @@ class CompletionIntegrationTest < Minitest::Test
     label\tUpdate the labels on a resource
     config\tInspect the configuration in effect
     help\tHelp about any command
-    version\tPrint the client version
+    version\tPrint the version of slipway
     completion\tOutput shell completion code for the specified shell (bash, zsh, fish)
     man\tShow the manual page of a command
     :4
@@ -71,7 +71,7 @@ class CompletionIntegrationTest < Minitest::Test
     with_home do |env|
       assert_equal [0, "table\nwide\njson\nyaml\nname\n:4\n", ''], slipway('__complete', 'get', '-o', '', env:)
       assert_equal [0, "--output=json\n:4\n", ''], slipway('__complete', 'get', '--output=j', env:)
-      assert_equal [0, "--color\tWhen to use color in the output (auto unless configured).\n:4\n", ''],
+      assert_equal [0, "--color\tWhen to use color in the output; a bare --color means always.\n:4\n", ''],
                    slipway('__complete', '--col', env:)
       assert_equal [0, "bash\nzsh\nfish\n:4\n", ''], slipway('__complete', 'completion', '', env:)
     end
@@ -90,6 +90,15 @@ class CompletionIntegrationTest < Minitest::Test
       assert_equal [0, ":4\n", ''], slipway('__complete', 'get', 'pods', '', env:)
       assert_equal [0, ":4\n", ''],
                    slipway('__complete', 'get', 'projects', '', env: env.merge('XDG_DATA_HOME' => '/dev/null/x'))
+    end
+  end
+
+  def test_the_group_flag_completes_group_names_from_the_store
+    with_home do |env|
+      seed(env, manifest('Group', 'work'), manifest('Group', 'lab'))
+
+      assert_equal [0, "lab\nwork\n:4\n", ''], slipway('__complete', '-n', '', env:)
+      assert_equal [0, "--group=work\n:4\n", ''], slipway('__complete', 'get', 'projects', '--group=w', env:)
     end
   end
 end

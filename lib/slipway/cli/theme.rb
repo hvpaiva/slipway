@@ -50,12 +50,10 @@ module Slipway
 
       attr_reader :name
 
-      # Returns the preset called +name+ or raises Slipway::Error for an unknown one.
+      # The preset called +name+; callers check the name against NAMES first, so an unknown
+      # one here is a programming error.
       def self.fetch(name)
-        roles = PRESETS.fetch(name) do
-          raise Slipway::Error, "unknown theme #{name.inspect} (known themes: #{NAMES.join(', ')})"
-        end
-        new(name, roles)
+        new(name, PRESETS.fetch(name))
       end
 
       # The dark preset, used until a theme is chosen.
@@ -65,9 +63,6 @@ module Slipway
         @name = name
         @roles = roles
       end
-
-      # Every role name the theme knows.
-      def roles = @roles.keys
 
       # SGR parameters for a single-valued role, such as "90;3".
       def sgr(role)

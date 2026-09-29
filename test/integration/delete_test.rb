@@ -82,7 +82,8 @@ class DeleteIntegrationTest < Minitest::Test
 
   def test_a_name_is_required
     with_home do |env|
-      assert_equal [2, '', "error: missing required argument \"NAME\"\nSee 'slipway delete --help' for usage.\n"],
+      assert_equal [2, '', "error: resource(s) were provided, but no name was specified\n" \
+                           "See 'slipway delete --help' for usage.\n"],
                    slipway('delete', 'project', env:)
     end
   end

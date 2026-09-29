@@ -14,9 +14,11 @@ module Slipway
                     'The edit command allows you to directly edit any resource in the registry. It will open ' \
                     'the editor named by the SLIPWAY_EDITOR environment variable, then the editor key of the ' \
                     "configuration file, then VISUAL or EDITOR, or fall back to 'vi'.\n\n" \
-                    'The kind, name and group of a resource cannot be changed. If an error occurs while saving, ' \
-                    'the file is reopened with the relevant failures as comments at the top; saving it again ' \
-                    'without changes cancels the edit.'
+                    'The kind, name, group and creation timestamp of a resource cannot be changed. If an error ' \
+                    'occurs while saving, the file is reopened with the relevant failures as comments at the ' \
+                    "top; saving it again without changes cancels the edit.\n\n" \
+                    "#{Options::TYPES_SENTENCE}".freeze
+      USAGE = '(TYPE NAME | TYPE/NAME)'
       HEADER = <<~TEXT
         # Please edit the object below. Lines beginning with a '#' will be ignored,
         # and an empty file will abort the edit. If an error occurs while saving this
@@ -24,6 +26,7 @@ module Slipway
         #
       TEXT
       UNCHANGED = 'Edit cancelled, no changes made.'
+      EMPTY = 'Edit cancelled, saved file was empty.'
       ABORTED = 'Edit cancelled, no valid changes were saved.'
       IMMUTABLE = 'kind, metadata.name and metadata.group cannot be changed'
       SOURCE = 'edited manifest'
@@ -33,11 +36,12 @@ module Slipway
       # as it was; exits with status 1.
       class Aborted < Slipway::Error; end
 
+      # The registry entry for `edit`: one NAME completed from the store and no options of its own.
       def self.command(factory)
         CLI::Command.new(
           name: 'edit', summary: 'Edit a resource from the default editor', section: 'Basic Commands',
-          description: DESCRIPTION, examples:,
-          positionals: [Options::TYPE, Options.name_positional(factory, variadic: false, required: true)],
+          description: DESCRIPTION, examples:, usage: USAGE,
+          positionals: [Options::TYPE, Options.name_positional(factory, variadic: false, required: false)],
           handler: new(factory)
         )
       end
@@ -49,11 +53,12 @@ module Slipway
           CLI::Example.new(comment: "Edit the group named 'work'", command: 'edit group work')
         ]
       end
+      private_class_method :examples
 
+      # Opens the resource in the editor and saves what comes back, or reports why not.
       def run(runtime, context, args, opts)
-        type, name = args
-        scope = scope(runtime, opts)
-        kind = scope.kind(type)
+        scope = scope(runtime, context, opts)
+        kind, name = scope.target(args)
         resource = runtime.store.find(kind, name, group: scope.group)
         editor = Editor.new(env: context.env, preferred: runtime.config.editor)
         edited = Session.new(editor, kind, resource).edit
@@ -82,37 +87,40 @@ module Slipway
           @original = Manifest.dump(resource)
         end
 
+        # Runs the editor until the text is valid, unchanged or blank; nil means unchanged.
         def edit
           text = @original
           problem = nil
           loop do
             edited = strip(@editor.edit(buffer(text, problem), filename: "#{@resource.name}.yaml"))
-            raise Aborted, ABORTED if edited.strip.empty? || (problem && edited == text)
+            raise Aborted, EMPTY if edited.strip.empty?
+            raise Aborted, ABORTED if problem && edited == text
             return nil if edited == @original
 
             return parse(edited)
           rescue Manifest::Invalid => e
-            problem = e.message
+            problem = e.problem
             text = edited
           end
         end
 
         private
 
-        # The header, the previous failure as a comment block, then the text to edit.
+        # The header, then the previous failure as kubectl words it, then the text to edit.
         def buffer(text, problem)
           return "#{HEADER}#{text}" if problem.nil?
 
-          "#{HEADER}#{problem.lines.map { "# #{it.chomp}\n" }.join}#\n#{text}"
+          "#{HEADER}# #{@kind.plural} #{@resource.name.inspect} was not valid:\n# * #{problem}\n#\n#{text}"
         end
 
         def strip(text) = text.lines.grep_v(COMMENT).join
 
+        # The stored creationTimestamp is kept whatever the buffer says, as apply keeps it.
         def parse(text)
           parsed = Manifest.parse_yaml(text, source: SOURCE, default_group: group)
           raise Manifest::Invalid.new(SOURCE, IMMUTABLE) unless same_identity?(parsed)
 
-          parsed.created_at ? parsed : parsed.with(created_at: @resource.created_at)
+          parsed.with(created_at: @resource.created_at)
         end
 
         def group = @kind.namespaced? ? @resource.group : Store::DEFAULT_GROUP

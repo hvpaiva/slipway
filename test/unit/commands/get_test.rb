@@ -26,6 +26,18 @@ class GetTest < Minitest::Test
             "\e[37mnotes\e[0m   \e[36mmain\e[0m     \e[33mDirty\e[0m     \e[36m3h\e[0m\n" \
             "\e[37mslow\e[0m    \e[90;3m<none>\e[0m   \e[90;3mUnknown\e[0m   \e[36m3h\e[0m\n"
 
+  def test_all_groups_leaves_the_other_columns_with_the_colors_they_have_without_it
+    with_runtime do |runtime|
+      register(runtime, 'hldr')
+      _, plain, = run_commands('get', 'projects', '--no-headers', '--color=always', runtime:)
+      _, grouped, = run_commands('get', 'projects', '-A', '--no-headers', '--color=always', runtime:)
+
+      assert_equal "\e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[36m3h\e[0m\n", plain
+      assert_equal "\e[36mdefault\e[0m   \e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[36m3h\e[0m\n",
+                   grouped
+    end
+  end
+
   def test_projects_print_as_a_table_of_the_current_group
     with_runtime do |runtime|
       register(runtime, 'hldr', labels: { 'lang' => 'rust' })
@@ -161,15 +173,9 @@ class GetTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Display one or many resources.\n\nPrints a table"
-      assert_includes out, "Usage:\n  slipway get TYPE [NAME...] [flags]\n"
+      assert_includes out, "Usage:\n  slipway get (TYPE [NAME...] | TYPE/NAME...) [flags]\n"
       assert_includes out, '  -A, --all-groups'
       assert_equal [2, '', "error: missing required argument \"TYPE\"\nSee 'slipway get --help' for usage.\n"], missing
     end
-  end
-
-  private
-
-  def with_runtime
-    with_sandbox { |env| yield sandbox_runtime(env) }
   end
 end

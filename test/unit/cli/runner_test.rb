@@ -3,11 +3,6 @@
 require 'test_helper'
 
 class RunnerTest < Minitest::Test
-  # A stream whose reader has gone away.
-  class BrokenPipe < StringIO
-    def write(*) = raise(Errno::EPIPE)
-  end
-
   def setup
     @fixture = FixtureRegistry.new
   end
@@ -55,8 +50,8 @@ class RunnerTest < Minitest::Test
 
     assert_equal [0, '', ''], [status, out, err]
     assert_equal ['get', %w[projects alpha]], [call.name, call.args]
-    assert_equal({ output: 'json', no_headers: nil, selector: nil, color: nil, group: nil, config: nil, help: nil,
-                   version: nil }, call.opts)
+    assert_equal({ output: 'json', no_headers: nil, selector: nil }, call.opts.slice(:output, :no_headers, :selector))
+    assert_nil call.opts.fetch(:group)
     assert_predicate call.opts, :frozen?
   end
 
@@ -101,7 +96,7 @@ class RunnerTest < Minitest::Test
     assert_equal "error: missing argument: -o\nSee 'slipway get --help' for usage.\n", missing
     assert_equal "error: missing required argument \"TYPE\"\nSee 'slipway get --help' for usage.\n", arity
     assert_equal 2, status
-    assert_equal 'error: invalid argument "xml" for "-o, --output FORMAT": must be one of table, wide, json, ' \
+    assert_equal 'error: invalid argument "xml" for --output: must be one of table, wide, json, ' \
                  "yaml, name\nSee 'slipway get --help' for usage.\n", enum
   end
 
@@ -161,22 +156,6 @@ class RunnerTest < Minitest::Test
     assert_equal 130, status
     assert_empty out
     assert_equal "\n", err
-  end
-
-  def test_broken_pipe_exits_zero_silently
-    @fixture.failure = Errno::EPIPE
-    status, out, err = @fixture.run('get', 'projects')
-
-    assert_equal 0, status
-    assert_empty out
-    assert_empty err
-  end
-
-  def test_broken_pipe_while_reporting_an_error_exits_zero
-    @fixture.failure = Slipway::Error.new('boom')
-    context = Slipway::CLI::Context.new(out: StringIO.new, err: BrokenPipe.new)
-
-    assert_equal 0, Slipway::CLI::Runner.new(@fixture.registry, context).run(%w[get projects])
   end
 
   def test_unknown_subcommand_inside_a_group_points_at_the_group_help
@@ -243,7 +222,7 @@ class RunnerTest < Minitest::Test
 
     assert_equal 1, status
     assert_empty out
-    assert_equal "error: unknown color mode \"blue\" (known modes: auto, always, never)\n", err
+    assert_equal "error: SLIPWAY_COLOR: must be one of auto, always, never\n", err
     assert_empty @fixture.calls
   end
 
@@ -252,7 +231,7 @@ class RunnerTest < Minitest::Test
 
     assert_equal 1, status
     assert_empty out
-    assert_equal "error: unknown theme \"solarized\" (known themes: dark, light)\n", err
+    assert_equal "error: SLIPWAY_THEME: must be one of dark, light\n", err
     assert_empty @fixture.calls
   end
 end

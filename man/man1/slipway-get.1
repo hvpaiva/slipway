@@ -4,8 +4,7 @@
 slipway\-get \- Display one or many resources
 .SH SYNOPSIS
 .SY "slipway get"
-.I TYPE
-.RI [ NAME... ]\&
+.I "(TYPE [NAME...] | TYPE/NAME...)"\&
 .RI [ flags ]
 .YS
 .SH DESCRIPTION
@@ -14,10 +13,12 @@ Display one or many resources.
 Prints a table of the most important information about the specified resources. You can filter the list using a label selector and the \-\-selector flag. Projects are listed in the current group unless you pass \-\-all\-groups.
 .PP
 Use \-o wide to add the path, the head commit and the age of the last commit of each project, and \-o json or \-o yaml for the full object with its status.
+.PP
+Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
 .TP
 \fB\-o\fR, \fB\-\-output\fR \fIFORMAT\fR
-Output format. One of: table, wide, json, yaml, name. Default: table.
+Output format. One of: table, wide, json, yaml, name. (default "table")
 .TP
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR
 Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. \-l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.

@@ -25,7 +25,9 @@ class EditTest < Minitest::Test
   SH
   BREAK_ONCE = %(if [ "$n" = 1 ]; then printf 'extra: 1\\n' >> "$1"; fi\n)
   ABORTED = [1, '', "error: Edit cancelled, no valid changes were saved.\n"].freeze
-  REOPENED_WITH_SYNTAX_ERROR = /\A#{Regexp.escape(HEADER)}# edited manifest: .+ at line \d+, column \d+\n#\n/
+  EMPTY = [1, '', "error: Edit cancelled, saved file was empty.\n"].freeze
+  INVALID = '# projects "hldr" was not valid:'
+  REOPENED_WITH_SYNTAX_ERROR = /\A#{Regexp.escape("#{HEADER}#{INVALID}\n")}# \* .+ at line \d+, column \d+\n#\n/
 
   def test_the_editor_receives_the_header_and_the_manifest_under_the_resource_name
     with_editor("printf '%s' \"$1\" > \"$LOG.name\"\n") do |runtime, log|
@@ -47,21 +49,15 @@ class EditTest < Minitest::Test
     end
   end
 
-  def test_an_empty_file_aborts_with_exit_one
-    with_editor(%(: > "$1"\n)) do |runtime, log|
-      register(runtime, 'hldr')
+  def test_an_empty_or_comment_only_file_aborts_with_exit_one
+    [%(: > "$1"\n), %(printf '# nothing\\n\\n' > "$1"\n)].each do |body|
+      with_editor(body) do |runtime, log|
+        register(runtime, 'hldr')
 
-      assert_equal ABORTED, run_edit('project', 'hldr', runtime:)
-      assert_equal 1, runs(log)
-      assert_equal 'hldr', runtime.store.find(kind('project'), 'hldr', group: 'default').name
-    end
-  end
-
-  def test_a_file_holding_only_comments_counts_as_empty
-    with_editor(%(printf '# nothing\\n\\n' > "$1"\n)) do |runtime|
-      register(runtime, 'hldr')
-
-      assert_equal ABORTED, run_edit('project', 'hldr', runtime:)
+        assert_equal EMPTY, run_edit('project', 'hldr', runtime:)
+        assert_equal 1, runs(log)
+        assert_equal 'hldr', runtime.store.find(kind('project'), 'hldr', group: 'default').name
+      end
     end
   end
 
@@ -125,7 +121,7 @@ class EditTest < Minitest::Test
 
       assert_equal [0, "project/hldr edited\n", ''], run_edit('project', 'hldr', runtime:)
       assert_equal 2, runs(log)
-      assert_equal "#{HEADER}# edited manifest: unknown field \"extra\"\n#\n#{DUMP}extra: 1\n", File.read("#{log}.2")
+      assert_equal "#{HEADER}#{INVALID}\n# * unknown field \"extra\"\n#\n#{DUMP}extra: 1\n", File.read("#{log}.2")
       assert_equal '~/dev/moved', runtime.store.find(kind('project'), 'hldr', group: 'default').path
     end
   end
@@ -189,7 +185,8 @@ class EditTest < Minitest::Test
 
       assert_equal [1, '', "error: projects \"nope\" not found\n"], run_edit('project', 'nope', runtime:)
       assert_equal [1, '', "error: projects \"hldr\" not found\n"], run_edit('project', 'hldr', '-n', 'work', runtime:)
-      assert_equal [1, '', "error: unknown resource type \"pod\"\n"], run_edit('pod', 'hldr', runtime:)
+      assert_equal [1, '', "error: unknown resource type \"pod\" (known types: projects, groups)\n"],
+                   run_edit('pod', 'hldr', runtime:)
       refute_path_exists log
     end
   end
@@ -210,7 +207,7 @@ class EditTest < Minitest::Test
       assert_equal [0, ''], [status, err]
       assert_includes out, "Edit a resource from the default editor.\n\nThe edit command"
       assert_includes out, "Examples:\n  # Edit the project named 'hldr'\n  slipway edit project hldr\n"
-      assert_includes out, "Usage:\n  slipway edit TYPE NAME\n"
+      assert_includes out, "Usage:\n  slipway edit (TYPE NAME | TYPE/NAME) [flags]\n"
     end
   end
 
@@ -234,7 +231,7 @@ class EditTest < Minitest::Test
       assert_equal ABORTED, run_edit('project', 'hldr', runtime:)
       assert_equal 2, runs(log)
       assert_includes File.read("#{log}.2"),
-                      "#\n# edited manifest: kind, metadata.name and metadata.group cannot be changed\n#\n"
+                      "#\n#{INVALID}\n# * kind, metadata.name and metadata.group cannot be changed\n#\n"
     end
   end
 

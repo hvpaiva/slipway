@@ -73,8 +73,8 @@ class StatesIntegrationTest < Minitest::Test
 
       assert_equal 0, status
       assert_equal "warning: git executable \"git\" not found on PATH\n", err
-      assert_includes out, "Status:       Unknown\nRepository:   #{env['HOME']}/dev/clean: git executable \"git\" " \
-                           "not found on PATH\nLast Commit:  <none>\n"
+      assert_includes out, "Status:       Unknown\nRepository:   git executable \"git\" not found on PATH\n" \
+                           "Last Commit:  <none>\n"
     end
   end
 end

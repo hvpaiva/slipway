@@ -41,14 +41,14 @@ class ValidatorTest < Minitest::Test
   def test_option_enum_uses_the_label
     error = usage_error('get', %w[projects], { output: 'xml' })
 
-    assert_equal 'invalid argument "xml" for "-o, --output FORMAT": must be one of table, wide, json, yaml, name',
+    assert_equal 'invalid argument "xml" for --output: must be one of table, wide, json, yaml, name',
                  error.message
   end
 
   def test_global_option_enum_is_checked_too
     error = usage_error('get', %w[projects], { color: 'sometimes' })
 
-    assert_equal 'invalid argument "sometimes" for "--color[=WHEN]": must be one of auto, always, never', error.message
+    assert_equal 'invalid argument "sometimes" for --color: must be one of auto, always, never', error.message
   end
 
   def test_valid_input_passes

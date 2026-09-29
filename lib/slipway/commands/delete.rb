@@ -11,17 +11,20 @@ module Slipway
                     'Every name is resolved before anything is deleted, so a name that does not exist leaves ' \
                     'the others untouched unless --ignore-not-found is set. Deleting a group also deletes the ' \
                     "registrations of its projects; the default group cannot be deleted.\n\n" \
-                    'Deleting a project removes its registration only. The repository on disk is not touched.'
-      DEFAULT_GROUP = 'the default group cannot be deleted'
+                    "Deleting a project removes its registration only. The repository on disk is not touched.\n\n" \
+                    "#{Options::TYPES_SENTENCE}".freeze
+      USAGE = '(TYPE NAME... | TYPE/NAME...)'
+      NO_NAMES = 'resource(s) were provided, but no name was specified'
 
       IGNORE_NOT_FOUND = CLI::Option.new(long: 'ignore-not-found',
                                          description: 'Treat "resource not found" as a successful delete.')
 
+      # The registry entry for `delete`: names completed from the store, --dry-run and --ignore-not-found.
       def self.command(factory)
         CLI::Command.new(
           name: 'delete', summary: 'Delete resources by type and name', section: 'Basic Commands',
-          description: DESCRIPTION, examples:,
-          positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: true)],
+          description: DESCRIPTION, examples:, usage: USAGE,
+          positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: false)],
           options: [Options::DRY_RUN, IGNORE_NOT_FOUND],
           handler: new(factory)
         )
@@ -38,11 +41,14 @@ module Slipway
                            command: 'delete project hldr --ignore-not-found')
         ]
       end
+      private_class_method :examples
 
+      # Resolves every name, then deletes them in order and prints one line each.
       def run(runtime, context, args, opts)
-        type, *names = args
-        scope = scope(runtime, opts)
-        kind = scope.kind(type)
+        scope = scope(runtime, context, opts)
+        kind, names = scope.targets(args)
+        raise CLI::UsageError, NO_NAMES if names.empty?
+
         group = kind.namespaced? ? scope.group : nil
         dry_run = opts[:dry_run] == 'client'
         resolve(runtime.store, kind, names.uniq, group, ignore: opts[:ignore_not_found] == true).each do |resource|
@@ -56,7 +62,7 @@ module Slipway
       # Every named resource, in order, or the first failure before anything is removed.
       def resolve(store, kind, names, group, ignore:)
         names.filter_map do |name|
-          raise Error, DEFAULT_GROUP if !kind.namespaced? && name == Store::DEFAULT_GROUP
+          raise Error, Store::PROTECTED_GROUP if !kind.namespaced? && name == Store::DEFAULT_GROUP
 
           store.find(kind, name, group:)
         rescue Store::NotFound

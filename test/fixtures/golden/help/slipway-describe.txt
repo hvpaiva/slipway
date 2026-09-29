@@ -1,6 +1,8 @@
-Show details of a specific resource or group of resources.
+Show details of one or many resources.
 
 Print a detailed description of the selected resources, including the state of the repository at the registered path. You may select a single object by name, all objects of that type, or use a label selector.
+
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
 
 Examples:
   # Describe a project
@@ -20,6 +22,6 @@ Options:
   -A, --all-groups      If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
 
 Usage:
-  slipway describe TYPE [NAME...] [flags]
+  slipway describe (TYPE [NAME...] | TYPE/NAME...) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

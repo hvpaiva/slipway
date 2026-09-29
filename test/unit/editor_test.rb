@@ -54,6 +54,14 @@ class EditorTest < Minitest::Test
     end
   end
 
+  def test_an_editor_that_removes_the_file_cancels_the_edit
+    with_fake_editor("rm \"$1\"\n") do |script|
+      error = assert_raises(Slipway::Editor::Failed) { editor({ 'EDITOR' => script }).edit('text', filename: 'p1.yaml') }
+
+      assert_equal 'editor removed p1.yaml; edit cancelled', error.message
+    end
+  end
+
   def test_edit_runs_a_quoted_ruby_one_liner_through_shellwords
     program = "#{Shellwords.escape(RbConfig.ruby)} -e 'File.write(ARGV[0], File.read(ARGV[0]).upcase)'"
     result = editor({ 'SLIPWAY_EDITOR' => program }).edit("name: hldr\n")

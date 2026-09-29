@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require_relative 'get_registry'
 
 class GetFormatsIntegrationTest < Minitest::Test
   include IntegrationHelper
@@ -25,9 +24,6 @@ class GetFormatsIntegrationTest < Minitest::Test
       "status": {
         "branch": "main",
         "head": "#{HEAD}",
-        "upstream": null,
-        "ahead": null,
-        "behind": null,
         "staged": 0,
         "unstaged": 0,
         "untracked": 0,
@@ -61,9 +57,6 @@ class GetFormatsIntegrationTest < Minitest::Test
       status:
         branch: main
         head: #{HEAD}
-        upstream:
-        ahead:
-        behind:
         staged: 0
         unstaged: 0
         untracked: 0
@@ -85,18 +78,7 @@ class GetFormatsIntegrationTest < Minitest::Test
       spec:
         path: "~/dev/plain"
       status:
-        branch:
-        head:
-        upstream:
-        ahead:
-        behind:
-        staged:
-        unstaged:
-        untracked:
-        conflicted:
-        stashes:
         state: NotARepo
-        lastCommit:
   TEXT
 
   WORK_JSON = <<~TEXT.freeze
