@@ -22,7 +22,8 @@ module Slipway
 
     class Timeout < Error
       def initialize(path, seconds: Runner::DEFAULT_TIMEOUT)
-        super(path, format('git did not finish within %g seconds', seconds))
+        unit = seconds == 1 ? 'second' : 'seconds'
+        super(path, format('git did not finish within %<seconds>g %<unit>s', seconds:, unit:))
       end
     end
 

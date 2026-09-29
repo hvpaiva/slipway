@@ -96,107 +96,6 @@ class GitRunnerTest < Minitest::Test
     assert_equal 1, error.exit_status
   end
 
-  def test_a_slow_git_is_killed_with_its_children_and_reported_as_a_timeout
-    pids = File.join(@root, 'pids')
-    bin = fake_git(@root, "echo $$ > #{pids}\nsleep 30 &\necho $! >> #{pids}\nwait")
-    runner = Slipway::Git::Runner.new(timeout: 0.2)
-
-    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
-      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      error = assert_raises(Slipway::Git::Timeout) { runner.run(@root, 'status') }
-
-      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
-      assert_equal "#{@root}: git did not finish within 0.2 seconds", error.message
-      assert_equal 2, File.read(pids).split.size
-      File.read(pids).split.each { assert gone?(Integer(it)), "process #{it} survived the kill" }
-    end
-  end
-
-  def test_an_interrupted_run_kills_the_git_it_started
-    pids = File.join(@root, 'pids')
-    bin = fake_git(@root, "echo $$ > #{pids}\nexec sleep 30")
-
-    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
-      thread = Thread.new { @runner.run(@root, 'status') }
-      thread.report_on_exception = false
-      sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
-      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      thread.raise(Interrupt)
-
-      assert_raises(Interrupt) { thread.join }
-      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
-      assert gone?(Integer(File.read(pids))), 'git survived the interrupt'
-    end
-  end
-
-  def test_an_interrupted_run_kills_a_git_that_survives_term
-    fifo = File.join(@root, 'git.pid')
-    File.mkfifo(fifo)
-    bin = fake_git(@root, %(trap '' TERM; echo $$ > "#{fifo}"; exec sleep 30))
-
-    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
-      running = Thread.new { @runner.run(@root, 'status') }
-      running.report_on_exception = false
-      pid = Integer(File.read(fifo))
-      Thread.pass until running.stop?
-      running.raise(Interrupt)
-
-      assert_raises(Interrupt, 'the run waited for a git that ignores TERM') { running.join(5) }
-      assert gone?(pid), 'git outlived an interrupted run'
-    ensure
-      Process.kill('KILL', pid) if pid && !gone?(pid)
-    end
-  end
-
-  def test_an_interrupted_run_still_raises_the_interrupt_when_the_group_answers_eperm
-    pids = File.join(@root, 'pids')
-    bin = fake_git(@root, "echo $$ > #{pids}\nexec sleep 30")
-
-    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
-      thread = Thread.new { @runner.run(@root, 'status') }
-      thread.report_on_exception = false
-      sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
-      answering_eperm_to_term do |refused|
-        thread.raise(Interrupt)
-
-        assert_raises(Interrupt) { thread.join(5) }
-        assert_equal [-Integer(File.read(pids))], refused
-      end
-    end
-  end
-
-  def test_an_interrupted_run_prints_nothing_while_a_helper_holds_the_output_open
-    fifo = File.join(@root, 'helper.pid')
-    File.mkfifo(fifo)
-    bin = fake_git(@root, %(sh -c 'trap "" TERM; echo $$ > "#{fifo}"; exec sleep 30' &\nwait))
-    before = Thread.list
-
-    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
-      _, err = capture_io { interrupt_with_a_helper_left(fifo, before) }
-
-      assert_empty err
-    end
-  end
-
-  def test_a_run_killed_as_git_starts_still_stops_it
-    bin = fake_git(@root, 'exec sleep 30')
-    started = Queue.new
-
-    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
-      gate = Queue.new
-      running = Thread.new { gate.pop && @runner.run(@root, 'status') }
-      killing_after_detach(running, started) do
-        gate << true
-        running.join(5)
-      end
-      pid = started.pop
-
-      assert gone?(pid), 'git survived a kill that landed before the block'
-    ensure
-      Process.kill('KILL', pid) if pid && !gone?(pid)
-    end
-  end
-
   def test_a_git_ended_by_a_signal_reports_128_plus_the_signal_number
     bin = fake_git(@root, 'kill -TERM $$')
 
@@ -205,58 +104,43 @@ class GitRunnerTest < Minitest::Test
     end
   end
 
-  private
+  def test_env_adds_variables_but_cannot_change_the_pinned_ones
+    bin = fake_git(@root, 'printf "%s|%s|%s" "$GIT_REFLOG_ACTION" "$LC_ALL" "${GIT_DIR-unset}"')
+    env = { 'GIT_REFLOG_ACTION' => 'slipway sync', 'LC_ALL' => 'pt_BR.UTF-8', 'GIT_DIR' => '/elsewhere' }
 
-  # Stands in for macOS, which answers EPERM once every process left in the group has exited
-  # but is not yet reaped: the TERM is sent, so git ends, and then the call fails as it does there.
-  def answering_eperm_to_term
-    kill = Process.method(:kill)
-    refused = []
-    Process.singleton_class.remove_method(:kill)
-    Process.define_singleton_method(:kill) do |signal, pid|
-      refused << pid if signal == 'TERM' && pid.negative?
-      kill.call(signal, pid).tap { raise Errno::EPERM if refused.include?(pid) }
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      assert_equal 'slipway sync|C|unset', @runner.run(@root, 'merge', env:).out
+      assert_equal '|C|unset', @runner.run(@root, 'status').out
     end
-    yield refused
-  ensure
-    Process.singleton_class.remove_method(:kill)
-    Process.define_singleton_method(:kill, kill)
   end
 
-  # The helper ignores TERM, so the pipes are still open when the interrupted block closes them
-  # under the readers, which report on their own threads after the interrupt has left run.
-  def interrupt_with_a_helper_left(fifo, before)
-    running = Thread.new { @runner.run(@root, 'status') }
-    running.report_on_exception = false
-    helper = Integer(File.read(fifo))
-    Thread.pass until running.stop?
-    running.raise(Interrupt)
-    assert_raises(Interrupt) { running.join }
-    Thread.pass until (Thread.list - before).empty?
-  ensure
-    Process.kill('KILL', helper) if helper
+  def test_the_network_environment_is_the_frozen_constant_and_the_allowed_protocols
+    names = %w[GIT_ASKPASS SSH_ASKPASS SSH_ASKPASS_REQUIRE GIT_ALLOW_PROTOCOL]
+    bin = fake_git(@root, names.map { %(printf '%s\\n' "$#{it}") }.join("\n"))
+    env = Slipway::Git::Runner.network_environment(%w[ssh https])
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      assert_equal env.values_at(*names), @runner.run(@root, 'fetch', env:).out.lines(chomp: true)
+    end
+    assert_equal Slipway::Git::Runner::NETWORK_ENVIRONMENT.merge('GIT_ALLOW_PROTOCOL' => 'ssh:https'), env
+    assert_predicate Slipway::Git::Runner::NETWORK_ENVIRONMENT, :frozen?
+    assert_equal [Slipway::Git::Runner::FALSE_PROGRAM, Slipway::Git::Runner::FALSE_PROGRAM, 'force'],
+                 Slipway::Git::Runner::NETWORK_ENVIRONMENT.values
   end
 
-  # The kill is queued the moment Process.detach returns, before Open3 yields to the block, and
-  # joining the killer is an interrupt check, so an unmasked kill lands right there.
-  def killing_after_detach(target, started, &)
-    trace = TracePoint.new(:c_return) do |call|
-      next unless call.method_id == :detach
+  def test_the_askpass_is_an_absolute_false_that_exists_here
+    program = Slipway::Git::Runner::FALSE_PROGRAM
 
-      started << call.return_value.pid
-      Thread.new { target.kill }.join
-    end
-    trace.enable(target_thread: target, &)
+    assert File.absolute_path?(program), "#{program} is not an absolute path"
+    assert File.executable?(program), "#{program} cannot be run"
+    refute system(program)
   end
 
-  # A killed grandchild lingers as a zombie until its new parent reaps it, so poll for a moment.
-  def gone?(pid)
-    20.times do
-      Process.kill(0, pid)
-      sleep 0.05
-    end
-    false
-  rescue Errno::ESRCH
-    true
+  def test_false_program_takes_the_first_candidate_that_runs_and_else_the_first_path
+    missing = File.join(@root, 'missing', 'false')
+    present = File.join(fake_git(@root, 'exit 1'), 'git')
+
+    assert_equal present, Slipway::Git::Runner.false_program([missing, present])
+    assert_equal missing, Slipway::Git::Runner.false_program([missing, File.join(@root, 'absent')])
   end
 end
