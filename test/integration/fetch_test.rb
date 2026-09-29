@@ -103,6 +103,16 @@ class FetchIntegrationTest < Minitest::Test
     end
   end
 
+  def test_a_paused_project_is_left_alone
+    with_home do |env|
+      env = env.merge(PROTOCOLS)
+      seed(env, manifest('Project', 'stale', path: repo(env, 'stale', 'stale'), paused: true))
+
+      assert_equal [0, "project/stale paused\n", ''], slipway('fetch', env:)
+      refute_path_exists File.join(env['HOME'], 'dev', 'stale', '.git', 'FETCH_HEAD')
+    end
+  end
+
   def test_prune_removes_the_remote_tracking_ref_of_a_deleted_branch
     skip_unless_fetch_lists_refs
     with_home do |env|

@@ -2,7 +2,7 @@ Fetch from the remote of each selected project.
 
 Runs git fetch in every project of the current group, in the projects named, in the ones a label selector matches, or with --all-groups in every project. Git fetches from the remote of the checked-out branch, else from the only remote, else from origin, as a git fetch typed in the repository would, and updates the references that remote's fetch refspecs name (remote-tracking references by default) and its tags, never the checked-out branch or the working tree. The parallel setting caps how many projects fetch at once, and the results print in the order the projects are listed.
 
-Each project prints one line: fetched, unchanged when the remote had nothing new, skipped, denied or failed, with the reason in parentheses and the details below. A project whose repository cannot be read, or in which git finds no remote to fetch from, is skipped before git fetch runs.
+Each project prints one line: fetched, unchanged when the remote had nothing new, skipped, paused, denied or failed, with the reason in parentheses and the details below. A project whose repository cannot be read, or in which git finds no remote to fetch from, is skipped before git fetch runs. A project whose spec.paused is true is paused: no git command runs in it.
 
 Git never prompts: a fetch that needs a password, a passphrase or a host key is denied, one that runs past the networkTimeout setting is killed, and only the transports in the protocols setting are allowed. The exit status is 1 when any project was denied or failed.
 

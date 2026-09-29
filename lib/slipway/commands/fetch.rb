@@ -24,9 +24,10 @@ module Slipway
                     'checked-out branch or the working tree. The parallel setting caps how many projects ' \
                     "fetch at once, and the results print in the order the projects are listed.\n\n" \
                     'Each project prints one line: fetched, unchanged when the remote had nothing new, skipped, ' \
-                    'denied or failed, with the reason in parentheses and the details below. A project whose ' \
-                    'repository cannot be read, or in which git finds no remote to fetch from, is skipped ' \
-                    "before git fetch runs.\n\n" \
+                    'paused, denied or failed, with the reason in parentheses and the details below. A project ' \
+                    'whose repository cannot be read, or in which git finds no remote to fetch from, is skipped ' \
+                    'before git fetch runs. A project whose spec.paused is true is paused: no git command runs ' \
+                    "in it.\n\n" \
                     'Git never prompts: a fetch that needs a password, a passphrase or a host key is denied, one ' \
                     'that runs past the networkTimeout setting is killed, and only the transports in the ' \
                     'protocols setting are allowed. The exit status is 1 when any project was denied or failed.'
@@ -34,11 +35,12 @@ module Slipway
       FETCHED = 'fetched'
       UNCHANGED = 'unchanged'
       SKIPPED = 'skipped'
+      PAUSED = 'paused'
       DENIED = 'denied'
       FAILED = 'failed'
       # In the order the closing summary counts them.
       ROLES = { FETCHED => :result_changed, UNCHANGED => :result_unchanged, SKIPPED => :result_skipped,
-                DENIED => :result_denied, FAILED => :result_failed }.freeze
+                PAUSED => :result_paused, DENIED => :result_denied, FAILED => :result_failed }.freeze
 
       ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, fetch every project across all groups. The ' \
                                                          'group in the current configuration is ignored even if ' \
@@ -124,6 +126,8 @@ module Slipway
         # Runs on a worker thread. An error git reports becomes the project's outcome; anything
         # else is a bug and leaves through the pool.
         def attempt(project)
+          return outcome(project, PAUSED) if project.paused
+
           inspection = @runtime.inspector.examine(project)
           return unreadable(project, inspection) if inspection.error
           return outcome(project, SKIPPED, NO_REMOTE, [NO_REMOTE_DETAIL]) if remoteless?(project, inspection)

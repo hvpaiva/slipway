@@ -101,7 +101,7 @@ bundle exec rake install
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
-| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `denied` or `failed`. |
+| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -228,6 +228,7 @@ projects are listed, as soon as it and every project before it are done:
 | `fetched` | The remote moved refs. Up to five follow, as `origin/main a1b2c3d..e4f5a6b`, then `and N more`. |
 | `unchanged` | The remote answered and had nothing new. |
 | `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (`NoRemote`), or its branch tracks a local branch (`LocalUpstream`). |
+| `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
 | `denied (AuthRequired)` | Git needed a password, a passphrase or a host key. Run the `git -C PATH fetch` printed below it once in a terminal to see what git needs. |
 | `failed (Reason)` | The fetch ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). |
 
@@ -289,9 +290,11 @@ field is optional, and one at its default is not written:
 | `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
 | `spec.revision` | The commit the project is expected to be at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. | none |
 | `spec.syncPolicy` | `FastForward` allows the checked-out branch to be fast-forwarded onto its upstream; `FetchOnly` allows fetching only. | `FastForward` |
-| `spec.paused` | `true` marks the project as paused. | `false` |
+| `spec.paused` | `true` keeps `fetch` away from the project, which prints `project/NAME paused` and runs no git command there. | `false` |
 
-No command acts on these fields yet. They are checked whenever a manifest is read, and a value
+Only `fetch` acts on one of these fields: it leaves a project with `spec.paused: true` alone. No
+command compares a repository with the other four or changes it to match them, and STATUS does
+not take them into account. The fields are checked whenever a manifest is read, and a value
 that breaks its rule is refused with that rule, so nothing that could reach git as an option or
 carry a control character is accepted. `describe`, `-o json` and `-o yaml` show them.
 
