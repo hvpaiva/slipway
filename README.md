@@ -304,9 +304,11 @@ nothing that could reach git as an option or carry a control character is accept
 
 `slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
 and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
-`-f` may be repeated. Each document prints `project/hldr created`, `configured` or
-`unchanged`; problems are collected and printed as `error: FILE[:N]: ...` after the successes,
-with exit status 1. `--dry-run=client` reports what would change without writing.
+`-f` may be repeated. A document of kind `List` stands for each manifest under its `items`, in
+order, and one that fails is named by its position (`FILE:3`). Each document prints
+`project/hldr created`, `configured` or `unchanged`; problems are collected and printed as
+`error: FILE[:N]: ...` after the successes, with exit status 1. `--dry-run=client` reports what
+would change without writing.
 
 ### Drift
 

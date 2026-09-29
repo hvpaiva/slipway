@@ -189,6 +189,9 @@ module Slipway
 
     private_constant :Reader
 
+    LIST_KIND = 'List'
+    LIST_FIELDS = %w[kind items].freeze
+
     # +hash+ must have string keys.
     def self.parse(hash, source:, default_group: 'default') = Reader.new(hash, source, default_group).resource
 
@@ -207,6 +210,24 @@ module Slipway
     rescue Psych::BadAlias => e
       raise Invalid.new(source, e.message)
     end
+
+    # kubectl prints several objects as one List and applies such a List back item by item, so
+    # each item stands for a document of its own.
+    def self.load_objects(text, source:)
+      load_documents(text, source:).flat_map { it['kind'] == LIST_KIND ? list_items(it, source) : [it] }
+    end
+
+    def self.list_items(list, source)
+      unknown = list.keys - LIST_FIELDS
+      raise Invalid.new(source, "unknown field #{unknown.first.inspect} in a List") unless unknown.empty?
+
+      case list['items']
+      in nil then []
+      in Array => items if items.all?(Hash) then items
+      else raise Invalid.new(source, '"items" of a List must be a sequence of mappings')
+      end
+    end
+    private_class_method :list_items
 
     def self.parse_yaml(text, source:, default_group: 'default')
       case load_documents(text, source:)
