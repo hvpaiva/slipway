@@ -13,7 +13,7 @@ Create a resource by name.
 .PP
 A project registers the git repository at \-\-path in the current group, which must exist unless it is the default group. A group is created empty and holds the projects you register with \-\-group later.
 .PP
-Use \-\-dry\-run=client to check the arguments without writing anything.
+Use \-\-dry\-run=client to check the arguments without writing anything, and \-o yaml with it to print the manifest instead, ready for apply \-f.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
@@ -35,6 +35,9 @@ The branch the project is expected to have checked out, written to spec.branch.
 .TP
 \fB\-\-dry\-run\fR \fISTRATEGY\fR
 Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIFORMAT\fR
+Output format; without it, each resource prints a result line such as project/hldr created. One of: json, yaml, name.
 .SH EXAMPLES
 .EX
 # Register the repository at ~/dev/hldr as a project in the current group
@@ -59,6 +62,11 @@ slipway create group work \-\-description "Projects for the day job"
 .EX
 # Check the arguments without writing the project
 slipway create project hldr \-\-path '~/dev/hldr' \-\-dry\-run=client
+.EE
+.PP
+.EX
+# Print the manifest of a project without registering it
+slipway create project hldr \-\-path '~/dev/hldr' \-\-dry\-run=client \-o yaml
 .EE
 .SH "SEE ALSO"
 .BR slipway (1)

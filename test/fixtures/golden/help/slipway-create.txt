@@ -2,7 +2,7 @@ Create a resource by name.
 
 A project registers the git repository at --path in the current group, which must exist unless it is the default group. A group is created empty and holds the projects you register with --group later.
 
-Use --dry-run=client to check the arguments without writing anything.
+Use --dry-run=client to check the arguments without writing anything, and -o yaml with it to print the manifest instead, ready for apply -f.
 
 Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
 
@@ -22,6 +22,9 @@ Examples:
   # Check the arguments without writing the project
   slipway create project hldr --path '~/dev/hldr' --dry-run=client
 
+  # Print the manifest of a project without registering it
+  slipway create project hldr --path '~/dev/hldr' --dry-run=client -o yaml
+
 Options:
       --path DIR           Directory of the git repository to register; required for projects. A relative directory is stored resolved against the current directory, a ~ path as written.
       --description TEXT   A short description of the resource.
@@ -29,6 +32,7 @@ Options:
       --remote URL         The URL the origin remote is expected to have, written to spec.remote. A URL that embeds credentials is refused; use a credential helper.
       --branch NAME        The branch the project is expected to have checked out, written to spec.branch.
       --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+  -o, --output FORMAT      Output format; without it, each resource prints a result line such as project/hldr created. One of: json, yaml, name.
 
 Usage:
   slipway create TYPE NAME [flags]

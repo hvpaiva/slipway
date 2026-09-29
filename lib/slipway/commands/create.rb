@@ -13,12 +13,16 @@ module Slipway
                     'A project registers the git repository at --path in the current group, which must ' \
                     'exist unless it is the default group. A group is created empty and holds the projects ' \
                     "you register with --group later.\n\n" \
-                    "Use --dry-run=client to check the arguments without writing anything.\n\n" \
+                    'Use --dry-run=client to check the arguments without writing anything, and -o yaml with it ' \
+                    "to print the manifest instead, ready for apply -f.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
       PATH_MISSING = 'required flag(s) "--path" not set'
       PATH_EMPTY = 'flag --path must not be empty'
       PROJECT_ONLY = 'flag --%s applies to projects only'
       PROJECT_FLAGS = %i[path remote branch].freeze
+
+      # The resource as written, or as it would be on a dry run, and the word and role of its result line.
+      Result = Data.define(:resource, :word, :role)
 
       PATH = CLI::Option.new(long: 'path', argument: 'DIR',
                              description: 'Directory of the git repository to register; required for projects. ' \
@@ -34,13 +38,17 @@ module Slipway
       BRANCH = CLI::Option.new(long: 'branch', argument: 'NAME',
                                description: 'The branch the project is expected to have checked out, written to ' \
                                             'spec.branch.')
+      OUTPUT = CLI::Option.new(long: 'output', short: 'o', argument: 'FORMAT',
+                               enum: [*Output::Serializer::STRUCTURED, Output::NAME],
+                               description: 'Output format; without it, each resource prints a result line such as ' \
+                                            'project/hldr created.')
 
       def self.command(factory)
         CLI::Command.new(
           name: 'create', summary: 'Create a resource by name', section: 'Basic Commands',
           description: DESCRIPTION, examples:,
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: false, required: true)],
-          options: [PATH, TEXT, LABEL, REMOTE, BRANCH, Options::DRY_RUN],
+          options: [PATH, TEXT, LABEL, REMOTE, BRANCH, Options::DRY_RUN, OUTPUT],
           handler: new(factory)
         )
       end
@@ -57,7 +65,9 @@ module Slipway
           CLI::Example.new(comment: 'Create a group with a description',
                            command: 'create group work --description "Projects for the day job"'),
           CLI::Example.new(comment: 'Check the arguments without writing the project',
-                           command: "create project hldr --path '~/dev/hldr' --dry-run=client")
+                           command: "create project hldr --path '~/dev/hldr' --dry-run=client"),
+          CLI::Example.new(comment: 'Print the manifest of a project without registering it',
+                           command: "create project hldr --path '~/dev/hldr' --dry-run=client -o yaml")
         ]
       end
       private_class_method :examples
@@ -66,12 +76,22 @@ module Slipway
         scope = scope(runtime, context, opts)
         kind, name = scope.target(args)
         resource = build(kind, name, scope.group, opts)
-        dry_run = opts[:dry_run] == 'client'
-        dry_run ? check(runtime.store, kind, resource) : runtime.store.create(resource)
-        result_line(context, kind, name, 'created', :create_created, dry_run:)
+        resource = dry_run?(opts) ? check(runtime.store, kind, resource) : runtime.store.create(resource)
+        report(context, kind, [Result.new(resource, 'created', :create_created)], opts, single: true)
       end
 
       private
+
+      def dry_run?(opts) = opts[:dry_run] == 'client'
+
+      def report(context, kind, results, opts, single:)
+        dry_run = dry_run?(opts)
+        case opts[:output]
+        when nil then results.each { result_line(context, kind, it.resource.name, it.word, it.role, dry_run:) }
+        when Output::NAME then results.each { context.puts("#{kind.singular}/#{it.resource.name}") }
+        else context.print(Output::Serializer.render(opts[:output], results.map { it.resource.to_manifest }, single:))
+        end
+      end
 
       def build(kind, name, group, opts)
         labels = Labels.parse_pairs(opts[:label] || [])
@@ -109,9 +129,11 @@ module Slipway
 
       # What a real create would reject before writing.
       def check(store, kind, resource)
-        return unless kind.namespaced?
+        if kind.namespaced? && !store.group_available?(resource.group)
+          raise Store::NotFound.of(Resources::GROUPS, resource.group)
+        end
 
-        raise Store::NotFound.of(Resources::GROUPS, resource.group) unless store.group_available?(resource.group)
+        resource
       end
     end
   end

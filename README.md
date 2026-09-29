@@ -98,7 +98,7 @@ bundle exec rake install
 | --- | --- |
 | `get TYPE [NAME...]` | List resources as a table, or as wide, json, yaml or name output. |
 | `describe TYPE [NAME...]` | Print every field of the selected resources, including the repository state. |
-| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group. |
+| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group; `-o yaml` prints the manifest. |
 | `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
