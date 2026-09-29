@@ -82,7 +82,12 @@ module Slipway
         'VISUAL' => 'Editor used by edit when SLIPWAY_EDITOR and the editor configuration key are unset.',
         'EDITOR' => 'Editor used by edit when VISUAL is unset as well.',
         'XDG_CONFIG_HOME' => 'Base of the configuration directory (default ~/.config).',
-        'XDG_DATA_HOME' => 'Base of the data directory (default ~/.local/share).'
+        'XDG_DATA_HOME' => 'Base of the data directory (default ~/.local/share).',
+        'TERM' => 'When dumb, disables color in auto mode.',
+        'MANPAGER' => 'When non-empty, slipway man leaves the pager palette alone.',
+        'MANROFFOPT' => 'Same as MANPAGER.',
+        'LESS_TERMCAP_md' => 'Same as MANPAGER.',
+        'GROFF_NO_SGR' => 'Same as MANPAGER.'
       }.freeze
 
       # +source+ fills the fourth .TH field and defaults to "PROGRAM VERSION". +configuration+

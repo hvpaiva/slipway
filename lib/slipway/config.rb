@@ -54,6 +54,7 @@ module Slipway
 
     # Reads and validates the config file itself; +values+ holds only the keys it set.
     class Document
+      # What one read of the file produced: the keys it set and whether the file was there.
       Contents = Data.define(:values, :exists)
 
       # A missing default file is an empty document; a missing explicit file is an error.

@@ -43,3 +43,12 @@ Metrics/ParameterLists:
 Minitest/MultipleAssertions:
   # A CLI test asserts status, stdout and stderr, often for two invocations.
   Max: 6
+
+Style/AsciiComments:
+  # Everything is written in English without emoji; the conventions test covers the rest of each file.
+  Enabled: true
+
+Style/DisableCopsWithinSourceCodeDirective:
+  # Exceptions to a cop live in this file, where they carry a reason, never inline.
+  Enabled: true
+  AllowedCops: []
