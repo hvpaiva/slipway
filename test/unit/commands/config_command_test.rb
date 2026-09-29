@@ -88,16 +88,39 @@ class ConfigCommandTest < Minitest::Test
     end
   end
 
-  def test_path_prints_the_resolved_file_whether_or_not_it_exists
+  def test_path_prints_the_default_file_and_says_on_stderr_when_it_is_missing
     with_sandbox do |env|
-      assert_equal [0, "#{default_path(env)}\n", ''], run_config('config', 'path', env:)
-      assert_equal [0, "#{default_path(env)}\n", ''],
+      note = "The file does not exist; slipway uses its defaults.\n"
+
+      assert_equal [0, "#{default_path(env)}\n", note], run_config('config', 'path', env:)
+      assert_equal [0, "#{default_path(env)}\n", note],
                    run_config('config', 'path', env: env.merge('XDG_CONFIG_HOME' => 'rel'))
+    end
+  end
+
+  def test_path_leaves_stderr_empty_when_the_file_exists
+    with_sandbox do |env|
+      path = write_config(env, '')
+
+      assert_equal [0, "#{path}\n", ''], run_config('config', 'path', env:)
 
       named = File.join(env['HOME'], 'named.yaml')
       File.write(named, '')
 
       assert_equal [0, "#{named}\n", ''], run_config('config', 'path', env: env.merge('SLIPWAY_CONFIG' => named))
+    end
+  end
+
+  def test_path_paints_the_note_with_the_stderr_style_and_leaves_the_path_plain
+    with_sandbox do |env|
+      path = "#{default_path(env)}\n"
+      note = 'The file does not exist; slipway uses its defaults.'
+      terminal = env.except('TERM')
+
+      assert_equal [0, path, "\e[90;3m#{note}\e[0m\n"], run_config('config', 'path', '--color=always', env:)
+      assert_equal [0, path, "\e[90;3m#{note}\e[0m\n"],
+                   run_config('config', 'path', env: terminal, tty: false, err_tty: true)
+      assert_equal [0, path, "#{note}\n"], run_config('config', 'path', env: terminal, tty: true, err_tty: false)
     end
   end
 
@@ -139,12 +162,12 @@ class ConfigCommandTest < Minitest::Test
   def default_path(env) = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')
 
   # The production factory, so the view reflects the file, the variables and the flags of each run.
-  def run_config(*argv, env:)
+  def run_config(*argv, env:, **)
     registry = Slipway::CLI::Registry.new(program: Slipway::Commands::PROGRAM, version: Slipway::VERSION,
                                           description: Slipway::Commands::DESCRIPTION,
                                           globals: Slipway::CLI::Globals::ALL,
                                           commands: [Slipway::Commands::ConfigCommand.command(Slipway::Runtime.method(:build))])
-    run_cli(*argv, env:, registry:)
+    run_cli(*argv, env:, registry:, **)
   end
 
   def write_config(env, text)

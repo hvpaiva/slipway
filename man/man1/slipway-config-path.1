@@ -9,7 +9,7 @@ slipway\-config\-path \- Display the path of the configuration file
 .SH DESCRIPTION
 Display the path of the configuration file.
 .PP
-Prints the file that \-\-config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml resolves to, whether or not it exists.
+Prints the file that slipway reads, or would read if it existed: \-\-config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml. When the file does not exist, a note on stderr says so.
 .SH EXAMPLES
 .EX
 # Print the path of the configuration file

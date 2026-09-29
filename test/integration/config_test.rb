@@ -11,7 +11,21 @@ class ConfigIntegrationTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_equal "# #{config_file(env)} (not found)\ncolor: auto\neditor:\ngroup: default\ntheme: dark\n", out
-      assert_equal [0, "#{config_file(env)}\n", ''], slipway('config', 'path', env:)
+    end
+  end
+
+  def test_path_prints_only_the_path_on_stdout_and_says_on_stderr_when_the_file_is_missing
+    with_home do |env|
+      note = 'The file does not exist; slipway uses its defaults.'
+
+      assert_equal [0, "#{config_file(env)}\n", "#{note}\n"], slipway('config', 'path', env:)
+      assert_equal [0, "#{config_file(env)}\n", "\e[90;3m#{note}\e[0m\n"],
+                   slipway('config', 'path', '--color=always', env:)
+
+      path = write_config(env, "group: work\n")
+
+      assert_equal [0, "#{path}\n", ''], slipway('config', 'path', env:)
+      assert_equal [0, "#{path}\n", ''], slipway('config', 'path', '--color=always', env:)
     end
   end
 
@@ -68,6 +82,8 @@ class ConfigIntegrationTest < Minitest::Test
                    slipway('config', 'view', '--config', '/nonexistent.yaml', env:)
       assert_equal [1, '', "error: #{env['HOME']}/x.yaml: no such file\n"],
                    slipway('get', 'projects', env: env.merge('SLIPWAY_CONFIG' => "#{env['HOME']}/x.yaml"))
+      assert_equal [1, '', "error: #{env['HOME']}/x.yaml: no such file\n"],
+                   slipway('config', 'path', env: env.merge('SLIPWAY_CONFIG' => "#{env['HOME']}/x.yaml"))
     end
   end
 
