@@ -1,0 +1,53 @@
+plugins:
+  - rubocop-minitest
+  - rubocop-performance
+  - rubocop-rake
+
+# Exclude lists add to the defaults (tmp, node_modules, .git) instead of replacing them.
+inherit_mode:
+  merge:
+    - Exclude
+
+AllCops:
+  # Pending cops are opted in as they ship, so the configuration never lags a release.
+  NewCops: enable
+  # Mirrors required_ruby_version in the gemspec; RuboCop checks that they agree.
+  TargetRubyVersion: 3.4
+  # Bundler may vendor gems here; they are not this project's code.
+  Exclude:
+    - vendor/**/*
+
+Layout/LineLength:
+  # Restated so the limit is visible next to the Metrics settings it pairs with.
+  Max: 120
+
+Metrics/AbcSize:
+  # Command handlers and parsers branch on user input; 25 keeps them readable without splitting on ceremony.
+  Max: 25
+
+Metrics/BlockLength:
+  # Test bodies, the gemspec and rake tasks are declarative blocks, not logic.
+  Exclude:
+    - test/**/*
+    - '*.gemspec'
+    - Rakefile
+
+Metrics/ClassLength:
+  # Renderers and the store hold many small methods; 200 lines is the point at which to split them.
+  Max: 200
+
+Metrics/MethodLength:
+  # 15 lines fits a whole case statement or a formatted table row without a private helper.
+  Max: 15
+
+Metrics/ParameterLists:
+  # Keyword arguments are named at every call site, so a long list of them stays readable.
+  CountKeywordArgs: false
+
+Minitest/MultipleAssertions:
+  # A CLI test asserts status, stdout and stderr, often for two invocations.
+  Max: 6
+
+Style/Documentation:
+  # Every public class and module carries a one-sentence comment.
+  Enabled: true

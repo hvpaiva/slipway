@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Installs the development dependencies for a fresh checkout.
+
+cd "$(dirname "$0")/.." || exit 1
+
+bundle install || exit 1
+
+printf '\nReady. Run "bundle exec rake" for the tests and RuboCop, or "bundle exec rake -T" to list every task.\n'

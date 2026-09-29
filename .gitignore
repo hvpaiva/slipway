@@ -1,0 +1,9 @@
+/.bundle/
+/.yardoc/
+/checksums/
+/coverage/
+/doc/
+/pkg/
+/tmp/
+*.gem
+mise.local.toml

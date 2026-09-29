@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Renders the man pages into man/man1 from the command registry. The page date comes
+# from the newest release heading in CHANGELOG.md, or from SOURCE_DATE_EPOCH, so the
+# output is reproducible.
+
+require 'fileutils'
+require 'slipway'
+
+ROOT = File.expand_path('..', __dir__)
+CHANGELOG = File.join(ROOT, 'CHANGELOG.md')
+OUTPUT_DIR = File.join(ROOT, 'man', 'man1')
+RELEASE_HEADING = /\A## \[\d+\.\d+\.\d+\] - (\d{4}-\d{2}-\d{2})\s*\z/
+
+def changelog_date
+  return unless File.exist?(CHANGELOG)
+
+  File.foreach(CHANGELOG) do |line|
+    match = RELEASE_HEADING.match(line)
+    return match[1] if match
+  end
+  nil
+end
+
+def epoch_date
+  epoch = ENV.fetch('SOURCE_DATE_EPOCH', '')
+  return if epoch.empty?
+
+  Time.at(Integer(epoch)).utc.strftime('%Y-%m-%d')
+end
+
+def page_date
+  changelog_date || epoch_date ||
+    abort('generate-man: CHANGELOG.md has no release heading and SOURCE_DATE_EPOCH is unset')
+end
+
+registry = Slipway::Commands.registry(Slipway::Runtime.method(:build))
+pages = Slipway::CLI::Manpage.new(registry, date: page_date).pages
+
+FileUtils.mkdir_p(OUTPUT_DIR)
+FileUtils.rm_f(Dir[File.join(OUTPUT_DIR, '*.1')])
+pages.each do |name, roff|
+  File.write(File.join(OUTPUT_DIR, name), roff)
+  puts "wrote man/man1/#{name}"
+end
