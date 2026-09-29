@@ -65,6 +65,20 @@ class StyleTest < Minitest::Test
     assert_raises(ArgumentError) { style.paint(:table_columns, 'x') }
   end
 
+  def test_plain_with_layout_keeps_line_feeds_and_tabs_and_nothing_else
+    message = "unknown command\n\nDid you mean this?\n\tget\e[2J\r\u202E\n"
+
+    assert_equal "unknown command\n\nDid you mean this?\n\tget^[[2J^M\uFFFD\n",
+                 Slipway::CLI::Style.plain(message, layout: true)
+    assert_equal 'a^Jb^Ic', Slipway::CLI::Style.plain("a\nb\tc")
+  end
+
+  def test_plain_reads_binary_text_as_utf8
+    assert_equal "caf\u00E9 ^[", Slipway::CLI::Style.plain("caf\xC3\xA9 \e".b)
+    assert_equal "x\uFFFDy", Slipway::CLI::Style.plain("x\xFFy".b)
+    assert_equal Encoding::UTF_8, Slipway::CLI::Style.plain('plain'.b).encoding
+  end
+
   private
 
   def enabled?(mode, tty:, env:) = Slipway::CLI::Style.for(mode, tty:, env:).enabled?

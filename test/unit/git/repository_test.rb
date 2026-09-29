@@ -226,6 +226,21 @@ class GitRepositoryTest < Minitest::Test
     assert_equal 1, error.exit_status
   end
 
+  def test_the_kept_stderr_line_is_redacted_before_it_is_cut_to_200_characters
+    dir = fixture('clean')
+    url = "https://ci-bot:s3cret@example.com/#{'x' * 180}.git"
+    stderr = "fatal: unable to access '#{url}/': The requested URL returned error: 403\nremote: s3cret\n"
+    repo = Slipway::Git::Repository.new(runner: CannedRunner.new(128, stderr))
+
+    detail = assert_raises(Slipway::Git::Error) { repo.status(dir) }.message.delete_prefix("#{dir}: ")
+    kept = detail.delete_prefix('git exited with status 128: ')
+
+    assert_equal "fatal: unable to access 'https://***@example.com/#{'x' * 180}.git/'"[0, 200], kept
+    assert_equal 200, kept.size
+    refute_includes detail, 's3cret'
+    refute_includes detail, 'ci-bot'
+  end
+
   private
 
   def fixture(state) = build_repo(File.join(@root, state), state)

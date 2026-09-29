@@ -10,6 +10,7 @@ module Slipway
       # `git config --get` exits 1 when the key is absent, which is an answer, not a failure.
       ABSENT_KEY_STATUS = 1
       UNBORN_MESSAGE = 'does not have any commits yet'
+      MESSAGE_LIMIT = 200
 
       def initialize(runner: Runner.new)
         @runner = runner
@@ -50,9 +51,13 @@ module Slipway
         when /\Afatal: not a git repository/ then NotARepository.new(path)
         when /\Afatal: cannot change to/ then MissingPath.new(path)
         when /\Afatal: detected dubious ownership/ then UnsafeRepository.new(path)
-        else Error.new(path, "git exited with status #{result.status}: #{result.err.lines.first.to_s.strip}")
+        else Error.new(path, "git exited with status #{result.status}: #{first_line(result.err)}")
         end
       end
+
+      # Git quotes the URL it failed on, credentials included, and a server can add lines of its
+      # own. Redacting before the cut keeps a password from surviving as a truncated URL.
+      def first_line(err) = Url.redact(err.lines.first.to_s.strip)[0, MESSAGE_LIMIT]
     end
   end
 end

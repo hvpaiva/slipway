@@ -161,6 +161,37 @@ class ViewsProjectTest < Minitest::Test
     assert_includes rendered, "  Subject:  fix^[[2Jall\n"
   end
 
+  def test_describe_redacts_the_credentials_in_the_remote
+    https = inspected(CommandsHelper::CLEAN, remote: 'https://ci-bot:s3cret@example.com/x.git')
+    ssh = inspected(CommandsHelper::CLEAN, remote: 'ssh://git:s3cret@example.com/x.git')
+
+    assert_includes render(Slipway::Views::Project.describe(https, now: NOW)),
+                    "  Remote:      https://***@example.com/x.git\n"
+    assert_includes render(Slipway::Views::Project.describe(ssh, now: NOW)),
+                    "  Remote:      ssh://git:***@example.com/x.git\n"
+  end
+
+  def test_rows_and_objects_never_carry_the_remote
+    inspection = inspected(CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT,
+                                                  remote: 'https://ci-bot:s3cret@forge.test/x.git')
+    row = Slipway::Views::Project.row(inspection, now: NOW, wide: true, group: true, labels: true)
+
+    refute_includes row.join(' '), 'forge.test'
+    refute_includes Slipway::Views::Project.object(inspection).to_s, 'forge.test'
+  end
+
+  def test_object_makes_the_text_git_returned_plain
+    commit = CommandsHelper::COMMIT.with(subject: "fix\e[2Jall", author: "Mallory\u202E", email: "m\e]0;x\a@x")
+    inspection = inspected(CommandsHelper::CLEAN.with(branch: "main\u2066", upstream: "origin/main\e[8m"), commit:)
+
+    status = Slipway::Views::Project.object(inspection).fetch('status')
+
+    assert_equal ["main\uFFFD", 'origin/main^[[8m'], status.values_at('branch', 'upstream')
+    assert_equal ["Mallory\uFFFD", 'm^[]0;x^G@x', 'fix^[[2Jall'],
+                 status.fetch('lastCommit').values_at('author', 'email', 'subject')
+    assert_equal [0, 'Clean'], status.values_at('ahead', 'state')
+  end
+
   private
 
   def inspected(status, commit: nil, remote: nil)

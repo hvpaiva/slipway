@@ -124,6 +124,30 @@ class RunnerTest < Minitest::Test
     assert_equal "error: nope\nTry again.\n", err
   end
 
+  def test_error_lines_make_control_characters_visible
+    @fixture.failure = Slipway::Error.new(problems: ["/srv/x: git exited with status 128: fatal: \e[2Jgone\u202E",
+                                                     "\e]52;c;cHduZWQ=\a\nforged"])
+    _, _, err = @fixture.run('get', 'projects', err_tty: true)
+
+    assert_equal "\e[31merror:\e[0m /srv/x: git exited with status 128: fatal: ^[[2Jgone\uFFFD\n" \
+                 "\e[31merror:\e[0m ^[]52;c;cHduZWQ=^G^Jforged\n", err
+  end
+
+  def test_error_lines_accept_binary_text_from_the_c_locale
+    @fixture.failure = Slipway::Error.new("/nonexistent/proje\xC3\xA7\xC3\xA3o\e.yaml: no such file".b)
+    status, _, err = @fixture.run('get', 'projects')
+
+    assert_equal 1, status
+    assert_equal "error: /nonexistent/proje\u00E7\u00E3o^[.yaml: no such file\n", err
+  end
+
+  def test_a_hint_is_made_visible_too
+    @fixture.failure = Slipway::CLI::UsageError.new('nope', hint: "Run \e[8mhidden\e[0m.")
+    _, _, err = @fixture.run('config', 'view')
+
+    assert_equal "error: nope\nRun ^[[8mhidden^[[0m.\n", err
+  end
+
   def test_unexpected_errors_exit_one_with_the_message_only
     @fixture.failure = RuntimeError.new('kaboom')
     status, out, err = @fixture.run('get', 'projects')

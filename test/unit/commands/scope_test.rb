@@ -152,6 +152,18 @@ class ScopeTest < Minitest::Test
     end
   end
 
+  def test_a_warning_about_a_manifest_makes_its_control_characters_visible
+    with_scope do |scope, runtime, context|
+      FileUtils.mkdir_p(File.join(runtime.store.root, 'projects', 'default'))
+      stray = File.join(runtime.store.root, 'projects', 'default', "\e]0;x\a.yaml")
+      File.write(stray, "kind: Project\nmetadata:\n  name: other\nspec:\n  path: /x\n")
+
+      assert_empty selected(scope, PROJECTS, [])
+      assert_equal "warning: #{File.dirname(stray)}/^[]0;x^G.yaml: describes project \"other\", which does not " \
+                   "belong at this path\n", context.err.string
+    end
+  end
+
   def test_report_none_names_the_group_only_for_projects_in_one_group
     with_scope do |scope, _runtime, context|
       scope.report_none(PROJECTS)
