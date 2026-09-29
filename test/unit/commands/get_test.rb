@@ -6,9 +6,9 @@ class GetTest < Minitest::Test
   include CommandsHelper
 
   WIDE = <<~TABLE
-    NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT
-    fresh   main     Unborn   <never>   3h    ~/dev/fresh   <none>    <none>
-    hldr    main     Clean    12m       3h    ~/dev/hldr    a1b2c3d   45m
+    NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT   DRIFT
+    fresh   main     Unborn   <never>   3h    ~/dev/fresh   <none>    <none>        Unborn
+    hldr    main     Clean    12m       3h    ~/dev/hldr    a1b2c3d   45m           <none>
   TABLE
   ALL_GROUPS = <<~TABLE
     GROUP     NAME   BRANCH   STATUS   FETCHED   AGE
@@ -52,7 +52,7 @@ class GetTest < Minitest::Test
     end
   end
 
-  def test_wide_adds_path_head_and_last_commit_age
+  def test_wide_adds_path_head_last_commit_age_and_drift
     with_runtime do |runtime|
       register(runtime, 'hldr', fetched_at: FETCHED)
       register(runtime, 'fresh', status: UNBORN)

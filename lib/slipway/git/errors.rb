@@ -55,7 +55,9 @@ module Slipway
       def initialize(path) = super(path, 'repository has dubious ownership')
 
       # Git's own remedy, so the user can decide whether to trust the directory.
-      def hint = "Run 'git config --global --add safe.directory #{Shellwords.escape(path)}' to trust it."
+      def command = "git config --global --add safe.directory #{Shellwords.escape(path)}"
+
+      def hint = "Run '#{command}' to trust it."
     end
 
     # Credentials, a passphrase or a host key confirmation were missing or refused, and network

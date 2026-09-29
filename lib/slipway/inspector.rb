@@ -2,14 +2,18 @@
 
 require_relative 'git'
 require_relative 'paths'
+require_relative 'plan'
 require_relative 'pool'
 require_relative 'state'
 
 module Slipway
   # +status+, +commit+ and +remote+ are nil when git could not answer; +error+ then holds the
   # Git error and +state+ its word. +fetched_at+ is nil then too, and for a repository no fetch
-  # has reached.
-  Inspection = Data.define(:project, :status, :commit, :remote, :fetched_at, :state, :error) do
+  # has reached. +operation+ is the merge, rebase or other operation in progress, asked only of a
+  # project the plan would fast-forward.
+  Inspection = Data.define(:project, :status, :commit, :remote, :fetched_at, :state, :error, :operation) do
+    def initialize(operation: nil, **) = super
+
     def self.failed(project, error)
       new(project:, status: nil, commit: nil, remote: nil, fetched_at: nil, state: State.for_error(error), error:)
     end
@@ -42,7 +46,7 @@ module Slipway
       return Inspection.failed(project, Git::RelativePath.new(path)) unless File.absolute_path?(path)
       return Inspection.failed(project, Git::MissingPath.new(path)) unless File.directory?(path)
 
-      Inspection.new(project:, **query(path), error: nil)
+      with_operation(Inspection.new(project:, **query(path), error: nil), path)
     rescue Git::Error => e
       Inspection.failed(project, e)
     rescue StandardError => e
@@ -61,6 +65,13 @@ module Slipway
       commit = status.unborn? ? nil : @git.last_commit(path)
       { status:, commit:, remote: @git.remote_url(path), fetched_at: @git.fetched_at(path),
         state: State.derive(status) }
+    end
+
+    # One more spawn, paid only by a project that would otherwise be fast-forwarded.
+    def with_operation(inspection, path)
+      return inspection unless Plan.for(inspection).fast_forward?
+
+      inspection.with(operation: @git.in_progress(path))
     end
 
     def collect_warnings(results)

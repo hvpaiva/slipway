@@ -37,6 +37,11 @@ class ReadmeTest < Minitest::Test
     assert_equal Slipway::State::ROLES.keys, first_cells('| STATUS | Meaning |')
   end
 
+  def test_drift_tables_list_every_type_and_blocker_in_order
+    assert_equal Slipway::Drift::TYPES, first_cells('| Drift | Reported when |')
+    assert_equal Slipway::Drift::BLOCKERS.keys, first_cells('| Blocker | Meaning |')
+  end
+
   def test_environment_table_lists_the_man_page_variables_in_order
     assert_equal Slipway::CLI::Manpage::DEFAULT_ENVIRONMENT.keys, first_cells('| Variable | Effect |')
   end

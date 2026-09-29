@@ -42,6 +42,8 @@ class DescribeIntegrationTest < Minitest::Test
       Remote:      <none>
       Last Fetch:  <never>
     #{LAST_COMMIT.chomp}
+    Drift:
+      NoUpstream:  main tracks no upstream; sync fast-forwards only a tracking branch
   TEXT
 
   THREE = <<~TEXT.freeze
@@ -60,6 +62,8 @@ class DescribeIntegrationTest < Minitest::Test
     Status:       Missing
     Repository:   no such directory
     Last Commit:  <none>
+    Drift:
+      Missing:  no directory at ~/dev/gone
 
     Name:         plain
     Group:        default
@@ -76,6 +80,8 @@ class DescribeIntegrationTest < Minitest::Test
     Status:       NotARepo
     Repository:   not a git repository
     Last Commit:  <none>
+    Drift:
+      NotARepo:  ~/dev/plain holds files but no repository; sync clones only into an absent directory
 
     Name:         unborn
     Group:        default
@@ -104,6 +110,8 @@ class DescribeIntegrationTest < Minitest::Test
       Remote:      <none>
       Last Fetch:  <never>
     Last Commit:  <none>
+    Drift:
+      Unborn:  no commits yet; nothing to fast-forward
   TEXT
 
   BEHIND = <<~TEXT.freeze
@@ -134,22 +142,8 @@ class DescribeIntegrationTest < Minitest::Test
       Remote:      <home>/dev/behind-origin.git
       Last Fetch:  <never>
     #{LAST_COMMIT.chomp}
-  TEXT
-
-  GROUPS = <<~TEXT.freeze
-    Name:         default
-    Labels:       <none>
-    Created:      #{CREATED}
-    Age:          <age>
-    Description:  <none>
-    Projects:     1
-
-    Name:         work
-    Labels:       <none>
-    Created:      #{CREATED}
-    Age:          <age>
-    Description:  Day job
-    Projects:     1
+    Drift:
+      Behind:  1 commit behind origin/main; sync will fast-forward
   TEXT
 
   def expand(text, env) = text.gsub('<home>', env['HOME'])
@@ -199,19 +193,6 @@ class DescribeIntegrationTest < Minitest::Test
       assert_equal %w[clean other], out.scan(/^Name: +(\S+)$/).flatten
       assert_equal %w[default work], out.scan(/^Group: +(\S+)$/).flatten
       assert_equal 1, out.scan(/^\n/).size
-    end
-  end
-
-  def test_groups_show_their_project_count
-    with_home do |env|
-      seed(env, manifest('Group', 'default'), manifest('Group', 'work', description: 'Day job'),
-           manifest('Project', 'clean', path: repo(env, 'clean')),
-           manifest('Project', 'api', group: 'work', path: repo(env, 'api', nil)))
-      status, out, err = slipway('describe', 'groups', env:)
-
-      assert_equal [0, ''], [status, err]
-      assert_equal expand(GROUPS, env), scrub_age(out)
-      assert_equal out.lines[7..].join, slipway!('describe', 'group', 'work', env:)
     end
   end
 

@@ -37,6 +37,7 @@ class DescribeTest < Minitest::Test
       Author:   Ada Lovelace <ada@example.com>
       Date:     2026-09-29T11:15:00Z
       Subject:  initial commit
+    Drift:        <none>
   TEXT
   MISSING = <<~TEXT
     Name:         gone
@@ -54,6 +55,8 @@ class DescribeTest < Minitest::Test
     Status:       Missing
     Repository:   no such directory
     Last Commit:  <none>
+    Drift:
+      Missing:  no directory at ~/dev/gone
   TEXT
 
   def test_a_project_with_a_full_status_lists_every_section
@@ -82,7 +85,7 @@ class DescribeTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_equal 2, out.scan(/^Name: /).size
-      assert_includes out, "  Subject:  initial commit\n\nName:         notes\n"
+      assert_includes out, "Drift:        <none>\n\nName:         notes\n"
       refute_match(/\n\n\z/, out)
     end
   end

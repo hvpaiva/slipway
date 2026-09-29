@@ -42,6 +42,7 @@ class ViewsProjectTest < Minitest::Test
       Author:   Ada Lovelace <ada@example.com>
       Date:     2026-09-29T11:15:00Z
       Subject:  initial commit
+    Drift:        <none>
   TEXT
   MISSING_DESCRIBE = <<~TEXT
     Name:         gone
@@ -59,6 +60,8 @@ class ViewsProjectTest < Minitest::Test
     Status:       Missing
     Repository:   no such directory
     Last Commit:  <none>
+    Drift:
+      Missing:  no directory at ~/dev/gone
   TEXT
 
   def test_headers_add_group_first_wide_columns_and_labels_last
@@ -66,8 +69,8 @@ class ViewsProjectTest < Minitest::Test
 
     assert_equal %w[NAME BRANCH STATUS FETCHED AGE], view.headers
     assert_equal %w[GROUP NAME BRANCH STATUS FETCHED AGE], view.headers(group: true)
-    assert_equal %w[NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT], view.headers(wide: true)
-    assert_equal %w[GROUP NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT LABELS],
+    assert_equal %w[NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT DRIFT], view.headers(wide: true)
+    assert_equal %w[GROUP NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT DRIFT LABELS],
                  view.headers(wide: true, group: true, labels: true)
   end
 
@@ -76,7 +79,7 @@ class ViewsProjectTest < Minitest::Test
     view = Slipway::Views::Project
 
     assert_equal %w[hldr main Clean 12m 3h], view.row(inspection, now: NOW)
-    assert_equal ['personal', 'hldr', 'main', 'Clean', '12m', '3h', '~/dev/hldr', 'a1b2c3d', '45m',
+    assert_equal ['personal', 'hldr', 'main', 'Clean', '12m', '3h', '~/dev/hldr', 'a1b2c3d', '45m', nil,
                   'app=web,lang=rust'],
                  view.row(inspection, now: NOW, wide: true, group: true, labels: true)
   end
@@ -88,8 +91,9 @@ class ViewsProjectTest < Minitest::Test
     view = Slipway::Views::Project
 
     assert_equal ['hldr', '(detached)', 'Detached', '12m', '3h'], view.row(detached, now: NOW)
-    assert_equal ['hldr', 'main', 'Unborn', '12m', '3h', '~/dev/hldr', nil, nil], view.row(unborn, now: NOW, wide: true)
-    assert_equal ['hldr', nil, 'Missing', nil, '3h', '~/dev/hldr', nil, nil, nil],
+    assert_equal ['hldr', 'main', 'Unborn', '12m', '3h', '~/dev/hldr', nil, nil, 'Unborn'],
+                 view.row(unborn, now: NOW, wide: true)
+    assert_equal ['hldr', nil, 'Missing', nil, '3h', '~/dev/hldr', nil, nil, 'Missing', nil],
                  view.row(missing, now: NOW, wide: true, labels: true)
   end
 
@@ -152,7 +156,7 @@ class ViewsProjectTest < Minitest::Test
     expected = PROJECT.to_manifest.merge(
       'status' => { 'branch' => 'main', 'head' => 'a1b2c3d', 'upstream' => 'origin/main', 'ahead' => 0, 'behind' => 0,
                     'staged' => 0, 'unstaged' => 0, 'untracked' => 0, 'conflicted' => 0, 'stashes' => 0,
-                    'state' => 'Clean', 'lastFetch' => '2026-09-29T11:48:00Z',
+                    'state' => 'Clean', 'lastFetch' => '2026-09-29T11:48:00Z', 'drift' => [],
                     'lastCommit' => { 'hash' => CommandsHelper::SHA, 'author' => 'Ada Lovelace',
                                       'email' => 'ada@example.com', 'date' => '2026-09-29T11:15:00Z',
                                       'subject' => 'initial commit' } }
@@ -166,8 +170,12 @@ class ViewsProjectTest < Minitest::Test
     inspection = Slipway::Inspection.failed(PROJECT, Slipway::Git::NotARepository.new('/x'))
     unborn = inspected(CommandsHelper::UNBORN, fetched_at: nil)
 
-    assert_equal({ 'state' => 'NotARepo' }, Slipway::Views::Project.object(inspection).fetch('status'))
-    assert_equal %w[branch staged unstaged untracked conflicted stashes state],
+    assert_equal({ 'state' => 'NotARepo',
+                   'drift' => [{ 'type' => 'NotARepo', 'blocker' => true,
+                                 'message' => '~/dev/hldr holds files but no repository; sync clones only into an ' \
+                                              'absent directory' }] },
+                 Slipway::Views::Project.object(inspection).fetch('status'))
+    assert_equal %w[branch staged unstaged untracked conflicted stashes state drift],
                  Slipway::Views::Project.object(unborn).fetch('status').keys
   end
 

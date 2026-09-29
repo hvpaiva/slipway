@@ -3,6 +3,7 @@
 require_relative '../git/status'
 require_relative '../git/url'
 require_relative '../labels'
+require_relative '../plan'
 require_relative '../resources'
 require_relative '../state'
 require_relative '../output'
@@ -28,7 +29,7 @@ module Slipway
 
       def self.headers(wide: false, group: false, labels: false)
         columns = [*(['GROUP'] if group), 'NAME', 'BRANCH', 'STATUS', 'FETCHED', 'AGE']
-        columns.push('PATH', 'HEAD', 'LAST-COMMIT') if wide
+        columns.push('PATH', 'HEAD', 'LAST-COMMIT', 'DRIFT') if wide
         columns << 'LABELS' if labels
         columns
       end
@@ -38,7 +39,10 @@ module Slipway
         project = inspection.project
         cells = [*([project.group] if group), project.name, branch(inspection.status), inspection.state,
                  fetched(inspection, now), Output::Age.humanize(project.created_at, now)]
-        cells.push(project.path, inspection.status&.head, last_commit_age(inspection.commit, now)) if wide
+        if wide
+          cells.push(project.path, inspection.status&.head, last_commit_age(inspection.commit, now),
+                     drift_types(inspection))
+        end
         cells << Labels.format(project.labels) if labels
         cells
       end
@@ -49,7 +53,8 @@ module Slipway
          ['Created', project.created_at], ['Age', Output::Age.humanize(project.created_at, now)],
          ['Path', project.path], ['Description', project.description], *desired(project),
          ['Status', Output::Painted.new(role: State.role(inspection.state), text: inspection.state)],
-         ['Repository', repository(inspection)], ['Last Commit', last_commit(inspection.commit)]]
+         ['Repository', repository(inspection)], ['Last Commit', last_commit(inspection.commit)],
+         ['Drift', drift(inspection).map { [it.type, it.message] }]]
       end
 
       # Fields git could not answer are left out, as kubectl leaves out unset fields.
@@ -62,6 +67,7 @@ module Slipway
             'unstaged' => status&.unstaged, 'untracked' => status&.untracked,
             'conflicted' => status&.conflicted, 'stashes' => status&.stashes,
             'state' => inspection.state, 'lastFetch' => Resources.timestamp(inspection.fetched_at),
+            'drift' => drift_object(inspection),
             'lastCommit' => commit_object(inspection.commit)
           ).compact
         )
@@ -86,6 +92,17 @@ module Slipway
       end
 
       def self.last_commit_age(commit, now) = commit && Output::Age.humanize(commit.time, now)
+
+      def self.drift(inspection) = Plan.for(inspection).items
+
+      def self.drift_types(inspection)
+        types = drift(inspection).map(&:type)
+        types.join(',') unless types.empty?
+      end
+
+      def self.drift_object(inspection)
+        drift(inspection).map { plain('type' => it.type, 'message' => it.message, 'blocker' => it.blocker) }
+      end
 
       def self.repository(inspection)
         status = inspection.status
@@ -124,8 +141,8 @@ module Slipway
       # prints a field as it is, so git's text is made plain here as it is in a table.
       def self.plain(fields) = fields.transform_values { it.is_a?(String) ? Output.plain(it) : it }
 
-      private_class_method :desired, :branch, :fetched, :last_commit_age, :repository, :last_fetch, :failure,
-                           :last_commit, :commit_object, :plain
+      private_class_method :desired, :branch, :fetched, :last_commit_age, :drift, :drift_types, :drift_object,
+                           :repository, :last_fetch, :failure, :last_commit, :commit_object, :plain
     end
   end
 end

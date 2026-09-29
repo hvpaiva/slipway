@@ -30,6 +30,14 @@ class InspectorTest < Minitest::Test
     assert_same project, inspection.project
   end
 
+  def test_the_operation_in_progress_is_asked_only_of_a_project_that_would_be_fast_forwarded
+    behind = repo('behind', status: CommandsHelper::CLEAN.with(behind: 2), operation: 'rebase')
+    dirty = repo('dirty', status: CommandsHelper::CLEAN.with(behind: 2, staged: 1), operation: 'merge')
+    paused = repo('paused', status: CommandsHelper::CLEAN.with(behind: 2), operation: 'bisect').with(paused: true)
+
+    assert_equal(['rebase', nil, nil], [behind, dirty, paused].map { @inspector.examine(it).operation })
+  end
+
   def test_an_unborn_repository_is_not_asked_for_its_last_commit
     project = repo('fresh', status: CommandsHelper::UNBORN, commit: CommandsHelper::COMMIT)
 
@@ -156,10 +164,10 @@ class InspectorTest < Minitest::Test
 
   private
 
-  def repo(name, status:, commit: nil, remote: nil, fetched_at: nil)
+  def repo(name, status:, commit: nil, remote: nil, fetched_at: nil, operation: nil)
     directory = File.join(@home, 'dev', name)
     FileUtils.mkdir_p(directory)
-    @git.add(directory, status:, commit:, remote:, fetched_at:)
+    @git.add(directory, status:, commit:, remote:, fetched_at:, operation:)
     Slipway::Project.new(name:, path: "~/dev/#{name}")
   end
 
