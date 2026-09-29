@@ -179,8 +179,9 @@ them; GitHub signs the merge commit. To check a branch before pushing it, run
 ## Releasing
 
 Releases are cut by a maintainer with `bin/release`, from `main` unless `--branch` says
-otherwise. `rake release` is the publish step and refuses to run outside GitHub Actions, so
-the tag is the only thing that publishes.
+otherwise. `rake release` is the publish step and refuses to run outside GitHub Actions, as do
+Bundler's `rake release:source_control_push` and `rake release:rubygem_push` run on their own,
+so the tag is the only thing that publishes.
 
 ```sh
 bin/release X.Y.Z            # validate, prepare and open the release pull request
@@ -195,7 +196,9 @@ first release is `bin/release 0.1.0`); the tree is clean, on `main` and equal to
 after `git fetch origin --tags`; the tag `vX.Y.Z` exists neither locally nor on origin;
 `## [Unreleased]` has at least one entry; and the repository is set up (the `release`
 environment with its `v*` policy and the `main` ruleset exist), otherwise it stops and names
-`bundle exec rake github:setup` as the fix. It then creates the branch `release/vX.Y.Z`, writes
+`bundle exec rake github:setup` as the fix. When `CHANGELOG.md` already has the heading and
+the tag exists only locally, a tag push that failed after the merge, it stops and names
+`git push origin vX.Y.Z` instead of asking for a greater version. It then creates the branch `release/vX.Y.Z`, writes
 `lib/slipway/version.rb`, rewrites `CHANGELOG.md` (today's date in UTC on the new heading, an
 empty `## [Unreleased]` above it, the `[Unreleased]` and `[X.Y.Z]` link references, older
 references kept), runs `bundle exec rake generate` so the man pages carry the date, runs
@@ -207,8 +210,10 @@ failure in `rake check` leaves the edits in place for you to inspect.
 With `--push` it continues once the pull request exists: waits for the checks with
 `gh pr checks --watch --fail-fast`, merges with `gh pr merge --merge --delete-branch`, fetches
 `main`, creates the signed annotated tag with `git tag -s vX.Y.Z -m vX.Y.Z` on the merge commit,
-pushes the tag and follows the Release workflow with `gh run watch`. Without `--push`, review
-the pull request, merge it, and tag the merge commit by hand:
+pushes the tag and follows the Release workflow with `gh run watch`. A failed tag push names
+`git push origin vX.Y.Z`; a failed Release run says to rerun the failed jobs, or only
+`github-release` once the gem is on rubygems.org. Without `--push`, review the pull request,
+merge it, and tag the merge commit by hand:
 
 ```sh
 git switch main
@@ -226,8 +231,14 @@ workflow on the tagged commit, then checks that the commit is on `main` or on a 
 branch, runs `rake release:verify` (the tag equals `v` + `Slipway::VERSION`, the changelog has
 the dated heading and its link reference, `## [Unreleased]` is present), builds the gem and
 publishes it to RubyGems through trusted publishing (no API key is stored anywhere; the job gets
-a short-lived OIDC token in the `release` environment), then creates the GitHub release with the
-changelog section as its notes and the gem attached.
+a short-lived OIDC token in the `release` environment, with `id-token: write` and read-only
+contents). `rubygems/release-gem` runs with `await-release` and `attestations` off, because
+both download and run unpinned gems while the push credential is on disk. A separate
+`github-release` job then rebuilds the gem from the tag (RubyGems builds reproducibly, so it is
+the file that was pushed) and creates the GitHub release with the changelog section as its
+notes and the gem attached. rubygems.org refuses a version it already has, so when only that
+job fails, rerun it alone. A manual run from a branch has no tag and checks `CHANGELOG.md` as
+`bin/release` would cut it, so the dry run passes before the first release.
 
 ### One-time setup of the repository and the trusted publisher
 

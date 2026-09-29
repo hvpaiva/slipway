@@ -85,10 +85,10 @@ jobs:
     # which only v* tags may enter.
     environment: release
     permissions:
-      # id-token mints the OIDC token for rubygems.org. contents: write is for
-      # gh release create only: rake release finds the tag already present and pushes nothing.
+      # id-token mints the OIDC token for rubygems.org. contents stays read: rake release finds
+      # the tag already present and has nothing to push.
       id-token: write
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -102,12 +102,33 @@ jobs:
       # the tag already exists, then push pkg/*.gem with the OIDC credential. await-release is
       # off because it runs "gem exec rubygems-await", an unpinned download executed while the
       # rubygems.org credential is on disk, and nothing after this step waits for the index.
+      # attestations is off for the same reason: RubyGems 4.0.20 has no
+      # send_push_request_with_attestation, so the action signs through "gem exec sigstore-cli",
+      # whose dependencies float, with the push key in its environment. It can come back once
+      # RubyGems signs natively.
       - name: Publish to rubygems.org
         uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
         with:
           await-release: false
-      # The attached .gem is the file that was just pushed; gh uploads it to a draft and
-      # publishes after, which immutable releases require.
+          attestations: false
+
+  # A job of its own because rubygems.org refuses a version it already has: rerunning publish
+  # after a failure here could never get past the push.
+  github-release:
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # gh release create
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+      # RubyGems builds reproducibly (every timestamp is pinned to SOURCE_DATE_EPOCH, 1980 unless
+      # set), so the gem rebuilt from the tag is byte for byte the one publish pushed.
+      - run: gem build slipway.gemspec
+      # gh uploads the gem to a draft and publishes after, which immutable releases require.
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -120,4 +141,4 @@ jobs:
             body = lines[(start + 1)..].take_while { |line| !line.start_with?("## ") && !line.match?(/\A\[[^\]]+\]: /) }
             File.write("notes.md", "#{body.join.strip}\n")
           ' "$VERSION"
-          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md "pkg/slipway-$VERSION.gem"
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md "slipway-$VERSION.gem"

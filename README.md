@@ -357,7 +357,7 @@ are development tasks and are not part of the gem.
 | `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
 | `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
 | `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
-| `rake release:guard_ci` | Aborts unless running inside GitHub Actions; `rake release` runs it before anything else. |
+| `rake release:guard_ci` | Aborts unless running inside GitHub Actions; `rake release`, `rake release:source_control_push` and `rake release:rubygem_push` run it before they tag or push. |
 | `rake github:setup` | Configures the GitHub repository (merge commits only, release environment, rulesets, security alerts, immutable releases, the `skip-changelog` label) through `gh api`, idempotently. |
 | `rake docs` | YARD documentation. |
 | `rake build`, `rake install` | The bundler gem tasks. |

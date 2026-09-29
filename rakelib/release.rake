@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 require_relative '../lib/slipway/version'
-require_relative 'support/changelog'
+require_relative 'support/release'
 
 namespace :release do
   desc 'Check the tag (TAG, or the pushed tag in GitHub Actions) against Slipway::VERSION and CHANGELOG.md'
   task :verify do
     version = Slipway::VERSION
     tag = ENV['GITHUB_REF_TYPE'] == 'tag' ? ENV.fetch('GITHUB_REF_NAME', nil) : ENV.fetch('TAG', nil)
-    problems = Changelog.release_problems(File.read('CHANGELOG.md'), version).map { "CHANGELOG.md has #{it}" }
-    problems.unshift("tag #{tag} does not match Slipway::VERSION #{version}") if tag && tag != "v#{version}"
+    problems = Release.verify_problems(File.read(Release::CHANGELOG), version,
+                                       tag:, date: Time.now.utc.strftime('%Y-%m-%d'))
     unless problems.empty?
       prefix = ENV['GITHUB_ACTIONS'] == 'true' ? '::error::' : 'release:verify: '
       abort problems.map { "#{prefix}#{it}" }.join("\n")
@@ -25,5 +25,8 @@ namespace :release do
   end
 end
 
-# Bundler's release task tags and pushes before it reaches rubygems.org; the guard stops it first.
-Rake::Task['release:guard_clean'].enhance(['release:guard_ci'])
+# Bundler's release task tags and pushes before it reaches rubygems.org, and its two subtasks can
+# be run on their own; the guard stops each of them first.
+%w[release:guard_clean release:source_control_push release:rubygem_push].each do |name|
+  Rake::Task[name].enhance(['release:guard_ci'])
+end
