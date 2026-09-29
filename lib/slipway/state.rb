@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module Slipway
-  # The STATUS column: the most actionable fact about a repository, in one word.
+  # A repository can be dirty and behind at once; the STATUS column shows one word, for the
+  # fact that needs attention first.
   module State
     # In precedence order.
     ROLES = {
