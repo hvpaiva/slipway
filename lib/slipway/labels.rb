@@ -3,9 +3,9 @@
 require_relative 'cli/errors'
 
 module Slipway
-  # Label keys and values as kubernetes defines them, plus the KEY=VALUE and KEY- words of the command line.
+  # Label keys and values as Kubernetes defines them.
   module Labels
-    # A key or value that breaks the rule; callers decide whether it came from the command line or a file.
+    # Callers decide whether the label came from the command line or a file.
     class Invalid < Error; end
 
     NAME = /\A[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?\z/
@@ -17,7 +17,6 @@ module Slipway
     VALUE_RULE = 'empty, or letters, digits, dashes, underscores and dots, starting and ending with a letter ' \
                  'or digit, at most 63 characters'
 
-    # True for a String key with an optional DNS prefix, a slash and a valid name.
     def self.valid_key?(key)
       return false unless key.is_a?(String)
 
@@ -28,24 +27,20 @@ module Slipway
       end
     end
 
-    # True for an empty String or one that reads as a label name.
     def self.valid_value?(value) = value.is_a?(String) && (value.empty? || valid_name?(value))
 
-    # Returns +key+ or raises Invalid with the key rule.
     def self.validate_key!(key)
       return key if valid_key?(key)
 
       raise Invalid, "#{key.inspect} is not a valid label key: #{KEY_RULE}"
     end
 
-    # Returns +value+ or raises Invalid with the value rule.
     def self.validate_value!(value)
       return value if valid_value?(value)
 
       raise Invalid, "#{value.inspect} is not a valid label value: #{VALUE_RULE}"
     end
 
-    # Returns +labels+ once every key and value passes.
     def self.validate!(labels)
       labels.each do |key, value|
         validate_key!(key)
@@ -53,7 +48,6 @@ module Slipway
       end
     end
 
-    # Turns KEY=VALUE words into a Hash; a malformed or repeated word is a usage error.
     def self.parse_pairs(words)
       words.each_with_object({}) do |word, pairs|
         key, value = split_pair(word, 'KEY=VALUE')
@@ -62,7 +56,7 @@ module Slipway
       end
     end
 
-    # Splits label words into [sets, removals]: KEY=VALUE sets a label and KEY- removes one.
+    # KEY=VALUE sets a label and KEY- removes one; returns [sets, removals].
     def self.parse_changes(words)
       sets = {}
       removals = []
@@ -78,7 +72,7 @@ module Slipway
       reject_overlap(sets, removals)
     end
 
-    # Renders labels as kubectl does, +a=b,c=d+ sorted by key; nil when there are none.
+    # The form kubectl prints labels in.
     def self.format(labels)
       return nil if labels.empty?
 

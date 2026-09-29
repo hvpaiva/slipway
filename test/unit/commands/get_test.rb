@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# `get` as a table: columns, flags that add or drop columns, selection and states.
 class GetTest < Minitest::Test
   include CommandsHelper
 

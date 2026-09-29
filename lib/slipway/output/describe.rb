@@ -5,9 +5,6 @@ module Slipway
     # A value whose color the caller has already chosen, such as a STATUS word.
     Painted = Data.define(:role, :text)
 
-    # Renders key and value pairs the way kubectl describe does: values aligned two spaces
-    # past the longest key of their block, nested blocks indented by two spaces with their own
-    # alignment, lists one item per line under the first, and <none> for anything empty.
     class Describe
       NONE = '<none>'
       INDENT = '  '
@@ -18,15 +15,14 @@ module Slipway
         @context = context
       end
 
-      # Renders +entries+, an ordered list of [key, value] pairs. A value is a scalar, a Time,
-      # a Painted, a list of strings, a Hash of labels, or another list of pairs.
+      # A value that is a non-empty list of [key, value] pairs renders as a nested block; any
+      # other list prints one item per line.
       def render(entries)
         return '' if entries.empty?
 
         "#{block(entries, 0).join("\n")}\n"
       end
 
-      # Renders and writes in one call, so callers hold no context of their own for one block.
       def print(entries) = @context.print(render(entries))
 
       private
@@ -50,7 +46,7 @@ module Slipway
         value.is_a?(Array) && !value.empty? && value.all? { it.is_a?(Array) && it.size == 2 }
       end
 
-      # The lines a value occupies, painted and free of control characters; always at least one.
+      # Never empty: #entry puts the first line beside the key.
       def values(value)
         case value
         when nil, [], {} then [@context.paint(:none, NONE)]

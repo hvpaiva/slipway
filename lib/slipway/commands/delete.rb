@@ -5,7 +5,6 @@ require_relative '../store'
 
 module Slipway
   module Commands
-    # `slipway delete TYPE NAME...`: removes resources by name, resolving every name first.
     class Delete < Base
       DESCRIPTION = "Delete resources by type and name.\n\n" \
                     'Every name is resolved before anything is deleted, so a name that does not exist leaves ' \
@@ -19,7 +18,6 @@ module Slipway
       IGNORE_NOT_FOUND = CLI::Option.new(long: 'ignore-not-found',
                                          description: 'Treat "resource not found" as a successful delete.')
 
-      # The registry entry for `delete`: names completed from the store, --dry-run and --ignore-not-found.
       def self.command(factory)
         CLI::Command.new(
           name: 'delete', summary: 'Delete resources by type and name', section: 'Basic Commands',
@@ -43,7 +41,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Resolves every name, then deletes them in order and prints one line each.
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, names = scope.targets(args)
@@ -59,7 +56,7 @@ module Slipway
 
       private
 
-      # Every named resource, in order, or the first failure before anything is removed.
+      # Runs before anything is removed, so one bad name deletes nothing.
       def resolve(store, kind, names, group, ignore:)
         names.filter_map do |name|
           raise Error, Store::PROTECTED_GROUP if !kind.namespaced? && name == Store::DEFAULT_GROUP
@@ -72,7 +69,6 @@ module Slipway
         end
       end
 
-      # kubectl's form: `project "hldr" deleted from work group`, `group "work" deleted`.
       def line(context, kind, resource, dry_run:)
         parts = ["#{kind.singular} #{resource.name.inspect}", context.paint(:delete_deleted, 'deleted')]
         parts << "from #{resource.group} group" if kind.namespaced?

@@ -1,9 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Cuts a release: bin/release VERSION [--dry-run] [--push] [--branch NAME]. The flow lives in
-# rakelib/support/release.rb; CONTRIBUTING.md describes each step.
-
 require 'optparse'
 require_relative '../rakelib/support/release'
 

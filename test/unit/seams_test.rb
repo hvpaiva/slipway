@@ -3,8 +3,6 @@
 require 'json'
 require 'test_helper'
 
-# Facts two modules must agree on: theme roles, variable names, the config documentation and
-# the shape a stored manifest takes when it is serialized.
 class SeamsTest < Minitest::Test
   include Sandbox
 

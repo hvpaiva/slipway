@@ -1,11 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Checks the commit messages of a revision range, and optionally a pull request title and
-# body, against the rules in rakelib/support/commits.rb:
-#   bin/lint-commits RANGE [--title FILE] [--body FILE]
-# Exits 1 with one line per offending commit or field, 2 on a usage or git error.
-
 require 'optparse'
 require_relative '../rakelib/support/commits'
 

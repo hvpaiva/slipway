@@ -1,5 +1,5 @@
-# Spelling check run by the lint job in CI (crate-ci/typos). Generated pages, golden
-# fixtures and the lockfile are excluded: their text comes from sources checked here.
+# Generated pages, golden fixtures and the lockfile are excluded: their text comes from
+# sources checked here.
 [files]
 extend-exclude = [
   "man/man1/",

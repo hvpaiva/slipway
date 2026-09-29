@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# `label`: every transition between labeled, unlabeled and not labeled, --overwrite, --list and the dry run.
 class LabelTest < Minitest::Test
   include CommandsHelper
 

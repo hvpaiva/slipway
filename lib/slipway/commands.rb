@@ -17,12 +17,10 @@ require_relative 'commands/label'
 require_relative 'commands/config'
 
 module Slipway
-  # The verbs of the program, one class per file, and the registry that dispatches them.
   module Commands
     PROGRAM = 'slipway'
     DESCRIPTION = 'A kubectl-style registry for the git repositories on your machine'
-    # What `slipway --help` and the root man page open with, in kubectl's shape: the one-line
-    # summary, then indented paragraphs that name the resources and how they are scoped.
+    # The space after each newline indents the paragraphs, as kubectl's root help does.
     LONG_DESCRIPTION = "#{DESCRIPTION}.\n\n " \
                        "A project is a registered git repository: its path, an optional description\n " \
                        "and labels. Projects live in groups the way pods live in namespaces; the group\n " \
@@ -31,8 +29,6 @@ module Slipway
     # Help lists the verbs in this order within their sections.
     VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, ConfigCommand].freeze
 
-    # The complete registry: every verb built with +factory+, the builtins wired to the
-    # paths of the data home, and -n completing group names from the store.
     def self.registry(factory)
       CLI::Registry.new(program: PROGRAM, version: VERSION, description: DESCRIPTION,
                         long_description: LONG_DESCRIPTION,

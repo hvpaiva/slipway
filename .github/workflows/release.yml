@@ -1,11 +1,6 @@
-# Publishes a tagged version to rubygems.org through trusted publishing (OIDC, no API key)
-# and creates the GitHub release with the matching CHANGELOG.md section and the .gem file.
-# The ci job runs the whole CI workflow on the tagged commit first, so nothing publishes
-# that CI rejects. The verify job checks the tag and builds the gem outside any
-# environment; only the publish job enters the release environment, and only when there is
-# something to publish. A manual run defaults to a dry run: it verifies and builds, then
-# stops. Publishing needs a tag ref, so a manual run from a branch never publishes,
-# whatever dry_run says.
+# The verify job runs outside any environment; only the publish job enters the release
+# environment, and only when there is something to publish. Publishing needs a tag ref, so a
+# manual run from a branch never publishes, whatever dry_run says.
 name: Release
 
 on:
@@ -46,8 +41,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # Releases are cut from main, or from a hotfix/* branch for a fix to the latest release
-      # (CONTRIBUTING.md, "Hotfixes and yanking"): a tag anywhere else never publishes.
+      # hotfix/* branches carry fixes to the latest release (CONTRIBUTING.md, "Hotfixes and yanking").
       - name: Require the tagged commit to be on main or a hotfix branch
         if: github.ref_type == 'tag'
         run: |
@@ -67,9 +61,7 @@ jobs:
         env:
           BUNDLE_FROZEN: 'true'
         run: bundle install
-      # The tag must be "v" + Slipway::VERSION and CHANGELOG.md must have a dated heading
-      # for that version, the link references and an "## [Unreleased]" section. A manual
-      # run from a branch skips the tag comparison. Writes version= to GITHUB_OUTPUT.
+      # rake release:verify writes version= to GITHUB_OUTPUT; a run from a branch has no tag to compare.
       - name: Verify the tag against Slipway::VERSION and CHANGELOG.md
         id: verify
         run: bundle exec rake release:verify
@@ -114,10 +106,8 @@ jobs:
         uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
         with:
           await-release: false
-      # The release notes are the CHANGELOG.md section for this version, from its heading up
-      # to the next "## " heading or the link references at the end of the file. The attached
-      # .gem is the file that was just pushed; gh uploads it to a draft and publishes after,
-      # which immutable releases require.
+      # The attached .gem is the file that was just pushed; gh uploads it to a draft and
+      # publishes after, which immutable releases require.
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

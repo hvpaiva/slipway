@@ -3,9 +3,8 @@
 require 'test_helper'
 require_relative '../../rakelib/support/changelog'
 
-# The committed pages under man/man1 have to be what the registry renders today. The date
-# comes from CHANGELOG.md the way bin/generate-man reads it, so a release heading and a
-# regenerated page move together.
+# The date comes from CHANGELOG.md the way bin/generate-man reads it, so a release heading and
+# a regenerated page move together.
 class ManpageGoldenTest < Minitest::Test
   include GoldenHelper
 

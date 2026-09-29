@@ -2,8 +2,6 @@
 
 module Slipway
   module Git
-    # Answers Slipway's three questions about a working tree by running git through a Runner
-    # and turning git's failures into the error classes of this module.
     class Repository
       STATUS_ARGS = %w[status --porcelain=v2 --branch --show-stash -z --untracked-files=normal --no-renames].freeze
       # Six NUL separated fields in the order Commit.parse expects; -z terminates the record.
@@ -17,18 +15,15 @@ module Slipway
         @runner = runner
       end
 
-      # Status of the working tree at +path+; one git process.
       def status(path)
         Status.parse(run(path, *STATUS_ARGS).out)
       end
 
-      # The commit at HEAD, or nil when the branch has no commits yet.
       def last_commit(path)
         result = run(path, *LOG_ARGS, accept: method(:unborn?))
         result.success? ? Commit.parse(result.out) : nil
       end
 
-      # URL of the remote called origin, or nil when there is none.
       def remote_url(path)
         result = run(path, *REMOTE_ARGS, accept: ->(failed) { failed.status == ABSENT_KEY_STATUS })
         result.success? ? result.out.chomp : nil
@@ -36,9 +31,7 @@ module Slipway
 
       private
 
-      # Runs git at +path+ and returns its Result when it succeeded or when +accept+ says the
-      # failure is an answer; any other failure is raised as the matching Git error. The spawn
-      # is skipped for a path that is not a directory, since git would only say the same.
+      # The spawn is skipped for a path that is not a directory, since git would only say the same.
       def run(path, *, accept: nil)
         directory = File.expand_path(path)
         raise MissingPath, directory unless File.directory?(directory)

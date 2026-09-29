@@ -3,7 +3,6 @@
 require 'test_helper'
 require 'rbconfig'
 
-# Every file under lib declares what it uses, so any one of them can be required on its own.
 class RequireGraphTest < Minitest::Test
   LIB = File.expand_path('../../lib', __dir__)
   FILES = Dir.glob('**/*.rb', base: LIB).sort.freeze

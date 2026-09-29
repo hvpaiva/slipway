@@ -1,12 +1,7 @@
-# Every job starts from a clean checkout. ruby/setup-ruby reads the Ruby version from
-# mise.toml unless a job passes ruby-version. The shell harness tests skip a missing zsh or
-# fish unless SLIPWAY_REQUIRE_SHELLS is set; only the completions job sets it and installs
-# both shells. Jobs call the same rake tasks a contributor runs locally through
-# "bundle exec rake check", so this file holds no logic the Rakefile lacks.
-#
-# The job names are the required status checks of the main ruleset ("rake github:setup").
-# Release reuses this workflow through workflow_call, so nothing publishes that CI rejects.
-# The weekly schedule runs only the advisory audit.
+# ruby/setup-ruby reads the Ruby version from mise.toml unless a job passes ruby-version.
+# Jobs call the rake tasks a contributor runs through "bundle exec rake check", so this file
+# holds no logic the Rakefile lacks. The job names are the required status checks of the
+# main ruleset (GitHub::REQUIRED_CHECKS in rakelib/support/github.rb).
 name: CI
 
 on:
@@ -17,8 +12,10 @@ on:
   # as a passing required check.
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+  # Runs only the audit job, so a new advisory surfaces without waiting for a push.
   schedule:
     - cron: '0 6 * * 1'
+  # Release runs this workflow first, so nothing publishes that CI rejects.
   workflow_call:
 
 permissions:
@@ -30,9 +27,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # RuboCop is clean, bin/setup and the bash completion script pass ShellCheck, the man
-  # pages render under groff -ww without a warning, typos finds no misspelling (_typos.toml)
-  # and zizmor finds nothing to report in the workflows.
   lint:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -57,10 +51,6 @@ jobs:
           advanced-security: false
           annotations: true
 
-  # Pull requests only. Every commit subject follows Conventional Commits, no commit is a
-  # fixup, squash or WIP, and neither the commits nor the pull request title and body carry
-  # an AI attribution trailer (bin/lint-commits). A change under lib/, exe/ or man/ comes
-  # with a CHANGELOG.md line unless the pull request has the skip-changelog label.
   commits:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -106,7 +96,7 @@ jobs:
             exit 1
           fi
 
-  # The suite passes on the oldest supported Ruby, on the current one, and on macOS.
+  # 3.4 is the oldest Ruby the gemspec supports.
   test:
     if: github.event_name != 'schedule'
     runs-on: ${{ matrix.os }}
@@ -129,8 +119,6 @@ jobs:
           bundler-cache: true
       - run: bundle exec rake test
 
-  # Line and branch coverage stay above the minimums in the Rakefile; the report is kept
-  # as an artifact.
   coverage:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -148,8 +136,6 @@ jobs:
           name: coverage
           path: coverage/
 
-  # No gem in Gemfile.lock has an entry in the ruby advisory database. Also runs every
-  # Monday, so a new advisory surfaces without waiting for the next push.
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -162,7 +148,6 @@ jobs:
           bundler-cache: true
       - run: bundle exec rake audit
 
-  # The committed man pages match what the command registry renders.
   generated:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -176,8 +161,6 @@ jobs:
           bundler-cache: true
       - run: bundle exec rake generate:check
 
-  # The gem builds, installs into an empty GEM_HOME with no other gems, and the installed
-  # executable answers version, help, man --path and completion bash.
   package:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -191,8 +174,7 @@ jobs:
           bundler-cache: true
       - run: bundle exec rake package:check
 
-  # The completion scripts work inside real bash, zsh and fish. SLIPWAY_REQUIRE_SHELLS turns
-  # a missing shell into a failure instead of a skip.
+  # SLIPWAY_REQUIRE_SHELLS turns a missing zsh or fish into a failure instead of a skip.
   completions:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -211,8 +193,6 @@ jobs:
           SLIPWAY_REQUIRE_SHELLS: '1'
         run: bundle exec ruby -Ilib -Itest test/unit/cli/completion_scripts_test.rb
 
-  # Relative links and heading anchors in the guides resolve. Offline: remote URLs are not
-  # fetched, so a flaky site never fails a pull request (lychee.toml).
   links:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest

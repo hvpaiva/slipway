@@ -2,8 +2,6 @@
 
 require 'test_helper'
 
-# The written conventions that no cop covers: what the gem ships and depends on, which files
-# may spawn processes, write YAML or touch the standard streams, and which way requires point.
 class ConventionsTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
   LIB = File.join(ROOT, 'lib')
@@ -29,12 +27,9 @@ class ConventionsTest < Minitest::Test
   # Context wraps the process streams; everything else prints through it.
   STREAM_OWNERS = ['cli/context.rb'].freeze
 
-  # Domain files: the registry, its settings and git, none of which knows about commands.
   DOMAIN = %w[paths.rb config.rb editor.rb names.rb labels.rb selector.rb resources.rb manifest.rb
               store.rb yaml.rb error.rb git.rb git/ state.rb].freeze
-  # What the command layer builds on top of cli/ and the domain.
   UPPER_LAYERS = %w[commands.rb commands/ views.rb views/ runtime.rb inspector.rb slipway.rb].freeze
-  # cli/ reaches outside itself only for the root of the error hierarchy.
   CLI_EXTERNAL_EDGES = { 'cli/errors.rb' => ['error.rb'] }.freeze
 
   def test_the_gem_has_no_runtime_dependencies
@@ -117,7 +112,7 @@ class ConventionsTest < Minitest::Test
 
   def slipway_path(file) = file.delete_prefix("#{LIB}/slipway/")
 
-  # [location, line] for every line that is not a comment, so prose about $stdout is allowed.
+  # Comment lines are skipped, so prose about $stdout is allowed.
   def code_lines(files)
     files.flat_map do |file|
       File.readlines(file, chomp: true).each_with_index.filter_map do |line, index|
@@ -136,7 +131,6 @@ class ConventionsTest < Minitest::Test
     end
   end
 
-  # [from, to] pairs, both relative to lib/slipway, for every require_relative inside it.
   def require_edges
     lib_files.select { it.start_with?("#{LIB}/slipway/") }.flat_map do |file|
       require_targets(file).map { [slipway_path(file), slipway_path(it)] }

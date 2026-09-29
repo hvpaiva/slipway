@@ -17,8 +17,6 @@ namespace :test do
   end
 end
 
-# Runs the completion scripts test where zsh and fish exist: here, or in a docker image built
-# on the fly from ruby:4.0 with the three shells and ShellCheck, as on the CI runner.
 module ShellTests
   extend FileUtils
 

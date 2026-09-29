@@ -5,8 +5,6 @@ require 'test_helper'
 class StatesIntegrationTest < Minitest::Test
   include IntegrationHelper
 
-  # Every fixture state plus a plain directory and a path that does not exist, with the STATUS
-  # word and the BRANCH cell each one shows.
   EXPECTED = {
     'ahead' => %w[main Ahead], 'behind' => %w[main Behind], 'clean' => %w[main Clean],
     'conflicted' => %w[main Conflicted], 'detached' => %w[(detached) Detached], 'diverged' => %w[main Diverged],

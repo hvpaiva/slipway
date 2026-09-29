@@ -1,7 +1,6 @@
-# Bundler updates arrive weekly as one pull request for minor and patch bumps; a major
-# bump gets its own. Action SHAs are refreshed monthly, and Dependabot rewrites the version
-# comment next to each SHA. The skip-changelog label exempts these pull requests from the
-# CHANGELOG.md check in the commits job: dependency bumps are not user-visible changes.
+# Dependabot rewrites the version comment next to each pinned action SHA. The skip-changelog
+# label exempts these pull requests from the CHANGELOG.md check in the commits job:
+# dependency bumps are not user-visible changes.
 # The cooldown waits a week after a release before proposing it, so a compromised or
 # yanked version has time to be caught before it reaches this repository.
 version: 2

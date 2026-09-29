@@ -3,7 +3,7 @@
 require 'test_helper'
 require 'slipway/git'
 
-# Parses porcelain v2 samples captured from git 2.55 against the fixture repositories.
+# The porcelain v2 samples were captured from git 2.55 against the fixture repositories.
 class GitStatusTest < Minitest::Test
   OID = '5bbaee2c60e94db1f64d04925d8365eec25d449b'
   HEADERS = ["# branch.oid #{OID}", '# branch.head main'].freeze

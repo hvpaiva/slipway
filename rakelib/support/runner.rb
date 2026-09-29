@@ -10,9 +10,9 @@ class CommandRunner
     @chdir = chdir
   end
 
-  # Returns [stdout, status]. When the command fails without printing anything, its stderr
-  # takes the place of stdout so the caller can report it. With +stream+ the command writes
-  # to the terminal directly and stdout comes back empty; long runs use it to show progress.
+  # When the command fails without printing anything, its stderr takes the place of stdout
+  # so the caller can report it. With +stream+ the command writes to the terminal directly,
+  # to show progress on long runs, and stdout comes back empty.
   def call(argv, stream: false)
     return ['', system_status(argv)] if stream
 
@@ -29,7 +29,6 @@ class CommandRunner
     $CHILD_STATUS || FailedStatus.new
   end
 
-  # The status of a command that could not start.
   class FailedStatus
     def success? = false
     def exitstatus = 127

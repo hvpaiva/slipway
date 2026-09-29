@@ -3,7 +3,6 @@
 require 'fileutils'
 require_relative 'git_env'
 
-# Builds small git repositories in known states with reproducible commit ids.
 module GitFixtures
   include GitEnv
 
@@ -11,8 +10,8 @@ module GitFixtures
   STATES = %w[clean staged unstaged untracked ahead behind diverged detached unborn conflicted gone stash
               plain_dir].freeze
 
-  # Builds a repository in +state+ at +dir+ and returns +dir+. The tracking states (ahead,
-  # behind, diverged, gone) also create a bare origin next to it, named "<dir>-origin.git".
+  # The tracking states (ahead, behind, diverged, gone) also create a bare origin next to
+  # +dir+, named "<dir>-origin.git".
   def build_repo(dir, state)
     unless STATES.include?(state)
       raise ArgumentError, "unknown fixture state #{state.inspect} (known: #{STATES.join(', ')})"
@@ -34,7 +33,6 @@ module GitFixtures
     git!(dir, 'commit', '-q', '-m', message)
   end
 
-  # One commit on main; every other repository state starts here.
   def clean(dir)
     unborn(dir)
     commit(dir, 'README.md', "hello\n", 'initial commit')
@@ -89,7 +87,6 @@ module GitFixtures
     write(dir, 'file.txt', "plain\n")
   end
 
-  # A repository whose main branch tracks a bare origin next to it and matches it exactly.
   def synced(dir)
     clean(dir)
     origin = "#{dir}-origin.git"
@@ -104,7 +101,6 @@ module GitFixtures
     commit(dir, 'a.txt', "a\n", 'local work')
   end
 
-  # Pushes a commit and then drops it locally, so origin is one commit ahead.
   def behind(dir)
     synced(dir)
     commit(dir, 'b.txt', "b\n", 'remote work')
@@ -117,7 +113,6 @@ module GitFixtures
     commit(dir, 'd.txt', "d\n", 'diverging work')
   end
 
-  # A feature branch whose upstream was deleted on origin and pruned locally.
   def gone(dir)
     synced(dir)
     git!(dir, 'checkout', '-q', '-b', 'feature')

@@ -3,8 +3,8 @@
 require 'date'
 require 'test_helper'
 
-# CHANGELOG.md follows Keep a Changelog: the man pages take their date from it and the release
-# notes are cut from it, so its shape is checked on every run rather than on release day.
+# The man pages take their date from CHANGELOG.md and the release notes are cut from it, so
+# its shape is checked on every run rather than on release day.
 class ChangelogTest < Minitest::Test
   PATH = File.expand_path('../../CHANGELOG.md', __dir__)
   REPOSITORY = 'https://github.com/hvpaiva/slipway'
@@ -129,7 +129,6 @@ class ChangelogTest < Minitest::Test
     order + parsed.reject(&:last).map { "#{it.first} has an invalid date" }
   end
 
-  # [heading, Date or nil] for every well-formed release heading, newest first.
   def dates(headings)
     release_headings(headings).filter_map do |heading|
       match = release(heading)
@@ -147,8 +146,6 @@ class ChangelogTest < Minitest::Test
     found + labels.reject { urls.key?(it) }.map { "[#{it}] has no link reference" } + link_problems(urls, labels)
   end
 
-  # Unreleased compares the newest tag with HEAD, or lists the commits of main before the
-  # first release; every release links to its tag.
   def link_problems(urls, labels)
     releases = labels.grep(VERSION)
     unreleased = releases.empty? ? "#{REPOSITORY}/commits/main" : "#{REPOSITORY}/compare/v#{releases.first}...HEAD"

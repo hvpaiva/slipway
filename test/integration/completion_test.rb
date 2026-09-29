@@ -5,7 +5,6 @@ require 'test_helper'
 class CompletionIntegrationTest < Minitest::Test
   include IntegrationHelper
 
-  # What the shell is offered at the root: every visible command with its summary.
   ROOT = <<~TEXT
     get\tDisplay one or many resources
     describe\tShow details of one or many resources

@@ -4,8 +4,8 @@ require 'open3'
 require 'rbconfig'
 require 'tmpdir'
 
-# Drives the generated completion scripts inside real shells. A stub `slipway` on PATH
-# answers `__complete` from the FixtureRegistry, so no store or git is involved.
+# A stub `slipway` on PATH answers `__complete` from the FixtureRegistry, so no store or git
+# is involved.
 module ShellHarness
   BASH_COMPLETION = '/usr/share/bash-completion/bash_completion'
   STUB = <<~RUBY
@@ -20,8 +20,7 @@ module ShellHarness
     exit Slipway::CLI::Runner.new(registry, Slipway::CLI::Context.system).run(ARGV)
   RUBY
 
-  # Yields a directory holding bin/slipway, the three scripts, and an env whose PATH
-  # finds the stub first. Bundler's variables are dropped so the stub loads plain Ruby.
+  # Bundler's variables are dropped so the stub loads plain Ruby.
   def with_completion_stub
     Dir.mktmpdir('slipway-shell-') do |dir|
       write_stub(dir)
@@ -32,7 +31,6 @@ module ShellHarness
     end
   end
 
-  # COMPREPLY for +line+ (a command line up to the cursor) through the bash script.
   def bash_completions(dir, line, env, bash_completion: false)
     prelude = bash_completion ? "source #{BASH_COMPLETION}" : ''
     script = <<~BASH
@@ -48,21 +46,18 @@ module ShellHarness
     run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line)
   end
 
-  # Candidates fish offers for +line+, as `value<TAB>description` lines.
   def fish_completions(dir, line, env)
     script = "source #{File.join(dir, 'slipway.fish')}; complete -C #{line.inspect}"
     run_shell(env, 'fish', '--no-config', '-c', script)
   end
 
-  # The listing an interactive zsh prints for +line+ followed by TAB, driven through zpty.
   def zsh_completions(dir, line, env)
     run_shell(env, 'zsh', '-f', '-c', ZSH_LISTING, 'harness', dir, line)
   end
 
-  # Drives an interactive zsh through zpty. The harness directory travels in the environment
-  # so every line typed into the pty stays short of the 80 columns zsh assumes there; setup
-  # is drained up to a sentinel, and the listing is read until the pty has been quiet for a
-  # second.
+  # The harness directory travels in the environment so every line typed into the pty stays
+  # short of the 80 columns zsh assumes there. The listing is read until the pty has been
+  # quiet for a second.
   ZSH_LISTING = <<~'ZSH'
     zmodload zsh/zpty
     mkdir -p "$1/zfunc" && cp "$1/slipway.zsh" "$1/zfunc/_slipway"
@@ -88,8 +83,8 @@ module ShellHarness
   # skip; the CI completions job sets it after installing both shells.
   REQUIRE_SHELLS = 'SLIPWAY_REQUIRE_SHELLS'
 
-  # True when +binary+ is on PATH. A shell missing locally is a reason to skip its tests;
-  # under REQUIRE_SHELLS it is a misconfigured runner, so the tests fail instead.
+  # A shell missing locally is a reason to skip its tests; under REQUIRE_SHELLS it is a
+  # misconfigured runner, so the tests fail instead.
   def shell_installed?(binary)
     return true if ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? { File.executable?(File.join(it, binary)) }
     return false if ENV.fetch(REQUIRE_SHELLS, '').empty? || !Slipway::CLI::CompletionScripts::SHELLS.include?(binary)

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Installs the development dependencies for a fresh checkout, then reports the tools the
-# tasks rely on and what skips or fails without each optional one.
 
 cd "$(dirname "$0")/.." || exit 1
 

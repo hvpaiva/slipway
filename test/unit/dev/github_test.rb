@@ -6,15 +6,12 @@ require 'stringio'
 require 'yaml'
 require_relative '../../../rakelib/support/github'
 
-# rake github:setup against a fake gh that answers from canned JSON and records every call,
-# with the JSON body each write sent.
 class GitHubTest < Minitest::Test
   Status = Data.define(:success) do
     def success? = success
   end
 
-  # Answers "METHOD path" from +answers+ (a JSON-able object, or :missing for a 404) and
-  # records [method, path, body].
+  # +answers+ maps "METHOD path" to a JSON-able object, or to :missing for a 404.
   class FakeGh
     attr_reader :requests
 

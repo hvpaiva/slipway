@@ -2,10 +2,7 @@
 
 module Slipway
   module Git
-    # Stands in for Repository in tests: answers from a Hash keyed by expanded path and raises
-    # whatever error a path was configured to fail with.
     class Fake
-      # Canned answers for one path.
       Entry = Data.define(:status, :commit, :remote)
 
       def initialize
@@ -13,7 +10,6 @@ module Slipway
         @failures = {}
       end
 
-      # Registers the answers for +path+; a later call replaces them and clears any failure.
       def add(path, status:, commit: nil, remote: nil)
         key = File.expand_path(path)
         @failures.delete(key)
@@ -21,8 +17,8 @@ module Slipway
         self
       end
 
-      # Makes every query about +path+ raise +error+, an exception instance or a Git error
-      # class that takes the path as its only argument.
+      # +error+ is an exception instance or a Git error class that takes the path as its only
+      # argument.
       def fail(path, error)
         key = File.expand_path(path)
         @entries.delete(key)
@@ -30,13 +26,10 @@ module Slipway
         self
       end
 
-      # The canned Status for +path+, or the configured failure.
       def status(path) = entry(path).status
 
-      # The canned Commit for +path+ (nil for an unborn branch), or the configured failure.
       def last_commit(path) = entry(path).commit
 
-      # The canned origin URL for +path+ (nil when none), or the configured failure.
       def remote_url(path) = entry(path).remote
 
       private

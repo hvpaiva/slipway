@@ -3,7 +3,6 @@
 require 'test_helper'
 require_relative '../../../rakelib/support/changelog'
 
-# CHANGELOG.md parsing and the rewrite bin/release applies when it cuts a version.
 class ChangelogParserTest < Minitest::Test
   REPO = 'https://github.com/hvpaiva/slipway'
   ROOT = File.expand_path('../../..', __dir__)
@@ -143,8 +142,6 @@ class ChangelogParserTest < Minitest::Test
                  Changelog.release_problems("# Changelog\n", '0.1.0')
   end
 
-  # The file in the repository, whatever it holds today, survives a cut: the entries move
-  # under the new heading and the Unreleased section starts empty.
   def test_the_project_changelog_can_be_cut
     text = File.read(File.join(ROOT, 'CHANGELOG.md'))
     entries = Changelog.unreleased_entries(text)

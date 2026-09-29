@@ -4,7 +4,6 @@ require 'test_helper'
 require 'slipway/store'
 require 'tmpdir'
 
-# The on-disk side of the store: layout, atomic replacement, permissions and corrupt files.
 class StoreDiskTest < Minitest::Test
   PROJECTS = Slipway::Resources.resolve('projects')
   GROUPS = Slipway::Resources.resolve('groups')

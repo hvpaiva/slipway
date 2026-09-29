@@ -6,7 +6,6 @@ require_relative '../output'
 
 module Slipway
   module Commands
-    # The options and positionals several verbs share, worded as kubectl words them.
     module Options
       OUTPUT = CLI::Option.new(long: 'output', short: 'o', argument: 'FORMAT', enum: Output::FORMATS,
                                default: Output::TABLE, description: 'Output format.')
@@ -27,29 +26,25 @@ module Slipway
                                 description: 'Only print what would change, without writing anything, when the ' \
                                              'strategy is client.')
 
-      # What completion says next to each resource type.
       TYPE_DESCRIPTIONS = {
         'projects' => 'Registered git repositories',
         'groups' => 'Namespaces that hold projects'
       }.freeze
 
-      # The type words, as every verb's description lists them: `projects (project, proj) and groups (group)`.
       TYPES = Resources::KINDS.map { "#{it.plural} (#{[it.singular, *it.aliases].join(', ')})" }.join(' and ')
       TYPES_SENTENCE = "Resource types: #{TYPES}. Type words are case-insensitive.".freeze
 
-      # The resource type word; unknown words are reported by Resources.resolve at run time.
+      # Unknown words are reported by Resources.resolve at run time.
       TYPE = CLI::Positional.new(name: 'TYPE', completer: ->(_given) { TYPE_DESCRIPTIONS })
 
-      # The NAME positional, completed from the store through +factory+. The runtime is built
-      # only when completion asks, with the process environment and no flags; any failure
-      # along the way means no candidates rather than an error in the shell.
       def self.name_positional(factory, variadic: true, required: false)
         CLI::Positional.new(name: 'NAME', variadic:, required:, completer: ->(given) { names(factory, given) })
       end
 
-      # The completer for -n and --group: every group name in the store.
       def self.group_completer(factory) = ->(_given) { names(factory, [Resources::GROUPS.plural]) }
 
+      # Runs during shell completion, with the process environment and no flags: any failure
+      # means no candidates rather than an error in the shell.
       def self.names(factory, given)
         runtime = factory.call(CLI::Context.system, {})
         runtime.store.names(Resources.resolve(given.fetch(0)), group: nil)

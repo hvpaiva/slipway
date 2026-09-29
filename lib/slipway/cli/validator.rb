@@ -2,7 +2,6 @@
 
 module Slipway
   module CLI
-    # Checks what OptionParser does not: positional arity, required options and enums.
     class Validator
       def initialize(command, path, registry)
         @command = command
@@ -10,7 +9,6 @@ module Slipway
         @registry = registry
       end
 
-      # Raises UsageError, with the command's help hint, on the first rule that fails.
       def call(args, opts)
         check_arity(args)
         check_positional_enums(args)

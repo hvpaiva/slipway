@@ -3,9 +3,7 @@
 require 'fileutils'
 require 'tmpdir'
 
-# Gives a test a throwaway HOME with XDG directories and a hermetic environment.
 module Sandbox
-  # Yields an env Hash rooted in a temporary HOME that is removed when the block returns.
   def with_sandbox
     Dir.mktmpdir('slipway-') do |home|
       yield sandbox_env(home)

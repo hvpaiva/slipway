@@ -7,8 +7,6 @@ require_relative '../store'
 
 module Slipway
   module Commands
-    # `slipway edit TYPE NAME`: opens the manifest in the user's editor and saves what comes
-    # back, reopening it with the failures as comments until it is valid, unchanged or blank.
     class Edit < Base
       DESCRIPTION = "Edit a resource from the default editor.\n\n" \
                     'The edit command allows you to directly edit any resource in the registry. It will open ' \
@@ -32,11 +30,8 @@ module Slipway
       SOURCE = 'edited manifest'
       COMMENT = /\A\s*#/
 
-      # Raised when the saved file is blank, or when a file reopened with failures is saved
-      # as it was; exits with status 1.
       class Aborted < Slipway::Error; end
 
-      # The registry entry for `edit`: one NAME completed from the store and no options of its own.
       def self.command(factory)
         CLI::Command.new(
           name: 'edit', summary: 'Edit a resource from the default editor', section: 'Basic Commands',
@@ -55,7 +50,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Opens the resource in the editor and saves what comes back, or reports why not.
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, name = scope.target(args)
@@ -77,8 +71,6 @@ module Slipway
         result_line(context, kind, original.name, 'edited', :apply_configured)
       end
 
-      # One edit of one resource: the reopen loop and the checks between the editor's runs.
-      # +edit+ returns the resource to save, or nil when the text came back unchanged.
       class Session
         def initialize(editor, kind, resource)
           @editor = editor
@@ -87,7 +79,6 @@ module Slipway
           @original = Manifest.dump(resource)
         end
 
-        # Runs the editor until the text is valid, unchanged or blank; nil means unchanged.
         def edit
           text = @original
           problem = nil
@@ -106,7 +97,7 @@ module Slipway
 
         private
 
-        # The header, then the previous failure as kubectl words it, then the text to edit.
+        # The failure is worded as kubectl words it.
         def buffer(text, problem)
           return "#{HEADER}#{text}" if problem.nil?
 

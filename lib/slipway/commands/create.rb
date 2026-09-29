@@ -6,7 +6,6 @@ require_relative '../store'
 
 module Slipway
   module Commands
-    # `slipway create TYPE NAME`: registers a project or a group from command-line flags.
     class Create < Base
       DESCRIPTION = "Create a resource by name.\n\n" \
                     'A project registers the git repository at --path in the current group, which must ' \
@@ -27,7 +26,6 @@ module Slipway
       LABEL = CLI::Option.new(long: 'label', argument: 'KEY=VALUE', repeatable: true,
                               description: 'A label to set on the new resource; may be repeated.')
 
-      # The registry entry for `create`: --path, --description, repeatable --label and --dry-run.
       def self.command(factory)
         CLI::Command.new(
           name: 'create', summary: 'Create a resource by name', section: 'Basic Commands',
@@ -52,7 +50,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Builds the resource from the flags and writes it, or only checks it under --dry-run.
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, name = scope.target(args)
@@ -85,7 +82,7 @@ module Slipway
         File.absolute_path(path)
       end
 
-      # What a real create would reject before writing: for a project, its group.
+      # What a real create would reject before writing.
       def check(store, kind, resource)
         return unless kind.namespaced?
 

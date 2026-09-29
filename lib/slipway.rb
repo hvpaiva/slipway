@@ -21,8 +21,8 @@ require_relative 'slipway/commands'
 
 # A kubectl-style registry for the git repositories on your machine.
 module Slipway
-  # Entry point shared by exe/slipway and the tests. Returns the process exit status.
-  # +runtime_factory+ is called with the context and the parsed options once a verb runs.
+  # Shared by exe/slipway and the tests, so it returns the exit status instead of exiting.
+  # +runtime_factory+ is called only once a verb runs, with the context and the parsed options.
   def self.run(argv, context: CLI::Context.system, runtime_factory: Runtime.method(:build))
     registry = Commands.registry(runtime_factory)
     color, theme = Runtime.color_defaults(context, argv)

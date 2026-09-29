@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# The sandbox must isolate a test from the real home and be gone afterwards.
 class SandboxTest < Minitest::Test
   include Sandbox
 

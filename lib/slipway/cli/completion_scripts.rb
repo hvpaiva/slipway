@@ -2,21 +2,18 @@
 
 module Slipway
   module CLI
-    # Shell wrappers that delegate every completion request to `PROGRAM __complete WORDS...`
-    # and interpret its directive line, so the scripts never change when commands do.
+    # Every request goes to `PROGRAM __complete WORDS...`, so the scripts never change when
+    # commands do.
     module CompletionScripts
       SHELLS = %w[bash zsh fish].freeze
 
-      # The script for +shell+ (bash, zsh or fish) completing +program+.
       def self.render(shell, program)
         RENDERERS.fetch(shell).render(program)
       end
 
-      # Uses bash-completion's initializer when one is loaded (2.12+ or older), else reads
-      # COMP_WORDS directly. Descriptions are stripped after the tab; when the directive
-      # allows it and nothing matched, file names are completed.
+      # _comp_initialize is bash-completion 2.12+ and _init_completion the older name; without
+      # either, COMP_WORDS is read directly.
       module Bash
-        # The bash script for +program+.
         def self.render(program)
           <<~BASH
             # bash completion for #{program}                             -*- shell-script -*-
@@ -70,7 +67,6 @@ module Slipway
       # Builds `value:description` pairs for _describe; a `--flag=` prefix is moved into
       # IPREFIX with compset so the values alone are listed.
       module Zsh
-        # The zsh script for +program+.
         def self.render(program)
           <<~ZSH
             #compdef #{program}
@@ -113,10 +109,9 @@ module Slipway
         end
       end
 
-      # Runs the program once per command line, caches its answer, and feeds fish the
-      # `value<TAB>description` lines natively; paths are offered when the directive allows.
+      # Both completion conditions call __PROGRAM_complete, so the answer is cached per command
+      # line. fish reads `value<TAB>description` lines natively.
       module Fish
-        # The fish script for +program+.
         def self.render(program)
           <<~FISH
             # fish completion for #{program}. Install it to ~/.config/fish/completions/#{program}.fish

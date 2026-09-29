@@ -5,13 +5,8 @@ require_relative 'changelog'
 require_relative 'github'
 require_relative 'runner'
 
-# Cuts a release: validates the version and the checkout, writes version.rb and CHANGELOG.md
-# on a release branch, regenerates and checks everything, commits, pushes and opens the pull
-# request. With +push+ it then waits for the checks, merges, tags the merge commit with a
-# signed tag and follows the Release workflow. Every command goes through +runner+, so a test
-# drives the whole flow with a fake that records each argv.
 class Release
-  # The wall clock and the pause between polls; tests pass one that never sleeps.
+  # Tests pass a clock that never sleeps.
   module SystemClock
     module_function
 
@@ -20,7 +15,6 @@ class Release
     def sleep(seconds) = Kernel.sleep(seconds)
   end
 
-  # Raised with the sentence to show when the release cannot go on.
   class Error < StandardError; end
 
   VERSION_FILE = 'lib/slipway/version.rb'
@@ -37,8 +31,8 @@ class Release
   POLL_ATTEMPTS = 60
   CHECK_COUNT = '.statusCheckRollup | length'
 
-  # +runner+ receives an argv Array (and stream: true for long commands) and returns
-  # [stdout, status]; +clock+ answers now and sleep; +root+ is the checkout to edit.
+  # +runner+ takes an argv Array (and stream: true for long commands) and returns
+  # [stdout, status], like CommandRunner; +clock+ answers now and sleep.
   def initialize(version, root:, runner:, clock: SystemClock, out: $stdout, **options)
     @version = version.to_s
     @root = root
@@ -55,7 +49,6 @@ class Release
 
   def release_branch = "release/#{tag}"
 
-  # Runs the flow the options select and returns nil; raises Error with the reason to stop.
   def run
     validate
     return preview if @dry_run
@@ -201,8 +194,7 @@ class Release
     @out.puts "Released #{tag}."
   end
 
-  # Polls the block until it is true, sleeping between attempts; GitHub registers checks
-  # and workflow runs a few seconds after the event that starts them.
+  # GitHub registers checks and workflow runs a few seconds after the event that starts them.
   def wait_for
     POLL_ATTEMPTS.times do
       return if yield

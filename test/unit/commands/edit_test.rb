@@ -18,7 +18,6 @@ class EditTest < Minitest::Test
     spec:
       path: "~/dev/hldr"
   YAML
-  # Every fake editor logs one line per run and keeps a copy of each buffer it was handed.
   PRELUDE = <<~SH
     echo run >> "$LOG"
     n=$(wc -l < "$LOG" | tr -d ' ')
@@ -224,7 +223,6 @@ class EditTest < Minitest::Test
     run_commands('edit', *argv, runtime:, commands: [Slipway::Commands::Edit])
   end
 
-  # An identity change is reopened with the immutability message; saving it as is aborts.
   def assert_immutable(body)
     with_editor(body) do |runtime, log|
       register(runtime, 'hldr')
@@ -236,7 +234,6 @@ class EditTest < Minitest::Test
     end
   end
 
-  # Yields a runtime whose EDITOR is a shell script running PRELUDE then +body+, and its log path.
   def with_editor(body)
     with_sandbox do |env|
       script = fake_editor(env, body)

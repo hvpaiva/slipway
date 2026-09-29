@@ -202,7 +202,6 @@ class ManBuiltinTest < Minitest::Test
 
   private
 
-  # A registry with get, config and the man builtin wired to the fake exec and +dir+.
   def registry(dir)
     fixture = FixtureRegistry.new
     registry = nil

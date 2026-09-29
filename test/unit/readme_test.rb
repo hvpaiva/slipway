@@ -3,8 +3,6 @@
 require 'rake'
 require 'test_helper'
 
-# The README tables that restate the code: STATUS words, environment variables, exit statuses
-# and rake tasks. Each is found by its header row and compared with the constant it mirrors.
 class ReadmeTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
   README = File.join(ROOT, 'README.md')
@@ -15,8 +13,6 @@ class ReadmeTest < Minitest::Test
     @rake ||= load_rakefile
   end
 
-  # Loads the Rakefile and rakelib/*.rake into a private Rake::Application, recording each
-  # task's description and location, then restores the global application and directory.
   def self.load_rakefile
     previous = [Rake.application, Rake::TaskManager.record_task_metadata, Dir.pwd]
     Rake::TaskManager.record_task_metadata = true
@@ -57,7 +53,6 @@ class ReadmeTest < Minitest::Test
 
   def lines = @lines ||= File.readlines(README, chomp: true)
 
-  # The first cell of each row under +header+, backticks removed.
   def first_cells(header) = rows(header).map { it.split('|')[1].strip.delete('`') }
 
   def rows(header)
@@ -67,12 +62,11 @@ class ReadmeTest < Minitest::Test
     lines.drop(start + 2).take_while { it.start_with?('|') }
   end
 
-  # Every backticked task name in the first cell, so `rake test`, `test:unit` counts twice.
   def documented_tasks
     rows('| Task | Runs |').flat_map { it.split('|')[1].scan(/`([^`]+)`/).flatten }.filter_map { TASK.match(it)&.[](1) }
   end
 
-  # Described tasks written in the Rakefile or rakelib/, not those a gem's task library adds.
+  # A gem's task library adds described tasks of its own; the README lists only ours.
   def project_tasks
     sources = [File.join(ROOT, 'Rakefile:'), File.join(ROOT, 'rakelib', '')]
     self.class.rake.tasks.select { it.comment && it.locations.any? { |location| location.start_with?(*sources) } }

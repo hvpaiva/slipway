@@ -3,33 +3,29 @@
 require 'json'
 require 'tempfile'
 
-# The repository settings releases depend on, applied and checked through `gh api`. Every
-# write is preceded by a read, so running the setup twice changes nothing the second time
-# and reports what it found.
+# Every write is preceded by a read, so a second run changes nothing and reports what it found.
 class GitHub
   REPOSITORY = 'hvpaiva/slipway'
   ENVIRONMENT = 'release'
   TAG_POLICY = 'v*'
-  # The job names of .github/workflows/ci.yml; the ruleset on main requires every one.
+  # Must match the job names in .github/workflows/ci.yml.
   REQUIRED_CHECKS = ['lint', 'commits', 'test (ubuntu-latest, 3.4)', 'test (ubuntu-latest, 4.0)',
                      'test (macos-latest, 4.0)', 'coverage', 'audit', 'generated', 'package', 'completions',
                      'links'].freeze
-  # The GitHub Actions app, so a status of the same name posted by anything else counts for nothing.
+  # The GitHub Actions app: a status of the same name posted by anything else counts for nothing.
   ACTIONS_APP_ID = 15_368
-  # The built-in repository admin role, the only actor allowed to create, move or delete v* tags.
+  # GitHub's built-in repository admin role.
   ADMIN_ROLE_ID = 5
-  # The label that exempts a pull request from the CHANGELOG.md rule; Dependabot applies it.
+  # .github/dependabot.yml applies this label to its pull requests.
   SKIP_CHANGELOG_LABEL = { name: 'skip-changelog', color: 'ededed',
                            description: 'No CHANGELOG.md line: the change is invisible to users' }.freeze
-  # Merge commits only, titled after the pull request (which the commits job holds to the
-  # Conventional Commits rule) with an empty body, and the branch deleted once merged.
+  # The merge commit takes the pull request title, which the commits job holds to Conventional Commits.
   MERGE_SETTINGS = { 'allow_merge_commit' => true, 'allow_squash_merge' => false, 'allow_rebase_merge' => false,
                      'merge_commit_title' => 'PR_TITLE', 'merge_commit_message' => 'BLANK',
                      'delete_branch_on_merge' => true }.freeze
   RUBYGEMS_PUBLISHER = [['Gem name', 'slipway'], ['Repository owner', 'hvpaiva'], ['Repository name', 'slipway'],
                         ['Workflow filename', 'release.yml'], %w[Environment release]].freeze
 
-  # Raised when a gh call fails; the message is GitHub's.
   class Error < StandardError; end
 
   # +runner+ receives an argv Array and returns [stdout, status], like CommandRunner.
@@ -39,8 +35,6 @@ class GitHub
     @out = out
   end
 
-  # Applies every setting and prints one line per setting saying whether it was created,
-  # updated or already in place, then what remains to be done on rubygems.org.
   def setup
     ensure_merge_settings
     ensure_environment
@@ -54,7 +48,6 @@ class GitHub
     print_publisher
   end
 
-  # Read-only: what bin/release needs and is missing, as sentences; empty when ready.
   def release_problems
     environment = environments[ENVIRONMENT]
     return ["the #{ENVIRONMENT} environment does not exist"] unless environment
@@ -68,9 +61,7 @@ class GitHub
     problems
   end
 
-  # The main ruleset: every change goes through a pull request that may be merged with no
-  # approval once the required checks pass on an up-to-date branch, with signed commits,
-  # no force pushes and no deletion. Merge commits keep the authors' signed commits.
+  # Only merge commits are allowed because they keep the authors' signed commits.
   def main_ruleset
     {
       name: 'main', target: 'branch', enforcement: 'active', bypass_actors: [],
@@ -88,7 +79,6 @@ class GitHub
     }
   end
 
-  # The tags ruleset: only the repository admin creates, moves or deletes a v* tag.
   def tags_ruleset
     {
       name: 'tags', target: 'tag', enforcement: 'active',
@@ -203,7 +193,7 @@ class GitHub
 
   def report(subject, outcome) = @out.puts("#{subject}: #{outcome}")
 
-  # Calls `gh api`; a body travels as a JSON file so nested rules keep their types.
+  # The body travels as a JSON file so nested rules keep their types.
   def api(method, path, body = nil)
     return request(['gh', 'api', '--method', method, path]) unless body
 

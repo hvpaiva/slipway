@@ -6,7 +6,6 @@ class EditIntegrationTest < Minitest::Test
   include IntegrationHelper
   include EditorScripts
 
-  # What the editor is shown for the clean project: kubectl's header, then the manifest.
   BUFFER = <<~TEXT.freeze
     # Please edit the object below. Lines beginning with a '#' will be ignored,
     # and an empty file will abort the edit. If an error occurs while saving this
@@ -38,7 +37,6 @@ class EditIntegrationTest < Minitest::Test
     seed(env, manifest('Project', 'clean', path: repo(env, 'clean'), labels: { 'lang' => 'rust' }))
   end
 
-  # Adds a label to the manifest opened in the editor.
   def label_editor(env)
     editor_script(env, 'add-label.sh', rewrite('$_ << %q(    edited: "yes") << "\n" if $_ == "    lang: rust\n"'))
   end

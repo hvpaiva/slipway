@@ -7,8 +7,8 @@ module Slipway
   module Yaml
     DOCUMENT_START = "---\n"
 
-    # Dumps +hash+ with the restrictions of Psych.safe_dump, without folding long lines and
-    # without the leading document marker, the way kubectl prints objects.
+    # line_width: -1 turns off Psych's line folding. The document marker is dropped, the way
+    # kubectl prints objects.
     def self.dump(hash) = Psych.safe_dump(hash, line_width: -1).delete_prefix(DOCUMENT_START)
   end
 end

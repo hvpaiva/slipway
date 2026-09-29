@@ -5,8 +5,6 @@ require_relative '../views'
 
 module Slipway
   module Commands
-    # `slipway get TYPE [NAME...]`: one line per resource as a table, wide table, json, yaml
-    # or `type/name`. Projects are inspected first; groups carry their project count.
     class Get < Base
       DESCRIPTION = "Display one or many resources.\n\n" \
                     'Prints a table of the most important information about the specified resources. ' \
@@ -17,7 +15,6 @@ module Slipway
                     "#{Options::TYPES_SENTENCE}".freeze
       USAGE = '(TYPE [NAME...] | TYPE/NAME...)'
 
-      # The registry entry for `get`: the listing options, and NAME completed from the store.
       def self.command(factory)
         CLI::Command.new(
           name: 'get', summary: 'Display one or many resources', section: 'Basic Commands',
@@ -42,8 +39,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Selects the resources, then renders them in the requested format; nothing is built
-      # for a format that will not print it.
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, names = scope.targets(args)
@@ -55,7 +50,6 @@ module Slipway
         end
       end
 
-      # Renders one selection: `type/name` lines, json or yaml objects, or a table.
       class Printer
         def initialize(runtime, context, opts, group_column:)
           @runtime = runtime
@@ -64,7 +58,6 @@ module Slipway
           @group_column = group_column
         end
 
-        # Prints +resources+ of +kind+; +single+ emits one object bare instead of a List.
         def print(kind, resources, single:)
           case @opts[:output]
           when Output::NAME then resources.each { @context.puts("#{kind.singular}/#{it.name}") }

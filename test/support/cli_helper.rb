@@ -2,10 +2,7 @@
 
 require 'stringio'
 
-# Runs the command line in-process with StringIO streams and a Hash environment.
 module CliHelper
-  # Returns [status, stdout, stderr]. A +registry+ runs through the Runner alone; otherwise
-  # the whole program runs through Slipway.run, with +runtime+ replacing the production one.
   def run_cli(*argv, env: {}, tty: false, err_tty: tty, registry: nil, runtime: nil)
     out = StringIO.new
     err = StringIO.new

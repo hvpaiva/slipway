@@ -6,8 +6,6 @@ require 'stringio'
 require 'tmpdir'
 require_relative '../../../rakelib/support/release'
 
-# bin/release driven end to end against a fake runner: every git and gh command is recorded
-# and answered from a table, so nothing touches a repository or GitHub.
 class ReleaseTest < Minitest::Test
   Status = Data.define(:success) do
     def success? = success
@@ -15,8 +13,8 @@ class ReleaseTest < Minitest::Test
   OK = Status.new(success: true)
   FAILED = Status.new(success: false)
 
-  # Answers commands from +answers+ (argv joined by spaces => stdout, [stdout, status], or a
-  # lambda returning either) and records [argv, stream] for each call.
+  # +answers+ maps argv joined by spaces to stdout, [stdout, status], or a lambda returning
+  # either.
   class FakeRunner
     attr_reader :calls
 

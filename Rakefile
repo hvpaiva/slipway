@@ -67,7 +67,6 @@ namespace :generate do
   end
 end
 
-# Aborts with an install hint when +tool+ is not on PATH, instead of rake's bare status 127.
 def require_tool(tool)
   return if system(tool, '--version', out: File::NULL, err: File::NULL)
 

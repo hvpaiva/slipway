@@ -2,7 +2,7 @@
 
 module Slipway
   module CLI
-    # Maps output roles to SGR parameter strings, following kubecolor's dark and light presets.
+    # The presets follow kubecolor's dark and light themes.
     class Theme
       # Roles whose value is a list are cycled by an index (column or nesting depth).
       DARK = {
@@ -35,7 +35,7 @@ module Slipway
         warning: '33'
       }.freeze
 
-      # The light preset swaps white for black and cyan for blue; every other role is shared.
+      # White becomes black, cyan blue and bright yellow plain yellow, to read on a light background.
       LIGHT = DARK.merge(
         table_columns: %w[30 34],
         describe_keys: %w[94 34],
@@ -50,13 +50,11 @@ module Slipway
 
       attr_reader :name
 
-      # The preset called +name+; callers check the name against NAMES first, so an unknown
-      # one here is a programming error.
+      # Callers check +name+ against NAMES first, so an unknown name here is a bug.
       def self.fetch(name)
         new(name, PRESETS.fetch(name))
       end
 
-      # The dark preset, used until a theme is chosen.
       def self.default = fetch(DEFAULT_NAME)
 
       def initialize(name, roles)
@@ -64,7 +62,6 @@ module Slipway
         @roles = roles
       end
 
-      # SGR parameters for a single-valued role, such as "90;3".
       def sgr(role)
         value = @roles.fetch(role)
         raise ArgumentError, "role #{role.inspect} is a list; use sgr_at" if value.is_a?(Array)
@@ -72,7 +69,6 @@ module Slipway
         value
       end
 
-      # SGR parameters for the +index+-th entry of a list role, wrapping around the list.
       def sgr_at(role, index)
         values = Array(@roles.fetch(role))
         values[index % values.size]

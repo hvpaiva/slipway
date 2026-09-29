@@ -2,7 +2,6 @@
 
 require 'test_helper'
 
-# The full registry and the wiring of Slipway.run around it.
 class CommandsRegistryTest < Minitest::Test
   include CommandsHelper
 

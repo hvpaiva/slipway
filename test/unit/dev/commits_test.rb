@@ -5,12 +5,10 @@ require 'rbconfig'
 require 'tmpdir'
 require_relative '../../../rakelib/support/commits'
 
-# bin/lint-commits and the rules behind it, run against throwaway git repositories.
 class CommitsTest < Minitest::Test
   include GitEnv
 
   SCRIPT = File.expand_path('../../../bin/lint-commits', __dir__)
-  # Assembled from parts, as a contributor's tool would write them.
   ASSISTANTS = %w[Claude Copilot Cursor].freeze
 
   def setup

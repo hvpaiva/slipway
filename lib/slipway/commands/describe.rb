@@ -5,8 +5,6 @@ require_relative '../views'
 
 module Slipway
   module Commands
-    # `slipway describe TYPE [NAME...]`: every field of the selected resources, one block per
-    # object, separated by a blank line.
     class Describe < Base
       DESCRIPTION = "Show details of one or many resources.\n\n" \
                     'Print a detailed description of the selected resources, including the state of the ' \
@@ -14,7 +12,6 @@ module Slipway
                     "of that type, or use a label selector.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
 
-      # The registry entry for `describe`: a selector and -A, and NAME completed from the store.
       def self.command(factory)
         CLI::Command.new(
           name: 'describe', summary: 'Show details of one or many resources',
@@ -36,7 +33,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Selects the resources and prints one describe block per resource.
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, names = scope.targets(args)

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Slipway
-  # The one-word STATUS shown for a project: the most actionable fact about its repository.
+  # The STATUS column: the most actionable fact about a repository, in one word.
   module State
-    # Every word, in precedence order, with the theme role that paints it.
+    # In precedence order.
     ROLES = {
       'Missing' => :status_danger,
       'NotARepo' => :status_danger,
@@ -20,8 +20,8 @@ module Slipway
       'Unknown' => :muted
     }.freeze
 
-    # Reduces a Git::Status to one word. A conflict outranks everything, then the states in
-    # which a commit could be lost, then uncommitted work, then the position against upstream.
+    # A conflict outranks everything, then the states in which a commit could be lost, then
+    # uncommitted work, then the position against upstream.
     def self.derive(status)
       return 'Conflicted' if status.conflicted.positive?
       return 'Detached' if status.detached?
@@ -32,8 +32,6 @@ module Slipway
       position(status)
     end
 
-    # The word for a failure raised while reading a repository. Git problems that say
-    # something about the path get their own word; anything else is Unknown.
     def self.for_error(error)
       case error
       when Git::MissingPath then 'Missing'
@@ -43,7 +41,6 @@ module Slipway
       end
     end
 
-    # The theme role that paints +word+ in a table.
     def self.role(word) = ROLES.fetch(word)
 
     def self.position(status)

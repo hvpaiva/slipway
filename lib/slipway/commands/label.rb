@@ -5,7 +5,6 @@ require_relative '../labels'
 
 module Slipway
   module Commands
-    # `slipway label TYPE NAME KEY=VALUE... KEY-...`: sets and removes labels on one resource.
     class Label < Base
       DESCRIPTION = <<~TEXT.chomp
         Update the labels on a resource.
@@ -30,15 +29,13 @@ module Slipway
       CHANGE = CLI::Positional.new(name: 'KEY=VALUE|KEY-', required: false, variadic: true)
       USAGE = "(TYPE NAME | TYPE/NAME) #{CHANGE.usage}".freeze
 
-      # The KEY=VALUE and KEY- words of one call, and what they do to a resource's labels.
       Change = Data.define(:sets, :removals) do
-        # Parses the label words; a malformed, repeated or contradictory word is a usage error.
+        # A malformed, repeated or contradictory word is a usage error.
         def self.parse(words) = new(*Labels.parse_changes(words))
 
-        # True when no label is set or removed.
         def empty? = sets.empty? && removals.empty?
 
-        # The labels after the change, or the error kubectl gives for a silent overwrite.
+        # Refuses a silent overwrite with kubectl's error message.
         def apply(labels, overwrite:)
           sets.each do |key, value|
             next if overwrite || !labels.key?(key) || labels[key] == value
@@ -48,9 +45,6 @@ module Slipway
           labels.merge(sets).except(*removals)
         end
 
-        # kubectl's operation word and its theme role: a set that changes a value is `labeled`,
-        # removals alone are `unlabeled`, and a change that leaves the labels as they were is
-        # `not labeled`.
         def outcome(labels)
           return [LABELED, :label_labeled] if sets.any? { |key, value| labels[key] != value }
           return [UNLABELED, :label_unlabeled] if removals.any? { labels.key?(it) }
@@ -59,7 +53,6 @@ module Slipway
         end
       end
 
-      # The registry entry for `label`: NAME, the KEY=VALUE and KEY- words, --overwrite, --list and --dry-run.
       def self.command(factory)
         CLI::Command.new(
           name: 'label', summary: 'Update the labels on a resource', section: 'Basic Commands',
@@ -82,7 +75,6 @@ module Slipway
       end
       private_class_method :examples
 
-      # Applies the label words to the named resource, or lists its labels under --list.
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, name, words = split(scope, args)
@@ -99,7 +91,6 @@ module Slipway
 
       private
 
-      # [kind, name, label words] from `TYPE NAME WORDS...` or `TYPE/NAME WORDS...`.
       def split(scope, args)
         type, *rest = args
         return [*scope.target([type]), rest] if type.include?('/')

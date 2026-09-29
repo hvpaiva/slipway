@@ -4,7 +4,6 @@ require 'test_helper'
 require 'tmpdir'
 require_relative '../../../rakelib/support/golden'
 
-# The fixture list rake generate:golden keeps, and the orphans it removes.
 class GoldenFixturesTest < Minitest::Test
   REGISTRY = Slipway::Commands.registry(->(_context, _opts) { raise 'fixtures do not build a runtime' })
   SHELLS = Slipway::CLI::CompletionScripts::SHELLS
