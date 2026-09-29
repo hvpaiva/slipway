@@ -45,6 +45,18 @@ class Release
     @github = options.fetch(:github) { GitHub.new(runner:, out:) }
   end
 
+  # What rake release:verify reports; +tag+ is nil on a run from a branch. Without a tag, a
+  # changelog that has not released +version+ yet is checked as bin/release would cut it on
+  # +date+, so a dry run passes before the first release.
+  def self.verify_problems(changelog, version, tag:, date:)
+    pending = tag.nil? && Changelog.unreleased_entries(changelog) &&
+              Changelog.headings(changelog).none? { it.version == version }
+    changelog = Changelog.cut(changelog, version, date, REPOSITORY_URL) if pending
+    problems = Changelog.release_problems(changelog, version).map { "#{CHANGELOG} has #{it}" }
+    problems.unshift("tag #{tag} does not match Slipway::VERSION #{version}") if tag && tag != "v#{version}"
+    problems
+  end
+
   def tag = "v#{@version}"
 
   def release_branch = "release/#{tag}"
@@ -84,6 +96,9 @@ class Release
     raise Error, "#{@version} is lower than the current version #{current_version}" if comparison.negative?
     return unless comparison.zero? && Changelog.headings(changelog).any? { it.version == @version }
 
+    # A tag push that failed after the merge leaves the heading on the branch and the tag only here.
+    raise Error, "#{tag} is tagged locally but not pushed; run git push origin #{tag}" if local_tag? && !remote_tag?
+
     raise Error, "#{@version} is already released (#{CHANGELOG} has its heading); pick a greater version"
   end
 
@@ -99,11 +114,13 @@ class Release
   end
 
   def validate_tag
-    raise Error, "tag #{tag} already exists locally" unless capture(['git', 'tag', '--list', tag]).strip.empty?
-    return if capture(['git', 'ls-remote', '--tags', 'origin', "refs/tags/#{tag}"]).strip.empty?
-
-    raise Error, "tag #{tag} already exists on origin"
+    raise Error, "tag #{tag} already exists locally" if local_tag?
+    raise Error, "tag #{tag} already exists on origin" if remote_tag?
   end
+
+  def local_tag? = !capture(['git', 'tag', '--list', tag]).strip.empty?
+
+  def remote_tag? = !capture(['git', 'ls-remote', '--tags', 'origin', "refs/tags/#{tag}"]).strip.empty?
 
   def validate_changelog
     @notes = Changelog.unreleased_entries(changelog)
@@ -178,7 +195,8 @@ class Release
     step(['git', 'switch', @branch])
     step(['git', 'merge', '--ff-only', "origin/#{@branch}"])
     step(['git', 'tag', '-s', tag, '-m', tag, sha])
-    step(['git', 'push', 'origin', tag])
+    step(['git', 'push', 'origin', tag],
+         failure: "the pull request is merged and #{tag} is tagged locally; push it with git push origin #{tag}")
     watch_release
   end
 
@@ -189,8 +207,9 @@ class Release
                         '--json', 'databaseId', '--jq', '.[0].databaseId // empty']).strip
       !run_id.empty?
     end
-    step(['gh', 'run', 'watch', run_id, '--exit-status'],
-         stream: true, failure: "#{tag} is pushed; rerun the failed jobs in Actions")
+    failure = "#{tag} is pushed; rerun the failed jobs in Actions, or only the github-release job if the gem is " \
+              'already on rubygems.org'
+    step(['gh', 'run', 'watch', run_id, '--exit-status'], stream: true, failure:)
     @out.puts "Released #{tag}."
   end
 

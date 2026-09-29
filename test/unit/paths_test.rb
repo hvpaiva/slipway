@@ -74,8 +74,8 @@ class PathsTest < Minitest::Test
   def test_variable_names_are_published_as_constants
     assert_equal 'SLIPWAY_CONFIG', Slipway::Paths::CONFIG_VARIABLE
     assert_equal 'SLIPWAY_DATA_HOME', Slipway::Paths::DATA_HOME_VARIABLE
-    assert_equal 'XDG_CONFIG_HOME', Slipway::Paths::XDG_CONFIG_HOME
-    assert_equal 'XDG_DATA_HOME', Slipway::Paths::XDG_DATA_HOME
+    assert_equal 'XDG_CONFIG_HOME', Slipway::Paths::XDG_CONFIG_HOME_VARIABLE
+    assert_equal 'XDG_DATA_HOME', Slipway::Paths::XDG_DATA_HOME_VARIABLE
   end
 
   private

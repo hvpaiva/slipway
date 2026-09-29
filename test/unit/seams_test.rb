@@ -13,12 +13,10 @@ class SeamsTest < Minitest::Test
   CHILD_ONLY = [Slipway::Git::Runner::CEILING_VARIABLE].freeze
   # Upper case, with the odd lower-case suffix such as LESS_TERMCAP_md.
   NAME = /[A-Z][A-Za-z0-9_]+/
-  # env['X'], @env.fetch('X'), ENV['X'], context.env['X'], ...
-  READ = /\b(?:env|ENV)(?:\[|\.fetch\()\s*['"](#{NAME})['"]/
+  # env['X'], @env.fetch('X'), env.fetch 'X', ENV.key?('X'), context.env['X'], ...
+  READ = /\b(?:env|ENV)(?:\[|\.(?:fetch|key\?|include\?|has_key\?|member\?)\(?)\s*['"](#{NAME})['"]/
   # FOO_VARIABLE = 'X' or FOO_VARIABLES = %w[X Y], and the bare VARIABLE constant.
   NAMED = /^\s*(?:[A-Z0-9_]+_)?VARIABLES?\s*=\s*(?:['"](#{NAME})['"]|%w\[([^\]]*)\])/
-  # XDG_DATA_HOME = 'XDG_DATA_HOME': a constant named after the variable it holds.
-  SELF_NAMED = /^\s*(#{NAME})\s*=\s*['"]\1['"]/
 
   def test_every_state_role_exists_in_both_themes
     Slipway::CLI::Theme::NAMES.each do |name|
@@ -47,12 +45,14 @@ class SeamsTest < Minitest::Test
     source = <<~RUBY
       NAME_VARIABLE = 'A_ONE'
       OTHER_VARIABLES = %w[B_TWO C_THREE].freeze
-      D_FOUR = 'D_FOUR'
+      XDG_DATA_HOME_VARIABLE = 'D_FOUR'
+      STATUS = 'STATUS'
       HEADER = 'NAME'
       x = env['E_five'] || @env.fetch("F_SIX", '') || ENV['G_SEVEN'] || context.env[name]
+      y = env.key?('H_EIGHT') || env.fetch 'I_NINE', nil
     RUBY
 
-    assert_equal %w[A_ONE B_TWO C_THREE D_FOUR E_five F_SIX G_SEVEN], variables_in(source).sort
+    assert_equal %w[A_ONE B_TWO C_THREE D_FOUR E_five F_SIX G_SEVEN H_EIGHT I_NINE], variables_in(source).sort
   end
 
   def test_runner_config_and_editor_read_the_same_variables
@@ -107,7 +107,6 @@ class SeamsTest < Minitest::Test
   end
 
   def variables_in(source)
-    [*source.scan(READ).flatten, *source.scan(SELF_NAMED).flatten,
-     *source.scan(NAMED).flat_map { |single, list| single ? [single] : list.split }]
+    [*source.scan(READ).flatten, *source.scan(NAMED).flat_map { |single, list| single ? [single] : list.split }]
   end
 end

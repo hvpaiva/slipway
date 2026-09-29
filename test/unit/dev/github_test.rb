@@ -131,18 +131,24 @@ class GitHubTest < Minitest::Test
   # renamed or added job cannot leave the ruleset waiting for a check that never reports.
   def test_the_required_checks_are_the_ci_job_names
     jobs = YAML.safe_load_file(File.expand_path('../../../.github/workflows/ci.yml', __dir__)).fetch('jobs')
-    names = jobs.flat_map do |id, job|
-      matrix = job.dig('strategy', 'matrix')
-      next [id] unless matrix
+    names = check_names(jobs)
 
-      legs = matrix['os'].product(matrix['ruby']) + matrix.fetch('include', []).map { it.values_at('os', 'ruby') }
-      legs.map { |os, ruby| "#{id} (#{os}, #{ruby})" }
-    end
-
+    assert_empty named_matrix_jobs(jobs), "a matrix job's name: changes its check names"
     assert_equal names, GitHub::REQUIRED_CHECKS
     assert_equal ['lint', 'commits', 'test (ubuntu-latest, 3.4)', 'test (ubuntu-latest, 4.0)',
                   'test (macos-latest, 4.0)', 'coverage', 'audit', 'generated', 'package', 'completions', 'links'],
                  names
+  end
+
+  # GitHub reports a job under its name: when it has one, not under its id.
+  def test_a_job_name_replaces_the_id_in_its_check_name
+    matrix = { 'strategy' => { 'matrix' => { 'os' => ['ubuntu-latest'], 'ruby' => ['4.0'] } } }
+    jobs = { 'lint' => { 'name' => 'Lint and style' }, 'audit' => {}, 'test' => matrix,
+             'named' => matrix.merge('name' => 'Tests') }
+
+    assert_equal ['Lint and style', 'audit', 'test (ubuntu-latest, 4.0)', 'named (ubuntu-latest, 4.0)'],
+                 check_names(jobs)
+    assert_equal ['named'], named_matrix_jobs(jobs)
   end
 
   def test_the_tags_ruleset_leaves_v_tags_to_the_admin_role
@@ -212,4 +218,18 @@ class GitHubTest < Minitest::Test
 
     assert(gh.calls.all? { it.start_with?('GET ') })
   end
+
+  private
+
+  def check_names(jobs)
+    jobs.flat_map do |id, job|
+      matrix = job.dig('strategy', 'matrix')
+      next [job.fetch('name', id)] unless matrix
+
+      legs = matrix['os'].product(matrix['ruby']) + matrix.fetch('include', []).map { it.values_at('os', 'ruby') }
+      legs.map { |os, ruby| "#{id} (#{os}, #{ruby})" }
+    end
+  end
+
+  def named_matrix_jobs(jobs) = jobs.select { |_, job| job.dig('strategy', 'matrix') && job.key?('name') }.keys
 end

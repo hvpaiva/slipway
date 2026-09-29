@@ -6,7 +6,7 @@ require 'stringio'
 require 'tmpdir'
 require_relative '../../../rakelib/support/release'
 
-class ReleaseTest < Minitest::Test
+class ReleaseTestCase < Minitest::Test
   Status = Data.define(:success) do
     def success? = success
   end
@@ -153,7 +153,9 @@ class ReleaseTest < Minitest::Test
   end
 
   def file(name) = File.read(File.join(@root, name))
+end
 
+class ReleaseTest < ReleaseTestCase
   def test_plain_mode_prepares_the_branch_and_opens_the_pull_request
     release
 
@@ -296,5 +298,64 @@ class ReleaseTest < Minitest::Test
     assert_equal 'bundle exec rake check failed; the edits stay on release/v0.2.0 for you to inspect', message
     assert_equal RELEASED_CHANGELOG, file('CHANGELOG.md')
     refute_includes @runner.commands, 'git commit -S -m chore: release v0.2.0'
+  end
+end
+
+class ReleaseRecoveryTest < ReleaseTestCase
+  def test_a_rerun_after_a_failed_tag_push_names_the_push
+    File.write(File.join(@root, 'CHANGELOG.md'), RELEASED_CHANGELOG)
+    File.write(File.join(@root, 'lib/slipway/version.rb'), VERSION_RB.sub('0.1.0', '0.2.0'))
+
+    assert_equal 'v0.2.0 is tagged locally but not pushed; run git push origin v0.2.0',
+                 refusal('0.2.0', { 'git tag --list v0.2.0' => "v0.2.0\n" })
+    assert_equal ['git tag --list v0.2.0', 'git ls-remote --tags origin refs/tags/v0.2.0'], @runner.commands
+  end
+
+  def test_a_tag_on_origin_leaves_the_version_released
+    File.write(File.join(@root, 'CHANGELOG.md'), RELEASED_CHANGELOG)
+    File.write(File.join(@root, 'lib/slipway/version.rb'), VERSION_RB.sub('0.1.0', '0.2.0'))
+    tags = { 'git tag --list v0.2.0' => "v0.2.0\n",
+             'git ls-remote --tags origin refs/tags/v0.2.0' => "abc123\trefs/tags/v0.2.0\n" }
+
+    assert_equal '0.2.0 is already released (CHANGELOG.md has its heading); pick a greater version',
+                 refusal('0.2.0', tags)
+  end
+
+  def test_a_failed_tag_push_says_the_merge_is_done
+    message = refusal('0.2.0', { 'git push origin v0.2.0' => ['', FAILED] }, push: true)
+
+    assert_equal 'git push origin v0.2.0 failed; the pull request is merged and v0.2.0 is tagged locally; ' \
+                 'push it with git push origin v0.2.0', message
+  end
+
+  def test_a_failed_release_run_points_at_the_jobs_to_rerun
+    message = refusal('0.2.0', { 'gh run watch 42 --exit-status' => ['', FAILED] }, push: true)
+
+    assert_equal 'gh run watch 42 --exit-status failed; v0.2.0 is pushed; rerun the failed jobs in Actions, or ' \
+                 'only the github-release job if the gem is already on rubygems.org', message
+  end
+end
+
+class ReleaseVerifyTest < ReleaseTestCase
+  NO_HEADING = 'CHANGELOG.md has no "## [0.1.0] - YYYY-MM-DD" heading'
+  NO_REFERENCE = 'CHANGELOG.md has no [0.1.0] link reference'
+
+  def verify(changelog, tag: nil) = Release.verify_problems(changelog, '0.1.0', tag:, date: '2026-10-01')
+
+  def test_verify_checks_an_unreleased_version_as_it_would_be_cut
+    assert_empty verify(CHANGELOG)
+    assert_empty verify(RELEASED_CHANGELOG.gsub('0.2.0', '0.1.0'))
+  end
+
+  def test_verify_holds_a_tag_to_the_changelog_as_written
+    assert_equal [NO_HEADING, NO_REFERENCE], verify(CHANGELOG, tag: 'v0.1.0')
+    assert_empty verify(RELEASED_CHANGELOG.gsub('0.2.0', '0.1.0'), tag: 'v0.1.0')
+    assert_equal ['tag v0.2.0 does not match Slipway::VERSION 0.1.0'],
+                 verify(RELEASED_CHANGELOG.gsub('0.2.0', '0.1.0'), tag: 'v0.2.0')
+  end
+
+  def test_verify_reports_a_changelog_that_cannot_be_cut
+    assert_equal [NO_HEADING, 'CHANGELOG.md has no "## [Unreleased]" heading', NO_REFERENCE],
+                 verify(CHANGELOG.sub("## [Unreleased]\n", ''))
   end
 end

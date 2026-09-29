@@ -31,11 +31,20 @@ class CommandsRegistryTest < Minitest::Test
   def test_every_command_class_is_reachable_from_the_verbs
     commands = Slipway::Commands::VERBS.map { it.command(->(_context, _opts) { raise 'unused' }) }
     handlers = commands.flat_map { handler_classes(it) }
-    shipped = Slipway::Commands::Base.subclasses.select { it.name && defined_in_lib?(it.name) }
+    shipped = command_classes(Slipway::Commands::Base).select { it.name && defined_in_lib?(it.name) }
 
     assert_empty(shipped.reject { handlers.include?(it) }.map(&:name))
     assert_operator shipped.size, :>, 8
     assert_includes handlers, Slipway::Commands::ConfigCommand::Path
+  end
+
+  def test_command_classes_reach_every_descendant_but_abstract_bases
+    base = Class.new
+    abstract = Class.new(base)
+    concrete = Class.new(abstract) { def self.command(_factory) = nil }
+    inherited = Class.new(concrete)
+
+    assert_equal [concrete, inherited], command_classes(base)
   end
 
   def test_run_dispatches_through_the_runtime_factory
@@ -89,6 +98,11 @@ class CommandsRegistryTest < Minitest::Test
   private
 
   def defined_in_lib?(name) = Object.const_source_location(name)&.first&.start_with?("#{LIB}/")
+
+  def descendants(klass) = klass.subclasses.flat_map { [it, *descendants(it)] }
+
+  # A class without `self.command` is an abstract base, never a registry entry.
+  def command_classes(base) = descendants(base).select { it.respond_to?(:command) }
 
   def handler_classes(command) = [command.handler.class, *command.subcommands.flat_map { handler_classes(it) }]
 
