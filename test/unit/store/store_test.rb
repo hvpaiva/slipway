@@ -154,6 +154,20 @@ class StoreTest < Minitest::Test
     assert_equal 'projects "hldr" not found', error.message
   end
 
+  def test_delete_of_the_last_project_removes_the_group_directory
+    @store.create(Slipway::Group.new(name: 'work'))
+    @store.create(project('a', group: 'work'))
+    @store.create(project('b', group: 'work'))
+    @store.delete(PROJECTS, 'a', group: 'work')
+
+    assert_path_exists File.join(@root, 'projects', 'work')
+    @store.delete(PROJECTS, 'b', group: 'work')
+
+    refute_path_exists File.join(@root, 'projects', 'work')
+    assert @store.exist?(GROUPS, 'work', group: nil)
+    assert_equal 0, @store.project_count('work')
+  end
+
   def test_delete_group_cascades_to_its_projects
     @store.create(Slipway::Group.new(name: 'work'))
     @store.create(project('a', group: 'work'))

@@ -72,7 +72,7 @@ module Slipway
       raise NotFound, "#{kind.plural} #{name.inspect} not found" unless File.file?(file)
 
       File.delete(file)
-      FileUtils.rm_rf(File.join(root, 'projects', name)) unless kind.namespaced?
+      kind.namespaced? ? prune(File.dirname(file)) : FileUtils.rm_rf(File.join(root, 'projects', name))
     end
 
     def project_count(group_name) = project_files(group_name).size
@@ -110,6 +110,14 @@ module Slipway
     end
 
     def group_file(name) = File.join(root, 'groups', "#{name}.yaml")
+
+    # A group's project directory exists only while it holds a project. rmdir refuses a
+    # directory that is not empty, which is the check itself; there is no locking to lose.
+    def prune(directory)
+      Dir.rmdir(directory)
+    rescue Errno::ENOTEMPTY, Errno::ENOENT
+      nil
+    end
 
     def group_files = Dir.glob(File.join(root, 'groups', '*.yaml'))
 
