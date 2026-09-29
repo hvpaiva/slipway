@@ -4,6 +4,7 @@ require 'test_helper'
 
 class EditIntegrationTest < Minitest::Test
   include IntegrationHelper
+  include EditorScripts
 
   # What the editor is shown for the clean project: kubectl's header, then the manifest.
   BUFFER = <<~TEXT.freeze
@@ -23,11 +24,11 @@ class EditIntegrationTest < Minitest::Test
   TEXT
 
   # Round one breaks the manifest; round two, seeing the reopened file, fixes it.
-  TWO_STEP = <<~SH
+  TWO_STEP = <<~SH.freeze
     echo "---- round" >> "<log>"
     cat "$1" >> "<log>"
     if grep -q 'was not valid:' "$1"; then
-      sed -i 's/^  path: .*/  path: "~\\/dev\\/moved"/' "$1"
+      #{EditorScripts.rewrite('$_.sub!(/^  path: .*/, %q(  path: "~/dev/moved"))')}
     else
       printf 'spec:\\n  path: 1\\n' >> "$1"
     fi
@@ -39,7 +40,7 @@ class EditIntegrationTest < Minitest::Test
 
   # Adds a label to the manifest opened in the editor.
   def label_editor(env)
-    editor_script(env, 'add-label.sh', %(sed -i 's/^    lang: rust$/    lang: rust\\n    edited: "yes"/' "$1"))
+    editor_script(env, 'add-label.sh', rewrite('$_ << %q(    edited: "yes") << "\n" if $_ == "    lang: rust\n"'))
   end
 
   def test_a_changed_manifest_is_saved
@@ -105,7 +106,7 @@ class EditIntegrationTest < Minitest::Test
   def test_kind_name_and_group_are_immutable
     with_home do |env|
       seed_clean(env)
-      editor = editor_script(env, 'rename.sh', %(sed -i 's/^  name: clean/  name: renamed/' "$1"))
+      editor = editor_script(env, 'rename.sh', rewrite('$_.sub!(/^  name: clean/, "  name: renamed")'))
       status, out, err = slipway('edit', 'project', 'clean', env: env.merge('EDITOR' => editor))
 
       assert_equal [1, '', "error: Edit cancelled, no valid changes were saved.\n"], [status, out, err]

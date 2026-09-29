@@ -30,7 +30,7 @@ class GitRunnerTest < Minitest::Test
 
     assert_predicate result, :success?
     assert_equal 0, result.status
-    assert_equal "#{dir}\n", result.out
+    assert_equal "#{File.realpath(dir)}\n", result.out
     assert_empty result.err
   end
 
@@ -49,7 +49,7 @@ class GitRunnerTest < Minitest::Test
 
     result = @runner.run('~/clean', 'rev-parse', '--show-toplevel')
 
-    assert_equal "#{dir}\n", result.out
+    assert_equal "#{File.realpath(dir)}\n", result.out
   end
 
   def test_an_inherited_git_dir_does_not_redirect_the_query
@@ -57,7 +57,7 @@ class GitRunnerTest < Minitest::Test
     staged = build_repo(File.join(@root, 'staged'), 'staged')
 
     with_env('GIT_DIR' => File.join(clean, '.git'), 'GIT_WORK_TREE' => clean) do
-      assert_equal "#{staged}\n", @runner.run(staged, 'rev-parse', '--show-toplevel').out
+      assert_equal "#{File.realpath(staged)}\n", @runner.run(staged, 'rev-parse', '--show-toplevel').out
       assert_includes @runner.run(staged, 'status', '--porcelain=v2', '-z').out, 'new.txt'
     end
   end
@@ -73,7 +73,11 @@ class GitRunnerTest < Minitest::Test
 
   def test_output_is_valid_utf8_whatever_bytes_git_prints
     dir = build_repo(File.join(@root, 'clean'), 'clean')
-    File.write(File.join(dir, "caf\xE9.txt".b), "x\n")
+    begin
+      File.write(File.join(dir, "caf\xE9.txt".b), "x\n")
+    rescue Errno::EILSEQ
+      skip 'this filesystem refuses file names that are not valid UTF-8'
+    end
 
     result = @runner.run(dir, 'status', '--porcelain=v2', '-z')
 

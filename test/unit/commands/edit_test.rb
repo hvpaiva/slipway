@@ -4,6 +4,7 @@ require 'test_helper'
 
 class EditTest < Minitest::Test
   include CommandsHelper
+  include EditorScripts
 
   HEADER = Slipway::Commands::Edit::HEADER
   DUMP = <<~YAML
@@ -62,7 +63,7 @@ class EditTest < Minitest::Test
   end
 
   def test_an_added_label_is_saved_and_reported_as_edited
-    with_editor(%(sed -i 's/^    lang: rust$/&\\n    team: core/' "$1"\n)) do |runtime|
+    with_editor("#{rewrite(ADD_TEAM)}\n") do |runtime|
       register(runtime, 'hldr', labels: { 'lang' => 'rust' })
 
       assert_equal [0, "project/hldr edited\n", ''], run_edit('project', 'hldr', runtime:)
@@ -74,7 +75,7 @@ class EditTest < Minitest::Test
   end
 
   def test_the_verb_is_painted_like_apply_configured
-    with_editor(%(sed -i 's/^    lang: rust$/&\\n    team: core/' "$1"\n)) do |runtime|
+    with_editor("#{rewrite(ADD_TEAM)}\n") do |runtime|
       register(runtime, 'hldr', labels: { 'lang' => 'rust' })
 
       _, out, = run_edit('project', 'hldr', '--color', runtime:)
@@ -84,7 +85,7 @@ class EditTest < Minitest::Test
   end
 
   def test_an_omitted_creation_timestamp_keeps_the_original
-    body = %(sed -i '/^  creationTimestamp: /d; s|~/dev/hldr|~/dev/moved|' "$1"\n)
+    body = "#{rewrite(%($_ = "" if $_.start_with?("  creationTimestamp: "); #{MOVE}))}\n"
     with_editor(body) do |runtime|
       register(runtime, 'hldr')
 
@@ -106,7 +107,7 @@ class EditTest < Minitest::Test
   end
 
   def test_a_group_can_be_edited_in_place
-    with_editor(%(sed -i 's/^spec: {}$/spec:\\n  description: Day job/' "$1"\n)) do |runtime|
+    with_editor("#{rewrite(DESCRIBE_GROUP)}\n") do |runtime|
       register_group(runtime, 'work')
 
       assert_equal [0, "group/work edited\n", ''], run_edit('group', 'work', runtime:)
@@ -115,7 +116,7 @@ class EditTest < Minitest::Test
   end
 
   def test_an_invalid_file_is_reopened_with_the_failure_as_a_comment_until_it_is_fixed
-    fix = %(sed -i '/^extra: 1$/d; s|~/dev/hldr|~/dev/moved|' "$1"\n)
+    fix = "#{rewrite(%($_ = "" if $_ == "extra: 1\\n"; #{MOVE}))}\n"
     with_editor(%(if [ "$n" = 1 ]; then printf 'extra: 1\\n' >> "$1"; else #{fix.chomp}; fi\n)) do |runtime, log|
       register(runtime, 'hldr', labels: { 'lang' => 'rust' })
 
@@ -146,11 +147,11 @@ class EditTest < Minitest::Test
   end
 
   def test_the_name_cannot_be_changed
-    assert_immutable(%(if [ "$n" = 1 ]; then sed -i 's/^  name: hldr$/  name: other/' "$1"; fi\n))
+    assert_immutable(%(if [ "$n" = 1 ]; then #{rewrite('$_.sub!(/^  name: hldr$/, "  name: other")')}; fi\n))
   end
 
   def test_the_group_cannot_be_changed
-    assert_immutable(%(if [ "$n" = 1 ]; then sed -i 's/^  group: default$/  group: work/' "$1"; fi\n))
+    assert_immutable(%(if [ "$n" = 1 ]; then #{rewrite('$_.sub!(/^  group: default$/, "  group: work")')}; fi\n))
   end
 
   def test_the_kind_cannot_be_changed
@@ -159,7 +160,7 @@ class EditTest < Minitest::Test
 
   def test_the_configured_editor_is_used_when_no_variable_names_one
     with_sandbox do |env|
-      script = fake_editor(env, %(sed -i 's/^spec: {}$/spec:\\n  description: Day job/' "$1"\n))
+      script = fake_editor(env, "#{rewrite(DESCRIBE_GROUP)}\n")
       write_config(env, "editor: #{script}\n")
       runtime = sandbox_runtime(env)
       register_group(runtime, 'work')

@@ -90,7 +90,9 @@ class CreateIntegrationTest < Minitest::Test
       status, out, err = slipway('create', 'project', 'here', '--path', '.', env:, chdir: dir)
 
       assert_equal [0, "project/here created\n", ''], [status, out, err]
-      assert_includes File.read(File.join(data_home(env), 'projects', 'default', 'here.yaml')), "path: \"#{dir}\"\n"
+      manifest = File.read(File.join(data_home(env), 'projects', 'default', 'here.yaml'))
+
+      assert_includes manifest, "path: \"#{File.realpath(dir)}\"\n"
       assert_equal 'Clean', table(slipway!('get', 'projects', env:)).last[2]
     end
   end

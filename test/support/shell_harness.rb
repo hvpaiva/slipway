@@ -56,20 +56,33 @@ module ShellHarness
 
   # The listing an interactive zsh prints for +line+ followed by TAB, driven through zpty.
   def zsh_completions(dir, line, env)
-    script = <<~ZSH
-      zmodload zsh/zpty
-      mkdir -p "$1/zfunc" && cp "$1/slipway.zsh" "$1/zfunc/_slipway"
-      zpty -b z zsh -f -i
-      zpty -w z "fpath=($1/zfunc \\$fpath); autoload -Uz compinit; compinit -u -d $1/zcompdump"
-      zpty -w z 'zstyle ":completion:*" force-list always; zstyle ":completion:*" menu no; unsetopt listambiguous; setopt nolistbeep; PS1="% "'
-      sleep 0.5; while zpty -r -t z line; do :; done
-      zpty -w -n z "$2"$'\\t'; sleep 1.5
-      out=""; while zpty -r -t z line; do out+=$line; done
-      zpty -d z
-      print -r -- "$out" | sed 's/\\r//g; s/\\x1b\\[[0-9;?]*[A-Za-z]//g' | grep -v '^% ' | grep -v '^$'
-    ZSH
-    run_shell(env, 'zsh', '-f', '-c', script, 'harness', dir, line)
+    run_shell(env, 'zsh', '-f', '-c', ZSH_LISTING, 'harness', dir, line)
   end
+
+  # Drives an interactive zsh through zpty. The harness directory travels in the environment
+  # so every line typed into the pty stays short of the 80 columns zsh assumes there; setup
+  # is drained up to a sentinel, and the listing is read until the pty has been quiet for a
+  # second.
+  ZSH_LISTING = <<~'ZSH'
+    zmodload zsh/zpty
+    mkdir -p "$1/zfunc" && cp "$1/slipway.zsh" "$1/zfunc/_slipway"
+    export HARNESS_DIR="$1"
+    zpty -b z zsh -f -i
+    zpty -w z 'fpath=($HARNESS_DIR/zfunc $fpath); autoload -Uz compinit; compinit -u -d $HARNESS_DIR/zcompdump'
+    zpty -w z 'zstyle ":completion:*" force-list always; zstyle ":completion:*" menu no'
+    zpty -w z 'unsetopt listambiguous; setopt nolistbeep; PS1="% "; print $(( 6 * 7 ))'
+    for i in {1..200}; do
+      if zpty -r -t z line; then [[ ${line%%$'\r'*} == 42 ]] && break; else sleep 0.05; fi
+    done
+    while zpty -r -t z line; do :; done
+    zpty -w -n z "$2"$'\t'
+    out=""; quiet=0
+    while (( quiet < 10 )); do
+      if zpty -r -t z line; then out+=$line; quiet=0; else sleep 0.1; (( quiet++ )); fi
+    done
+    zpty -d z
+    print -r -- "$out" | sed 's/\r//g; s/\x1b\[[0-9;?]*[A-Za-z]//g' | grep -v '^% ' | grep -v '^$'
+  ZSH
 
   # Set to anything non-empty, this turns a missing zsh or fish into a failure instead of a
   # skip; the CI completions job sets it after installing both shells.
