@@ -1,0 +1,90 @@
+# Publishes a tagged version to rubygems.org through trusted publishing (OIDC, no API key)
+# and creates the GitHub release with the matching CHANGELOG.md section and the .gem file.
+# A manual run defaults to a dry run: it verifies and builds, then stops. Publishing needs
+# a tag ref, so a manual run from a branch never publishes, whatever dry_run says.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Verify and build without publishing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The rubygems.org trusted publisher is bound to this workflow file and this environment.
+    environment: release
+    permissions:
+      # id-token mints the OIDC token for rubygems.org; contents lets rake release and
+      # gh release create write to the repository.
+      id-token: write
+      contents: write
+    env:
+      PUBLISH: ${{ github.ref_type == 'tag' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The suite runs here too, and under CI the shell harness tests need zsh and fish.
+      - name: Install zsh, fish and bash-completion
+        run: sudo apt-get update && sudo apt-get install -y zsh fish bash-completion
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      # The tag must be "v" + Slipway::VERSION and CHANGELOG.md must have a dated heading
+      # for that version. A manual run from a branch skips the tag comparison.
+      - name: Verify the tag against Slipway::VERSION and CHANGELOG.md
+        id: verify
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          ruby -Ilib -e '
+            require "slipway/version"
+            version = Slipway::VERSION
+            if ENV["REF_TYPE"] == "tag" && ENV["REF_NAME"] != "v#{version}"
+              puts "::error::tag #{ENV["REF_NAME"]} does not match Slipway::VERSION #{version}"
+              exit 1
+            end
+            unless File.read("CHANGELOG.md").include?("## [#{version}] - ")
+              puts "::error::CHANGELOG.md has no \"## [#{version}] - YYYY-MM-DD\" heading"
+              exit 1
+            end
+            File.write(ENV.fetch("GITHUB_OUTPUT"), "version=#{version}\n", mode: "a")
+            puts "releasing slipway #{version} (publish: #{ENV["PUBLISH"]})"
+          '
+      # Nothing ships that the CI workflow would have rejected.
+      - run: bundle exec rake test rubocop
+      # Building always, even on a dry run, catches a gemspec that no longer packages.
+      - run: gem build slipway.gemspec
+      # release-gem runs "bundle exec rake release": build into pkg/, skip tagging because
+      # the tag already exists, then push pkg/*.gem with the OIDC credential.
+      - name: Publish to rubygems.org
+        if: env.PUBLISH == 'true'
+        uses: rubygems/release-gem@7f9650160c1a4e7989fdc9855807bdbd421d8b6b # v1.4.1
+      # The release notes are the CHANGELOG.md section for this version, from its heading up
+      # to the next "## " heading or the link references at the end of the file. The attached
+      # .gem is the file that was just pushed.
+      - name: Create the GitHub release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.verify.outputs.version }}
+        run: |
+          ruby -e '
+            lines = File.readlines("CHANGELOG.md")
+            start = lines.index { |line| line.start_with?("## [#{ARGV[0]}] - ") } or abort "no section for #{ARGV[0]}"
+            body = lines[(start + 1)..].take_while { |line| !line.start_with?("## ") && !line.match?(/\A\[[^\]]+\]: /) }
+            File.write("notes.md", "#{body.join.strip}\n")
+          ' "$VERSION"
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md "pkg/slipway-$VERSION.gem"

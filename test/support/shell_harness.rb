@@ -71,8 +71,13 @@ module ShellHarness
     run_shell(env, 'zsh', '-f', '-c', script, 'harness', dir, line)
   end
 
+  # True when +binary+ is on PATH. A shell missing locally is a reason to skip its tests;
+  # on CI (ENV["CI"] set) it is a misconfigured runner, so the tests fail instead.
   def shell_installed?(binary)
-    ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? { File.executable?(File.join(it, binary)) }
+    return true if ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? { File.executable?(File.join(it, binary)) }
+    return false if ENV.fetch('CI', '').empty? || !Slipway::CLI::CompletionScripts::SHELLS.include?(binary)
+
+    flunk "#{binary} is not installed; CI must provide every shell the completion scripts target"
   end
 
   private

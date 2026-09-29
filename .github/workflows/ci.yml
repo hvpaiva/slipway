@@ -1,0 +1,155 @@
+# Every job starts from a clean checkout. ruby/setup-ruby reads the Ruby version from
+# mise.toml unless a job passes ruby-version. GitHub sets CI=true in every job, and the
+# shell harness tests fail instead of skipping when zsh or fish is missing under CI, so
+# every job that runs the suite installs both shells first.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # RuboCop is clean, bin/setup and the bash completion script pass ShellCheck, and the
+  # man pages render under groff -ww without a warning.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      - run: bundle exec rubocop
+      - run: bundle exec rake lint:shell
+      - run: bundle exec rake lint:man
+
+  # The suite passes on the oldest supported Ruby, on the current one, and on macOS.
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        ruby: ['3.4', '4.0']
+        include:
+          - os: macos-latest
+            ruby: '4.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install zsh, fish and bash-completion
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zsh fish bash-completion
+      - name: Install fish (zsh ships with macOS)
+        if: runner.os == 'macOS'
+        run: brew install fish
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - run: bundle exec rake test
+
+  # Line and branch coverage stay above the minimums in the Rakefile; the report is kept
+  # as an artifact.
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install zsh, fish and bash-completion
+        run: sudo apt-get update && sudo apt-get install -y zsh fish bash-completion
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      - run: bundle exec rake test:cov
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage
+          path: coverage/
+
+  # No gem in Gemfile.lock has an entry in the ruby advisory database.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      - run: bundle exec rake audit
+
+  # The committed man pages match what the command registry renders.
+  generated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      - run: bundle exec rake generate
+      - name: Fail when man/ differs from the generated output
+        run: |
+          git diff --exit-code -- man/ || {
+            echo "::error::man/ is out of date; run 'bundle exec rake generate' and commit the result"
+            exit 1
+          }
+
+  # The gem builds, installs into an empty GEM_HOME with no other gems, and the installed
+  # executable answers version, help, man --path and completion bash.
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      - run: gem build slipway.gemspec
+      - name: Install the built gem into a temporary GEM_HOME
+        run: gem install --install-dir "$RUNNER_TEMP/gems" --no-document slipway-*.gem
+      - name: Run the installed executable
+        env:
+          GEM_HOME: ${{ runner.temp }}/gems
+          GEM_PATH: ${{ runner.temp }}/gems
+        run: |
+          "$GEM_HOME/bin/slipway" version
+          "$GEM_HOME/bin/slipway" --help
+          "$GEM_HOME/bin/slipway" man --path
+          "$GEM_HOME/bin/slipway" completion bash | shellcheck -s bash -
+
+  # The completion scripts work inside real bash, zsh and fish. CI=1 is what GitHub already
+  # sets; it is repeated here so the intent survives a copy to another runner.
+  completions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install zsh, fish and bash-completion
+        run: sudo apt-get update && sudo apt-get install -y zsh fish bash-completion
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          bundler-cache: true
+      - run: CI=1 bundle exec ruby -Ilib -Itest test/unit/cli/completion_scripts_test.rb
