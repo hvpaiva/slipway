@@ -6,8 +6,8 @@ module GoldenHelper
   FIXTURES = File.expand_path('../fixtures/golden', __dir__)
   UPDATE_VARIABLE = 'UPDATE_GOLDEN'
 
-  def assert_golden(name, actual)
-    path = File.join(FIXTURES, name)
+  def assert_golden(name, actual, root: FIXTURES)
+    path = File.join(root, name)
     if update_golden?
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, actual)

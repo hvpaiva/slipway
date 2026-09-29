@@ -351,7 +351,7 @@ are development tasks and are not part of the gem.
 | `rake rubocop` | RuboCop with the minitest, performance and rake plugins. |
 | `rake audit` | Updates the advisory database and checks `Gemfile.lock` with bundler-audit. |
 | `rake check` | `rubocop`, `lint:shell`, `lint:man`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
-| `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help and completion fixtures and removes the ones no command owns; `generate` runs the three and prints `git status` for `man` and `test/fixtures/golden`. |
+| `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help, completion and man page fixtures and removes the help and completion ones no command owns; `generate` runs the three and prints `git status` for `man`, `test/fixtures/golden` and `test/fixtures/man`. |
 | `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
 | `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
 | `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
@@ -363,11 +363,11 @@ are development tasks and are not part of the gem.
 | `rake build`, `rake install` | The bundler gem tasks. |
 | `rake release` | The publish step `release.yml` runs through `rubygems/release-gem`; refused locally. Use `bin/release` instead. |
 
-`man/man1` and `test/fixtures/golden` are generated: `rake generate` rewrites the pages from
-the command definitions, dating them from the newest release heading in `CHANGELOG.md` (no
-date while there is none), and refreshes the fixtures. CI regenerates the pages and fails when
-the committed ones are stale. The completion scripts are printed at run time and are not
-generated files.
+`man/man1`, `test/fixtures/golden` and `test/fixtures/man` are generated: `rake generate`
+rewrites the pages from the command definitions, dating them from the newest release heading in
+`CHANGELOG.md` (no date while there is none), and refreshes the fixtures. CI regenerates the
+pages and fails when the committed ones are stale. The completion scripts are printed at run
+time and are not generated files.
 
 ## Other documents
 

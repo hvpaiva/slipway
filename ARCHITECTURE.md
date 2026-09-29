@@ -130,8 +130,9 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   recipe yields the same commit ids on every machine. The git adapter and the inspector are
   unit-tested against the same fixtures with the real `git`.
 - Golden tests under `test/golden` compare the help page of every command, the three completion
-  scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`;
-  `rake generate` refreshes both after an intended change. `ShellHarness` also drives
+  scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`, and
+  `test/unit/cli/manpage_test.rb` compares two pages of a test registry with `test/fixtures/man`;
+  `rake generate` refreshes all three after an intended change. `ShellHarness` also drives
   the completion scripts inside real shells (bash always; zsh and fish when installed, or
   unconditionally when `SLIPWAY_REQUIRE_SHELLS` is set, which the CI `completions` job does)
   against a stub program that answers `__complete` from a `FixtureRegistry`.
@@ -147,10 +148,10 @@ the code a fake command runner.
 
 Two kinds of generated text are committed: the man pages under `man/man1` and the golden
 fixtures under `test/fixtures/golden` (the help page of every command and the three completion
-scripts). One command refreshes both: `rake generate` renders the pages through
-`bin/generate-man`, lints them with groff, rewrites the fixtures from the current output,
-removes fixtures that no longer belong to a command, and prints `git status` for both
-directories so the diff is reviewed before it is committed.
+scripts) and `test/fixtures/man` (two pages of a test registry). One command refreshes both:
+`rake generate` renders the pages through `bin/generate-man`, lints them with groff, rewrites
+the fixtures from the current output, removes fixtures that no longer belong to a command, and
+prints `git status` for the three directories so the diff is reviewed before it is committed.
 
 The page date is the date of the newest `## [x.y.z] - YYYY-MM-DD` heading in `CHANGELOG.md` (a
 trailing ` [YANKED]` is allowed) and is empty while there is none, so a rebuild is

@@ -94,8 +94,9 @@ No tool checks these; a reviewer does.
 ## Generated files
 
 Two kinds of generated text are committed: the man pages under `man/man1`, rendered from the
-command definitions, and the golden fixtures under `test/fixtures/golden`, which freeze the
-text of every help page and of the three completion scripts. After changing a command, an
+command definitions, and the golden fixtures. Those under `test/fixtures/golden` freeze the
+text of every help page and of the three completion scripts; the two under `test/fixtures/man`
+freeze the roff the man page builder writes for the test registry. After changing a command, an
 option, a description or an example, run
 
 ```sh
@@ -104,11 +105,12 @@ bundle exec rake generate
 
 review the diff it prints at the end, and commit the pages and fixtures with the change. The
 task renders the pages, lints them with groff, rewrites the golden fixtures from the current
-output and removes fixtures that no longer belong to a command. Forgetting it is caught: a new
-command without its fixture fails `test_every_fixture_belongs_to_a_command` in
-`test/golden/help_test.rb`, a missing page fails `test_man1_holds_exactly_the_rendered_pages`
-in `test/golden/manpage_test.rb` and a stale one fails that page's `_is_fresh` test, and the CI
-`generated` job fails when the committed pages differ from what `rake generate:check` renders.
+output and removes fixtures that no longer belong to a command. Forgetting it is caught: a
+stale fixture fails its test with a diff, a new command without its fixture fails
+`test_every_fixture_belongs_to_a_command` in `test/golden/help_test.rb`, a missing page fails
+`test_man1_holds_exactly_the_rendered_pages` in `test/golden/manpage_test.rb` and a stale one
+fails that page's `_is_fresh` test, and the CI `generated` job fails when the committed pages
+differ from what `rake generate:check` renders.
 
 The page date comes from the newest `## [x.y.z] - YYYY-MM-DD` heading in `CHANGELOG.md` and is
 empty while the changelog has no release heading, so a plain change does not touch the date.

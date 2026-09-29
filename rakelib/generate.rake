@@ -5,16 +5,16 @@ require 'rbconfig'
 require 'tmpdir'
 require_relative 'support/golden'
 
-GOLDEN_TESTS = %w[test/golden/help_test.rb test/golden/completion_test.rb].freeze
+GOLDEN_TESTS = %w[test/golden/help_test.rb test/golden/completion_test.rb test/unit/cli/manpage_test.rb].freeze
 
 desc 'Render and lint the man pages, rewrite the golden fixtures, and list what changed'
 task generate: %w[generate:man lint:man generate:golden] do
-  changed, = Open3.capture2('git', 'status', '--short', '--', 'man', 'test/fixtures/golden')
+  changed, = Open3.capture2('git', 'status', '--short', '--', 'man', 'test/fixtures/golden', 'test/fixtures/man')
   puts changed.empty? ? 'No generated file changed.' : "Review these changes before committing:\n#{changed}"
 end
 
 namespace :generate do
-  desc 'Rewrite the help and completion golden fixtures and remove the ones no command produces'
+  desc 'Rewrite the golden fixtures and remove the help and completion ones no command produces'
   task :golden do
     require_relative '../lib/slipway'
 

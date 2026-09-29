@@ -51,7 +51,7 @@ class ConventionsTest < Minitest::Test
   LIB = File.join(ROOT, 'lib')
   SHIPPED_DIRECTORIES = %w[lib/ exe/ man/].freeze
   SHIPPED_DOCUMENTS = %w[README.md CHANGELOG.md LICENSE.txt].freeze
-  ASCII_TREES = %w[lib exe bin rakelib test/fixtures/golden].freeze
+  ASCII_TREES = %w[lib exe bin rakelib test/fixtures/golden test/fixtures/man].freeze
   TEST_TREES = %w[test/unit test/integration test/golden].freeze
 
   # Paths are relative to lib/slipway.
