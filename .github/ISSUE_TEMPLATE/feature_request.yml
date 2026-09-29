@@ -1,0 +1,26 @@
+name: Feature request
+description: Something slipway does not do yet
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do and where slipway gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The command line, flag or output you have in mind. If kubectl has a shape for it, name it.
+      placeholder: |
+        $ slipway get projects --sort-by=status
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways to get the same result, in slipway or outside it, and why they fall short.

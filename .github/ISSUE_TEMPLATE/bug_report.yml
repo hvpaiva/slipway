@@ -1,0 +1,62 @@
+name: Bug report
+description: Something slipway did that it should not have done
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The command you ran and its exact output, including stderr and the exit status.
+      placeholder: |
+        $ slipway get projects -A
+        error: ...
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What the command should have printed or done instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Start from an empty registry if you can (SLIPWAY_DATA_HOME=$(mktemp -d)) and list every command.
+      placeholder: |
+        1. slipway create group work
+        2. slipway create project api --path ~/work/api -n work
+        3. slipway get projects -n work
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: slipway version
+      description: The output of `slipway version`.
+      placeholder: slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and shell
+      placeholder: Arch Linux, bash 5.3; git 2.55.0
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration file
+      description: The output of `slipway config view`, if the problem depends on it. Remove anything private.
+      render: yaml
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and this bug has not been reported yet.
+          required: true
