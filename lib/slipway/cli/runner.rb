@@ -50,7 +50,7 @@ module Slipway
       rescue Errno::EPIPE
         raise
       rescue Slipway::Error => e
-        report(e.problems, e.hint)
+        report(e.problems, e.hint, layout: e.is_a?(UsageError))
         e.exit_status
       rescue Interrupt
         @context.err.write("\n")
@@ -167,9 +167,12 @@ module Slipway
         0
       end
 
-      def report(problems, hint)
-        problems.each { @context.warn("#{@context.paint_err(:error, 'error:')} #{it}") }
-        @context.warn(hint) if hint
+      # A problem can quote git's stderr, a manifest field, a path or a typed word, so nothing reaches
+      # stderr raw. Only a usage error keeps its line feeds, for its "Did you mean this?" list.
+      def report(problems, hint, layout: false)
+        prefix = @context.paint_err(:error, 'error:')
+        problems.each { @context.warn("#{prefix} #{Style.plain(it, layout:)}") }
+        @context.warn(Style.plain(hint)) if hint
       end
 
       def report_unexpected(error)

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative '../git/url'
 require_relative '../labels'
 require_relative '../resources'
 require_relative '../state'
@@ -41,13 +42,13 @@ module Slipway
       def self.object(inspection)
         status = inspection.status
         inspection.project.to_manifest.merge(
-          'status' => {
+          'status' => plain(
             'branch' => status&.branch, 'head' => status&.head, 'upstream' => status&.upstream,
             'ahead' => status&.ahead, 'behind' => status&.behind, 'staged' => status&.staged,
             'unstaged' => status&.unstaged, 'untracked' => status&.untracked,
             'conflicted' => status&.conflicted, 'stashes' => status&.stashes,
             'state' => inspection.state, 'lastCommit' => commit_object(inspection.commit)
-          }.compact
+          ).compact
         )
       end
 
@@ -66,7 +67,8 @@ module Slipway
         [['Branch', branch(status)], ['Head', status.head], ['Upstream', status.upstream],
          ['Ahead', status.ahead], ['Behind', status.behind], ['Staged', status.staged],
          ['Unstaged', status.unstaged], ['Untracked', status.untracked],
-         ['Conflicted', status.conflicted], ['Stashes', status.stashes], ['Remote', inspection.remote]]
+         ['Conflicted', status.conflicted], ['Stashes', status.stashes],
+         ['Remote', inspection.remote&.then { Git::Url.redact(it) }]]
       end
 
       # The Path line already shows the path, so it is cut from git's message.
@@ -85,11 +87,15 @@ module Slipway
       def self.commit_object(commit)
         return nil if commit.nil?
 
-        { 'hash' => commit.sha, 'author' => commit.author, 'email' => commit.email,
-          'date' => Resources.timestamp(commit.time), 'subject' => commit.subject }
+        plain('hash' => commit.sha, 'author' => commit.author, 'email' => commit.email,
+              'date' => Resources.timestamp(commit.time), 'subject' => commit.subject)
       end
 
-      private_class_method :branch, :last_commit_age, :repository, :failure, :last_commit, :commit_object
+      # json and yaml escape what their syntax needs, not what a terminal obeys, and `jq -r`
+      # prints a field as it is, so git's text is made plain here as it is in a table.
+      def self.plain(fields) = fields.transform_values { it.is_a?(String) ? Output.plain(it) : it }
+
+      private_class_method :branch, :last_commit_age, :repository, :failure, :last_commit, :commit_object, :plain
     end
   end
 end

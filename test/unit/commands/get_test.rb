@@ -152,6 +152,17 @@ class GetTest < Minitest::Test
     end
   end
 
+  def test_a_warning_makes_the_text_git_printed_visible
+    with_runtime do |runtime, home|
+      path = File.join(home, 'dev', 'odd')
+      register_failing(runtime, 'odd', Slipway::Git::Error.new(path, "git exited with status 128: \e[2Jfatal\u202E"))
+
+      _, _, err = run_commands('get', 'projects', runtime:)
+
+      assert_equal "warning: git exited with status 128: ^[[2Jfatal\uFFFD\n", err
+    end
+  end
+
   def test_color_paints_status_by_state_and_the_warning_prefix
     with_runtime do |runtime|
       register(runtime, 'hldr')

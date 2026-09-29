@@ -14,7 +14,7 @@ module Slipway
       # Prints the warnings here so neither read verb can forget them.
       def self.examine(runtime, context, resources)
         batch = runtime.inspector.examine_all(resources)
-        batch.warnings.each { context.warn("#{context.paint_err(:warning, 'warning:')} #{it}") }
+        batch.warnings.each { context.warn("#{context.paint_err(:warning, 'warning:')} #{Output.plain(it)}") }
         batch.inspections
       end
 

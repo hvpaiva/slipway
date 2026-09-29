@@ -11,7 +11,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | --- | --- | --- |
 | Command layer | `cli/` | `Registry`, `Command`, `Option`, `Positional`, `Example` (the data model), `Globals` (the options every command accepts), `Parser` (OptionParser adapter), `Validator`, `Runner` (front controller), `HelpRenderer`, `Completer` and `CompletionScripts`, `Manpage`, `Builtins`, `Context`, `Style` and `Theme`, `UsageError`. It knows nothing about projects or git. |
 | Domain | `error.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `config.rb`, `paths.rb`, `editor.rb` | `Slipway::Error` (the base of every failure reported to the user), the one YAML writer, `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label selector grammar, XDG paths, the config file and the editor launcher. |
-| Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the three questions slipway needs (status, last commit, remote); `Git::Status` and `Git::Commit` parse the answers; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
+| Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the three questions slipway needs (status, last commit, remote); `Git::Status` and `Git::Commit` parse the answers; `Git::Url` redacts the credentials in a URL; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
 | Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
 | Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print. No I/O. |
 | Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a thread pool and preserves order. |
@@ -50,6 +50,13 @@ reads every `require_relative` under `lib/` and fails on an edge that breaks the
 8. `Runner#execute` maps failures to exit statuses: `Slipway::Error` prints `error: MESSAGE`
    and exits 1 (2 for `UsageError`), `Interrupt` exits 130, `Errno::EPIPE` exits 0 quietly, and
    any other `StandardError` exits 1, with class and backtrace added when `SLIPWAY_DEBUG` is set.
+
+Every table cell, describe value and warning line passes `Output.plain`, which makes control
+and bidirectional characters visible, and so do the fields git answered in json and yaml output.
+The runner's error lines pass the same rule through `CLI::Style.plain`; only a `UsageError`
+takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean this?" list. A
+remote URL passes `Git::Url.redact`, and a git failure keeps only the first line of git's
+stderr, redacted and cut to 200 characters.
 
 ## One definition, four outputs
 

@@ -2,6 +2,7 @@
 
 require_relative '../cli/errors'
 require_relative '../names'
+require_relative '../output'
 require_relative '../resources'
 require_relative '../selector'
 require_relative '../store'
@@ -103,7 +104,7 @@ module Slipway
         matcher = selector
         scope_group = kind.namespaced? && !all_groups? ? group : nil
         resources = @runtime.store.list(kind, group: scope_group) do |problem|
-          @context.warn("#{@context.paint_err(:warning, 'warning:')} #{problem.message}")
+          @context.warn("#{@context.paint_err(:warning, 'warning:')} #{Output.plain(problem.message)}")
         end
         resources.select { matcher.match?(it.labels) }
       end
