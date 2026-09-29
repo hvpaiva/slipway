@@ -92,9 +92,12 @@ module Slipway
         wait.join
       end
 
+      # macOS answers EPERM, not ESRCH, when every process left in the group has exited but is
+      # not yet reaped. git runs as this user, so either answer means nothing is left to signal,
+      # and raising would replace the interrupt, kill or timeout that is ending the run.
       def signal(wait, name)
         Process.kill(name, -wait.pid)
-      rescue Errno::ESRCH
+      rescue Errno::ESRCH, Errno::EPERM
         nil
       end
 

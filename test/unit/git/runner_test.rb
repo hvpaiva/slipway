@@ -127,6 +127,23 @@ class GitRunnerTest < Minitest::Test
     end
   end
 
+  def test_an_interrupted_run_still_raises_the_interrupt_when_the_group_answers_eperm
+    pids = File.join(@root, 'pids')
+    bin = fake_git(@root, "echo $$ > #{pids}\nexec sleep 30")
+
+    with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+      thread = Thread.new { @runner.run(@root, 'status') }
+      thread.report_on_exception = false
+      sleep 0.05 until File.exist?(pids) && !File.empty?(pids)
+      answering_eperm_to_term do |refused|
+        thread.raise(Interrupt)
+
+        assert_raises(Interrupt) { thread.join(5) }
+        assert_equal [-Integer(File.read(pids))], refused
+      end
+    end
+  end
+
   def test_a_git_ended_by_a_signal_reports_128_plus_the_signal_number
     bin = fake_git(@root, 'kill -TERM $$')
 
@@ -136,6 +153,22 @@ class GitRunnerTest < Minitest::Test
   end
 
   private
+
+  # Stands in for macOS, which answers EPERM once every process left in the group has exited
+  # but is not yet reaped: the TERM is sent, so git ends, and then the call fails as it does there.
+  def answering_eperm_to_term
+    kill = Process.method(:kill)
+    refused = []
+    Process.singleton_class.remove_method(:kill)
+    Process.define_singleton_method(:kill) do |signal, pid|
+      refused << pid if signal == 'TERM' && pid.negative?
+      kill.call(signal, pid).tap { raise Errno::EPERM if refused.include?(pid) }
+    end
+    yield refused
+  ensure
+    Process.singleton_class.remove_method(:kill)
+    Process.define_singleton_method(:kill, kill)
+  end
 
   # A killed grandchild lingers as a zombie until its new parent reaps it, so poll for a moment.
   def gone?(pid)
