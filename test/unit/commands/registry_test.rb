@@ -10,8 +10,8 @@ class CommandsRegistryTest < Minitest::Test
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
 
-    assert_equal %w[get describe create apply delete edit label fetch diff sync rollout config api-resources help
-                    version completion man __complete],
+    assert_equal %w[get describe create apply delete edit label explain fetch diff sync rollout config api-resources
+                    help version completion man __complete],
                  registry.root.subcommands.map(&:name)
     assert_equal ['slipway', Slipway::VERSION, 'A kubectl-style registry of the git repositories on your machine'],
                  [registry.program, registry.version, registry.description]
@@ -26,7 +26,7 @@ class CommandsRegistryTest < Minitest::Test
 
     assert_equal ['Basic Commands', 'Repository Commands', 'Settings Commands', 'Other Commands'],
                  registry.root.sections.map(&:first)
-    assert_equal %w[get describe create apply delete edit label], sections.fetch('Basic Commands')
+    assert_equal %w[get describe create apply delete edit label explain], sections.fetch('Basic Commands')
     assert_equal %w[fetch diff sync rollout], sections.fetch('Repository Commands')
     assert_equal %w[config completion man], sections.fetch('Settings Commands')
     assert_equal %w[api-resources help version], sections.fetch('Other Commands')
@@ -44,11 +44,11 @@ class CommandsRegistryTest < Minitest::Test
 
   def test_the_kinds_a_verb_acts_on_follow_its_arguments
     verbs = Slipway::Commands::VERBS.flat_map { leaves(it.command(->(_context, _opts) { raise 'unused' })) }
-    typed, rest = verbs.partition { it.positionals.include?(Slipway::Commands::Options::TYPE) }
+    typed, rest = verbs.partition { |verb| verb.positionals.any? { it.name == 'TYPE' } }
     named, bare = rest.partition { it.positionals.any? }
     every = %w[projects groups]
 
-    assert_equal %w[get describe create delete edit label].to_h { [it, every] }, kinds_by_name(typed)
+    assert_equal %w[get describe create delete edit label explain].to_h { [it, every] }, kinds_by_name(typed)
     assert_equal %w[fetch diff sync history undo unpin pause resume].to_h { [it, %w[projects]] }, kinds_by_name(named)
     assert_equal({ 'apply' => every, 'view' => [], 'path' => [], 'api-resources' => [] }, kinds_by_name(bare))
   end

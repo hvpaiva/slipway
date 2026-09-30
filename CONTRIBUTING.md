@@ -157,7 +157,8 @@ Each of these fails `rake check` or CI when it is broken.
   reads except `HOME` and `PATH`. The README tables of STATUS words, drift, blockers, exit
   statuses and the results of `fetch`, `sync` and `rollout undo`, the reasons a fetch gives,
   the fields a field selector supports and the task table above match the code, the STATUS,
-  drift and blocker tables say what `--help` says, and the README configuration example sets
+  drift and blocker tables say what `--help` says, the table of a project's spec gives every
+  field with the meaning and default `Schema` holds, and the README configuration example sets
   every config key and no other.
 - Every console example in the README prints what the executable prints
   ([README examples](#readme-examples)).

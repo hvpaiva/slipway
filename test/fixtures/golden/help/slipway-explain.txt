@@ -1,0 +1,23 @@
+Describe fields and structure of the resource types.
+
+This command describes the fields of each resource type, as a manifest holds them. Fields are identified by a dotted path after the type word, such as project.spec.syncPolicy. Each field shows its type, -required- when a manifest must have it, and a description with the rule its value follows and its default; --recursive prints the whole tree of names and types instead.
+
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive. Field names are case-sensitive, as in a manifest.
+
+Examples:
+  # Get the documentation of the resource and its fields
+  slipway explain projects
+
+  # Get all the fields in the resource
+  slipway explain projects --recursive
+
+  # Get the documentation of a specific field of a resource
+  slipway explain project.spec.syncPolicy
+
+Options:
+      --recursive   If present, print the name of all the fields recursively. Otherwise, print the available fields with their description.
+
+Usage:
+  slipway explain TYPE[.FIELD...] [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

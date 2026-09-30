@@ -6,7 +6,8 @@ module Slipway
 
     # `long` has no dashes, and a nil `argument` makes a boolean flag. An `optional` option
     # takes its value only attached (--long=VALUE) and stores `implicit` when it is omitted.
-    # `completer` is called with the words typed so far; see Completer for what it returns.
+    # `completer` is called with the positional words typed so far and the word being completed;
+    # see Completer for what it returns.
     Option = Data.define(:long, :short, :argument, :enum, :default, :description,
                          :repeatable, :required, :optional, :implicit, :completer) do
       def initialize(long:, description:, short: nil, argument: nil, enum: nil, default: nil,
@@ -51,7 +52,7 @@ module Slipway
         raw
       end
 
-      def candidates(given = []) = enum || completer&.call(given) || []
+      def candidates(given = [], current = '') = enum || completer&.call(given, current) || []
     end
 
     Positional = Data.define(:name, :required, :variadic, :enum, :completer) do
@@ -64,7 +65,7 @@ module Slipway
         required ? token : "[#{token}]"
       end
 
-      def candidates(given = []) = enum || completer&.call(given) || []
+      def candidates(given = [], current = '') = enum || completer&.call(given, current) || []
     end
 
     # `command` omits the program name; help and man pages prepend it.

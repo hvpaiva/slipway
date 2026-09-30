@@ -23,7 +23,7 @@ module Slipway
                        "Type #{program} help [path to command] for full details.",
           examples: [Example.new(comment: 'Show the help of a nested command', command: 'help config view')],
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
-                                       completer: ->(given) { subcommand_names(resolve.call, given) })],
+                                       completer: ->(given, _current) { subcommand_names(resolve.call, given) })],
           handler: HelpCommand.new(resolve)
         )
       end
@@ -74,7 +74,7 @@ module Slipway
                        'says how man(1) finds them.',
           examples: man_examples,
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
-                                       completer: ->(given) { subcommand_names(resolve.call, given) })],
+                                       completer: ->(given, _current) { subcommand_names(resolve.call, given) })],
           options: man_options,
           handler: ManCommand.new(resolve, man_dir:, exec:, paths:)
         )

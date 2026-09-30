@@ -4,6 +4,7 @@ require_relative 'cli/style'
 require_relative 'output/age'
 require_relative 'output/table'
 require_relative 'output/describe'
+require_relative 'output/explain'
 require_relative 'output/serializer'
 
 module Slipway

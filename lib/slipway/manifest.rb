@@ -8,6 +8,7 @@ require_relative 'git/url'
 require_relative 'names'
 require_relative 'labels'
 require_relative 'resources'
+require_relative 'schema'
 require_relative 'yaml'
 
 module Slipway
@@ -23,16 +24,11 @@ module Slipway
     end
 
     # Turns one parsed document into a Project or a Group, or raises Invalid with the source and
-    # the first field that breaks its rule. Unknown fields are refused, and every field that can
-    # reach git or a command slipway prints is checked here, so a resource read from the store or
-    # applied from a file can be handed to Git::Repository as it is.
+    # the first field that breaks its rule. Which fields exist, which are required, their defaults
+    # and the words of each refusal come from Schema, so a field Schema does not name is refused.
+    # Every field that can reach git or a command slipway prints is checked here, so a resource
+    # read from the store or applied from a file can be handed to Git::Repository as it is.
     class Reader
-      FIELDS = {
-        'Project' => { root: %w[kind metadata spec], metadata: %w[name group labels creationTimestamp],
-                       spec: %w[path description remote branch revision syncPolicy paused] },
-        'Group' => { root: %w[kind metadata spec], metadata: %w[name labels creationTimestamp],
-                     spec: %w[description] }
-      }.freeze
       TIMESTAMP = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
       # SHA-1 or SHA-256; an abbreviation can become ambiguous as the repository grows.
       REVISION = /\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/
@@ -45,10 +41,10 @@ module Slipway
 
       def resource
         invalid('document is not a mapping') unless @document.is_a?(Hash)
-        fields = FIELDS.fetch(kind)
-        reject_unknown(@document, fields[:root], nil)
-        @metadata = mapping('metadata', fields[:metadata])
-        @spec = mapping('spec', fields[:spec])
+        @schema = Schema::KINDS.fetch(kind)
+        reject_unknown(@document, @schema, nil)
+        @metadata = mapping('metadata')
+        @spec = mapping('spec')
         kind == 'Project' ? project : group
       end
 
@@ -56,10 +52,10 @@ module Slipway
 
       def kind
         case @document['kind']
-        in 'Project' | 'Group' => kind then kind
-        in nil then invalid('"kind" is required')
-        in String => other then invalid("\"kind\" must be Project or Group, not #{other.inspect}")
-        else invalid('"kind" must be a string')
+        in String => kind if Schema::KINDS.key?(kind) then kind
+        in nil then required('kind')
+        in String => other then invalid("\"kind\" must be #{Schema::KINDS.keys.join(' or ')}, not #{other.inspect}")
+        else mistyped('kind', Schema::STRING)
         end
       end
 
@@ -71,9 +67,7 @@ module Slipway
       def group = Group.new(name:, labels:, created_at:, description:)
 
       def name
-        checked do
-          Names.validate!(string(@metadata, 'metadata', 'name', required: true), what: "#{kind.downcase} name")
-        end
+        checked { Names.validate!(string(@metadata, 'metadata', 'name'), what: "#{kind.downcase} name") }
       end
 
       def group_name
@@ -82,8 +76,8 @@ module Slipway
 
       # An empty path would be resolved against whatever directory the reader happens to be in.
       def path
-        value = string(@spec, 'spec', 'path', required: true)
-        invalid('"spec.path" must not be empty') if value.strip.empty?
+        value = string(@spec, 'spec', 'path')
+        broken('spec', 'path') if value.strip.empty?
         value
       end
 
@@ -103,25 +97,25 @@ module Slipway
         case @spec['revision']
         in nil then nil
         in String => sha if REVISION.match?(sha) then sha
-        else invalid('"spec.revision" must be a full object name, 40 or 64 lowercase hexadecimal characters')
+        else broken('spec', 'revision')
         end
       end
 
       def sync_policy
+        field = @schema.dig('spec', 'syncPolicy')
         case @spec['syncPolicy']
-        in nil then SyncPolicy::FAST_FORWARD
-        in String => policy if SyncPolicy::ALL.include?(policy) then policy
-        in String => other
-          invalid("\"spec.syncPolicy\" must be #{SyncPolicy::ALL.join(' or ')}, not #{other.inspect}")
-        else invalid('"spec.syncPolicy" must be a string')
+        in nil then field.default
+        in String => policy if field.enum.include?(policy) then policy
+        in String => other then invalid("\"spec.syncPolicy\" #{field.rule}, not #{other.inspect}")
+        else mistyped('spec.syncPolicy', Schema::STRING)
         end
       end
 
       def paused
         case @spec['paused']
-        in nil | false then false
-        in true then true
-        else invalid('"spec.paused" must be a boolean')
+        in nil then @schema.dig('spec', 'paused').default
+        in true | false => paused then paused
+        else mistyped('spec.paused', Schema::BOOLEAN)
         end
       end
 
@@ -129,14 +123,14 @@ module Slipway
         case @metadata['labels']
         in nil then {}
         in Hash => labels then checked { Labels.validate!(string_pairs(labels)) }
-        else invalid('"metadata.labels" must be a mapping')
+        else mistyped('metadata.labels', Schema::LABEL_MAP)
         end
       end
 
       def string_pairs(labels)
         labels.each do |key, value|
           invalid('"metadata.labels" keys must be strings') unless key.is_a?(String)
-          invalid("\"metadata.labels.#{key}\" must be a string") unless value.is_a?(String)
+          mistyped("metadata.labels.#{key}", Schema::STRING) unless value.is_a?(String)
         end
       end
 
@@ -144,7 +138,7 @@ module Slipway
         case @metadata['creationTimestamp']
         in nil then nil
         in String => text if TIMESTAMP.match?(text) then time(text)
-        else invalid('"metadata.creationTimestamp" must be an RFC 3339 timestamp')
+        else broken('metadata', 'creationTimestamp')
         end
       end
 
@@ -152,31 +146,31 @@ module Slipway
       def time(text)
         Time.iso8601(text).getutc.floor
       rescue ArgumentError
-        invalid('"metadata.creationTimestamp" must be an RFC 3339 timestamp')
+        broken('metadata', 'creationTimestamp')
       end
 
-      def mapping(key, allowed)
+      def mapping(key)
         case @document[key]
         in nil then {}
-        in Hash => section then reject_unknown(section, allowed, key)
-        else invalid("\"#{key}\" must be a mapping")
+        in Hash => section then reject_unknown(section, @schema.field(key), key)
+        else mistyped(key, Schema::OBJECT)
         end
       end
 
-      def reject_unknown(section, allowed, prefix)
+      def reject_unknown(section, schema, prefix)
         section.each_key do |key|
-          next if allowed.include?(key)
+          next if schema.field(key)
 
           invalid("unknown field #{[prefix, key].compact.join('.').inspect}")
         end
       end
 
-      def string(section, prefix, key, required: false)
+      def string(section, prefix, key)
         case section[key]
         in String => value then value
-        in nil if required then invalid("\"#{prefix}.#{key}\" is required")
+        in nil if @schema.dig(prefix, key).required then required("#{prefix}.#{key}")
         in nil then nil
-        else invalid("\"#{prefix}.#{key}\" must be a string")
+        else mistyped("#{prefix}.#{key}", Schema::STRING)
         end
       end
 
@@ -185,6 +179,13 @@ module Slipway
       rescue Names::Invalid, Labels::Invalid, Git::Url::Invalid, Git::BranchName::Invalid => e
         invalid(e.message)
       end
+
+      def required(path) = invalid("\"#{path}\" is required")
+
+      def mistyped(path, type) = invalid("\"#{path}\" must be #{Schema::NOUNS.fetch(type)}")
+
+      # For the fields whose rule this class checks itself rather than a module such as Names.
+      def broken(prefix, key) = invalid("\"#{prefix}.#{key}\" #{@schema.dig(prefix, key).rule}")
 
       def invalid(problem)
         raise Invalid.new(@source, problem)

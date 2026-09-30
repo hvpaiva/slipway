@@ -3,16 +3,25 @@
 module Slipway
   module CLI
     # Speaks cobra's __complete protocol: one candidate per line, as `value` or
-    # `value<TAB>description`, then a final `:N` line where N is 4 (no file completion) or 0
-    # (let the shell complete file names).
+    # `value<TAB>description`, then a final `:N` line. N is a sum of cobra's directives: 4 when
+    # the shell must not complete file names in place of the candidates, 2 when it must not add a
+    # space after the one it inserts, and 0 lets the shell complete file names.
     #
-    # A completer proc on an Option or Positional may return an Array of values, a Hash of
-    # value to description, or FILES to request file completion. Never raises: on any error
-    # only `:4` is printed.
+    # A completer proc on an Option or Positional receives the positional words typed so far and
+    # the word being completed, without a `--flag=` in front of it, and may return an Array of
+    # values, a Hash of value to description, either of them wrapped in NoSpace, or FILES to
+    # request file completion. The candidates are filtered by that word afterwards. Never raises:
+    # on any error only `:4` is printed.
     class Completer
       FILES = :files
-      NO_FILES_DIRECTIVE = 4
       FILES_DIRECTIVE = 0
+      NO_SPACE_DIRECTIVE = 2
+      NO_FILES_DIRECTIVE = 4
+      # Candidates the user goes on typing after, such as a field path that continues after a
+      # dot: the shell adds no space after the one it inserts. The directive covers the whole
+      # answer, so a completer returns NoSpace only when a candidate that matches the word goes
+      # on, and a finished value still gets its space.
+      NoSpace = Data.define(:candidates)
       # bash splits `--flag=value` at the `=` (COMP_WORDBREAKS), so the separator may arrive
       # as a word of its own between the flag and its value.
       EQUALS = '='
@@ -34,10 +43,11 @@ module Slipway
         state = replay(words)
         return [[], NO_FILES_DIRECTIVE] unless state
 
-        candidates = candidates_for(state, current)
-        return [[], FILES_DIRECTIVE] if candidates == FILES
-
-        [select(candidates, prefix(state, current), state.args), NO_FILES_DIRECTIVE]
+        case candidates_for(state, current)
+        in FILES then [[], FILES_DIRECTIVE]
+        in NoSpace(candidates:) then [select(candidates, state, current), NO_FILES_DIRECTIVE | NO_SPACE_DIRECTIVE]
+        in candidates then [select(candidates, state, current), NO_FILES_DIRECTIVE]
+        end
       end
 
       private
@@ -97,28 +107,34 @@ module Slipway
       def options_of(command) = @registry.globals + command.options
 
       def candidates_for(state, current)
-        return values_of(state.pending, state.args) if state.pending
+        return values_of(state.pending, state.args, prefix(state, current)) if state.pending
         return inline_value_candidates(state, current) if current.match?(INLINE_VALUE)
         return switch_candidates(state.command) if option_word?(current, state)
         return subcommand_candidates(state.command) if state.command.group?
 
-        values_of(state.command.positional_at(state.args.size), state.args)
+        values_of(state.command.positional_at(state.args.size), state.args, current)
       end
 
-      def values_of(target, args)
-        values = target&.candidates(args) || []
-        return values if values == FILES
-
-        values.is_a?(Hash) ? values.to_a : values.map { [it, nil] }
+      def values_of(target, args, current)
+        within(target&.candidates(args, current) || []) do |values|
+          values.is_a?(Hash) ? values.to_a : values.map { [it, nil] }
+        end
       end
 
       # Values for `--flag=partial` carry the `--flag=` prefix so they replace the whole word.
       def inline_value_candidates(state, current)
-        flag, = current.split(EQUALS, 2)
-        values = values_of(option_for(state.command, flag.delete_prefix('--')), state.args)
-        return values if values == FILES
+        flag, typed = current.split(EQUALS, 2)
+        values = values_of(option_for(state.command, flag.delete_prefix('--')), state.args, typed)
+        within(values) { |pairs| pairs.map { |value, description| ["#{flag}=#{value}", description] } }
+      end
 
-        values.map { |value, description| ["#{flag}=#{value}", description] }
+      # Yields the candidates, unwrapped from a NoSpace and wrapped back; FILES passes through.
+      def within(values)
+        case values
+        in FILES then FILES
+        in NoSpace(candidates:) then NoSpace.new(yield(candidates))
+        else yield(values)
+        end
       end
 
       def switch_candidates(command)
@@ -133,8 +149,9 @@ module Slipway
         state.pending && current == EQUALS ? '' : current
       end
 
-      def select(candidates, prefix, given)
-        candidates.select { |value, _| value.start_with?(prefix) && !given.include?(value) }
+      def select(candidates, state, current)
+        typed = prefix(state, current)
+        candidates.select { |value, _| value.start_with?(typed) && !state.args.include?(value) }
       end
     end
   end

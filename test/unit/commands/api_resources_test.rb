@@ -12,8 +12,8 @@ class APIResourcesTest < Minitest::Test
   TABLE
   WIDE = <<~TABLE
     NAME       SHORTNAMES   KIND      GROUPED   VERBS
-    groups     <none>       Group     false     apply,create,delete,describe,edit,get,label
-    projects   proj         Project   true      apply,create,delete,describe,diff,edit,fetch,get,label,rollout,sync
+    groups     <none>       Group     false     apply,create,delete,describe,edit,explain,get,label
+    projects   proj         Project   true      apply,create,delete,describe,diff,edit,explain,fetch,get,label,rollout,sync
   TABLE
   # Without the header row, SHORTNAMES and GROUPED narrow to their widest cell.
   TABLE_ROWS = <<~TABLE
@@ -21,8 +21,8 @@ class APIResourcesTest < Minitest::Test
     projects   proj     Project   true
   TABLE
   WIDE_ROWS = <<~TABLE
-    groups     <none>   Group     false   apply,create,delete,describe,edit,get,label
-    projects   proj     Project   true    apply,create,delete,describe,diff,edit,fetch,get,label,rollout,sync
+    groups     <none>   Group     false   apply,create,delete,describe,edit,explain,get,label
+    projects   proj     Project   true    apply,create,delete,describe,diff,edit,explain,fetch,get,label,rollout,sync
   TABLE
   HINT = "See 'slipway api-resources --help' for usage.\n"
 

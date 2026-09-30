@@ -13,6 +13,7 @@ class CompletionIntegrationTest < Minitest::Test
     delete\tDelete resources by type and name
     edit\tEdit a resource from the default editor
     label\tUpdate the labels on a resource
+    explain\tGet documentation for a resource
     fetch\tFetch from the remote of each project
     diff\tShow where projects differ from their manifests
     sync\tFetch projects and fast-forward their branches

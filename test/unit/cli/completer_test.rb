@@ -12,7 +12,7 @@ class CompleterTest < Minitest::Test
     candidates, directive = @completer.complete([''])
 
     assert_equal 4, directive
-    assert_equal %w[get create config completion man help version].sort, candidates.map(&:first).sort
+    assert_equal %w[get create explain config completion man help version].sort, candidates.map(&:first).sort
     assert_equal ['get', 'Display one or many resources'], candidates.first
     refute_includes candidates.map(&:first), 'raw'
     refute_includes candidates.map(&:first), '__complete'
@@ -98,11 +98,39 @@ class CompleterTest < Minitest::Test
     assert_equal [[], 0], completer.complete(['apply', ''])
   end
 
+  def test_a_no_space_answer_adds_the_no_space_directive
+    assert_equal [%w[projects groups], 6], pairs(@completer.complete(['explain', '']))
+    assert_equal [['projects'], 6], pairs(@completer.complete(%w[explain proj]))
+    assert_equal [%w[projects.kind projects.spec], 6], pairs(@completer.complete(%w[explain projects.]))
+    assert_equal [['projects.kind'], 4], pairs(@completer.complete(%w[explain projects.k]))
+    assert_equal [['groups'], 4], pairs(@completer.complete(%w[explain g]))
+  end
+
+  def test_an_option_value_can_ask_for_no_space_too
+    completer = Slipway::CLI::Completer.new(files_registry)
+
+    assert_equal [['spec'], 6], pairs(completer.complete(['apply', '--field', 's']))
+    assert_equal [['--field=spec'], 6], pairs(completer.complete(%w[apply --field=s]))
+  end
+
   def test_hash_completer_supplies_descriptions
     completer = Slipway::CLI::Completer.new(files_registry)
 
     assert_equal [[['yaml', 'One YAML document'], ['json', 'One JSON object']], 4],
                  completer.complete(['apply', '--output', ''])
+  end
+
+  def test_a_completer_receives_the_positional_words_and_the_word_being_completed
+    seen = []
+    completer = Slipway::CLI::Completer.new(recording_registry(seen))
+
+    completer.complete(%w[pick a b])
+    completer.complete(%w[pick a --from wo])
+    completer.complete(%w[pick --from=wo])
+    completer.complete(%w[pick --from = wo])
+    completer.complete(%w[pick --from =])
+
+    assert_equal [[%w[a], 'b'], [%w[a], 'wo'], [[], 'wo'], [[], 'wo'], [[], '']], seen
   end
 
   def test_call_prints_candidates_then_the_directive
@@ -112,6 +140,7 @@ class CompleterTest < Minitest::Test
     assert_equal "projects\ngroups\n:4\n", out
     assert_empty err
     assert_equal "get\tDisplay one or many resources\n:4\n", @fixture.run('__complete', 'ge')[1]
+    assert_equal "projects\n:6\n", @fixture.run('__complete', 'explain', 'proj')[1]
   end
 
   def test_call_prints_only_the_directive_when_completion_raises
@@ -132,22 +161,44 @@ class CompleterTest < Minitest::Test
   def files_registry
     apply = Slipway::CLI::Command.new(
       name: 'apply', summary: 'Apply a manifest',
-      positionals: [Slipway::CLI::Positional.new(name: 'FILE', required: false, completer: ->(_) { :files })],
-      options: [
-        Slipway::CLI::Option.new(long: 'filename', short: 'f', argument: 'FILE', description: 'Manifest.',
-                                 completer: ->(_) { Slipway::CLI::Completer::FILES }),
-        Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', description: 'Output format.',
-                                 completer: ->(_) { { 'yaml' => 'One YAML document', 'json' => 'One JSON object' } })
-      ],
-      handler: ->(*) {}
+      positionals: [Slipway::CLI::Positional.new(name: 'FILE', required: false,
+                                                 completer: ->(_given, _current) { :files })],
+      options: apply_options, handler: ->(*) {}
     )
     Slipway::CLI::Registry.new(program: 'slipway', version: '0', description: 'x', globals: [], commands: [apply])
+  end
+
+  def apply_options
+    [
+      Slipway::CLI::Option.new(long: 'filename', short: 'f', argument: 'FILE', description: 'Manifest.',
+                               completer: ->(_given, _current) { Slipway::CLI::Completer::FILES }),
+      Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', description: 'Output format.',
+                               completer: lambda do |_given, _current|
+                                 { 'yaml' => 'One YAML document', 'json' => 'One JSON object' }
+                               end),
+      Slipway::CLI::Option.new(long: 'field', argument: 'PATH', description: 'Field.',
+                               completer: ->(_given, _current) { Slipway::CLI::Completer::NoSpace.new(%w[spec]) })
+    ]
+  end
+
+  def recording_registry(seen)
+    record = lambda do |given, current|
+      seen << [given.dup, current]
+      []
+    end
+    pick = Slipway::CLI::Command.new(
+      name: 'pick', summary: 'Records what its completers receive',
+      positionals: [Slipway::CLI::Positional.new(name: 'ITEM', variadic: true, completer: record)],
+      options: [Slipway::CLI::Option.new(long: 'from', argument: 'WHERE', description: 'Where.', completer: record)],
+      handler: ->(*) {}
+    )
+    Slipway::CLI::Registry.new(program: 'slipway', version: '0', description: 'x', globals: [], commands: [pick])
   end
 
   def exploding_command
     Slipway::CLI::Command.new(
       name: 'boom', summary: 'Fails while completing',
-      positionals: [Slipway::CLI::Positional.new(name: 'X', completer: ->(_) { raise 'no' })], handler: ->(*) {}
+      positionals: [Slipway::CLI::Positional.new(name: 'X', completer: ->(_given, _current) { raise 'no' })], handler: ->(*) {}
     )
   end
 end

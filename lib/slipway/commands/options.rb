@@ -44,19 +44,20 @@ module Slipway
       TYPES_SENTENCE = "Resource types: #{TYPES}. Type words are case-insensitive.".freeze
 
       # Unknown words are reported by Resources.resolve at run time.
-      TYPE = CLI::Positional.new(name: 'TYPE', completer: ->(_given) { TYPE_DESCRIPTIONS })
+      TYPE = CLI::Positional.new(name: 'TYPE', completer: ->(_given, _current) { TYPE_DESCRIPTIONS })
 
       def self.name_positional(factory, variadic: true, required: false)
-        CLI::Positional.new(name: 'NAME', variadic:, required:, completer: ->(given) { names(factory, given) })
+        CLI::Positional.new(name: 'NAME', variadic:, required:,
+                            completer: ->(given, _current) { names(factory, given) })
       end
 
       # No TYPE word comes first, so completion always offers project names.
       def self.project_positional(factory, variadic: true, required: false)
         CLI::Positional.new(name: 'NAME', variadic:, required:,
-                            completer: ->(_given) { names(factory, [Resources::PROJECTS.plural]) })
+                            completer: ->(_given, _current) { names(factory, [Resources::PROJECTS.plural]) })
       end
 
-      def self.group_completer(factory) = ->(_given) { names(factory, [Resources::GROUPS.plural]) }
+      def self.group_completer(factory) = ->(_given, _current) { names(factory, [Resources::GROUPS.plural]) }
 
       # Runs during shell completion, with the process environment and no flags: any failure
       # means no candidates rather than an error in the shell.

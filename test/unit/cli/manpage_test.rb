@@ -15,8 +15,9 @@ class ManpageTest < Minitest::Test
   end
 
   def test_pages_cover_the_root_and_every_visible_command_and_group
-    assert_equal %w[slipway.1 slipway-get.1 slipway-create.1 slipway-config.1 slipway-config-view.1
-                    slipway-config-path.1 slipway-help.1 slipway-version.1 slipway-completion.1 slipway-man.1],
+    assert_equal %w[slipway.1 slipway-get.1 slipway-create.1 slipway-explain.1 slipway-config.1
+                    slipway-config-view.1 slipway-config-path.1 slipway-help.1 slipway-version.1
+                    slipway-completion.1 slipway-man.1],
                  @manpage.pages.keys
   end
 

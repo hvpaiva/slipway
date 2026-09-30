@@ -21,6 +21,7 @@ Basic Commands:
   delete          Delete resources by type and name
   edit            Edit a resource from the default editor
   label           Update the labels on a resource
+  explain         Get documentation for a resource
 
 Repository Commands:
   fetch           Fetch from the remote of each project

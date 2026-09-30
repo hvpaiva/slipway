@@ -23,7 +23,7 @@ module Slipway
       NO_OBJECTS = 'no objects passed to apply'
 
       FILENAME = CLI::Option.new(long: 'filename', short: 'f', argument: 'FILE', repeatable: true, required: true,
-                                 completer: ->(_given) { CLI::Completer::FILES },
+                                 completer: ->(_given, _current) { CLI::Completer::FILES },
                                  description: 'The file that contains the manifests to apply; may be repeated. ' \
                                               "A directory reads its *.yaml and *.yml files, '-' reads stdin.")
 

@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML manifests stored as plain files under `$XDG_DATA_HOME/slipway`, applied from files, directories or stdin with `apply -f`, one document or `kind: List` item at a time, and reported as created, configured or unchanged.
 - `spec.remote`, `spec.branch`, `spec.revision`, `spec.syncPolicy` and `spec.paused` in project manifests, validated when a manifest is read and shown by `describe`, `-o json` and `-o yaml`.
 - `create project --remote` and `--branch`, checked like the manifest fields they set.
+- `explain TYPE[.FIELD...]`, which prints the fields of a manifest in the layout of `kubectl explain`: the type of each field, `-required-`, and a description with the rule its value follows and its default, or with `--recursive` the whole tree of names and types. A field that does not exist is a usage error, and completion offers the field paths one level at a time.
 - `diff` verb printing where each project differs from its manifest and what blocks sync, with the git command that shows or resolves it, without writing anything or contacting a remote; it exits with 3 when anything differs, and its man page has an EXIT STATUS section.
 - Drift, where a repository differs from its manifest (Missing, Remote, Branch, Revision, Behind) and what blocks a fast-forward onto the upstream or up to a `spec.revision` pin the upstream holds, never back to it, in the DRIFT column of `-o wide`, in `status.drift` and in a Drift block of `describe`.
 - `create -o name|yaml|json` prints the created resource instead of the result line; with `--dry-run` it prints the manifest without writing it.
@@ -32,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `edit` through `SLIPWAY_EDITOR`, the `editor` config key, `VISUAL` or `EDITOR`, reopening the file with the failure as a comment when the result is invalid.
 - Configuration file at `$XDG_CONFIG_HOME/slipway/config.yaml` with the keys `color`, `editor`, `group`, `networkTimeout`, `parallel`, `protocols` and `theme`, `SLIPWAY_*` environment variables, and `config view` and `config path`.
 - Color per stream with `--color[=auto|always|never]`, `NO_COLOR`, `FORCE_COLOR` and `CLICOLOR_FORCE`, and `dark` and `light` themes following kubecolor.
-- Shell completion for bash, zsh and fish that covers commands, flags, values and resource names.
+- Shell completion for bash, zsh and fish that covers commands, flags, values, resource names and the field paths of `explain`.
 - Bundled man pages for every command, with `slipway man`, `slipway man --path` and `slipway man --install[=DIR]`, which copies them into a `man1` directory; any other DIR, or a DIR after a space instead of `=`, is refused.
 - Text from git is printed with control and bidirectional characters made visible, and credentials in URLs are masked in `describe`, in result details and in error lines.
 - Exit statuses 0, 1, 2 and 130, `error:` lines on stderr with a help hint, "Did you mean this?" suggestions for unknown commands and flags, and `SLIPWAY_DEBUG`, which adds the class and backtrace of an unexpected error.

@@ -86,7 +86,7 @@ end
 
 class ThemeTest < Minitest::Test
   DARK = {
-    table_header: '1', table_columns: %w[37 36], describe_keys: %w[96 36],
+    table_header: '1', table_columns: %w[37 36], describe_keys: %w[96 36], explain_required: '31',
     string: '93', number: '35', boolean_true: '32', boolean_false: '31', none: '90;3',
     status_success: '32', status_warning: '33', status_danger: '31', muted: '90;3',
     help_header: '1', help_flag: '36', help_command: '32', help_comment: '90;3',

@@ -55,7 +55,8 @@ module Slipway
       BRANCH = CLI::Option.new(long: 'branch', argument: 'NAME',
                                description: 'The branch the project is expected to have checked out, written to ' \
                                             'spec.branch.')
-      FROM_DIR = CLI::Option.new(long: 'from-dir', argument: 'DIR', completer: ->(_given) { CLI::Completer::FILES },
+      FROM_DIR = CLI::Option.new(long: 'from-dir', argument: 'DIR',
+                                 completer: ->(_given, _current) { CLI::Completer::FILES },
                                  description: 'Register every git repository at or under DIR as a project, in ' \
                                               'place of NAME.')
       # No option default: one would hide whether --depth was typed without --from-dir.

@@ -9,6 +9,7 @@ module Slipway
         table_header: '1',
         table_columns: %w[37 36],
         describe_keys: %w[96 36],
+        explain_required: '31',
         string: '93',
         number: '35',
         boolean_true: '32',

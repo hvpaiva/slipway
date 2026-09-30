@@ -31,20 +31,26 @@ module ShellHarness
     end
   end
 
-  def bash_completions(dir, line, env, bash_completion: false)
-    prelude = bash_completion ? "source #{BASH_COMPLETION}" : ''
-    script = <<~BASH
-      #{prelude}
-      source "$1/slipway.bash"
-      read -ra COMP_WORDS <<<"$2"
-      [[ $2 == *" " ]] && COMP_WORDS+=("")
-      COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
-      COMP_LINE=$2 COMP_POINT=${#2}
-      _slipway "${COMP_WORDS[0]}" "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}"
-      printf '%s\\n' "${COMPREPLY[@]}"
-    BASH
-    run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line)
-  end
+  def bash_completions(dir, line, env, bash_completion: false) = bash_answer(dir, line, env, bash_completion:).first
+
+  # compopt changes nothing unless readline started the completion, so a function in its place
+  # records what the completion function asked of it.
+  def bash_compopt(dir, line, env) = bash_answer(dir, line, env).last
+
+  # The replies, a line with `--`, then one line per compopt call.
+  BASH_ANSWER = <<~'BASH'
+    source "$1/slipway.bash"
+    asked=()
+    compopt() { asked+=("$*"); builtin compopt "$@"; }
+    read -ra COMP_WORDS <<<"$2"
+    [[ $2 == *" " ]] && COMP_WORDS+=("")
+    COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
+    COMP_LINE=$2 COMP_POINT=${#2}
+    _slipway "${COMP_WORDS[0]}" "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}"
+    printf '%s\n' "${COMPREPLY[@]}"
+    printf -- '--\n'
+    for option in "${asked[@]}"; do printf '%s\n' "$option"; done
+  BASH
 
   def fish_completions(dir, line, env)
     script = "source #{File.join(dir, 'slipway.fish')}; complete -C #{line.inspect}"
@@ -52,12 +58,21 @@ module ShellHarness
   end
 
   def zsh_completions(dir, line, env)
-    run_shell(env, 'zsh', '-f', '-c', ZSH_LISTING, 'harness', dir, line)
+    run_shell(env, 'zsh', '-f', '-c', ZSH_LISTING, 'harness', dir, line, '')
+  end
+
+  # The command line as TAB leaves it, trailing space included, read back by a widget bound to
+  # Ctrl-T, which unlike Ctrl-X starts no other binding.
+  def zsh_buffer(dir, line, env)
+    listing = run_shell(env, 'zsh', '-f', '-c', ZSH_LISTING, 'harness', dir, line, "\C-x\C-b")
+    listing.join("\n")[/buffer:\[(.*)\]/, 1]
   end
 
   # The harness directory travels in the environment so every line typed into the pty stays
-  # short of the 80 columns zsh assumes there. The listing is read until the pty has been
-  # quiet for a second.
+  # short of the 80 columns zsh assumes there. The keys in $3 are typed once the pty has gone
+  # quiet after the TAB, so they never arrive while the completion is still running. They are
+  # Ctrl-X Ctrl-B rather than a single control key, because a BSD terminal (macOS) takes Ctrl-T
+  # as its status character. The listing is read until the pty has been quiet for a second.
   ZSH_LISTING = <<~'ZSH'
     zmodload zsh/zpty
     mkdir -p "$1/zfunc" && cp "$1/slipway.zsh" "$1/zfunc/_slipway"
@@ -65,16 +80,20 @@ module ShellHarness
     zpty -b z zsh -f -i
     zpty -w z 'fpath=($HARNESS_DIR/zfunc $fpath); autoload -Uz compinit; compinit -u -d $HARNESS_DIR/zcompdump'
     zpty -w z 'zstyle ":completion:*" force-list always; zstyle ":completion:*" menu no'
+    zpty -w z 'show-buffer() { zle -M "buffer:[$BUFFER]" }; zle -N show-buffer; bindkey "^X^B" show-buffer'
     zpty -w z 'unsetopt listambiguous; setopt nolistbeep; PS1="% "; print $(( 6 * 7 ))'
     for i in {1..200}; do
       if zpty -r -t z line; then [[ ${line%%$'\r'*} == 42 ]] && break; else sleep 0.05; fi
     done
     while zpty -r -t z line; do :; done
-    zpty -w -n z "$2"$'\t'
-    out=""; quiet=0
-    while (( quiet < 10 )); do
-      if zpty -r -t z line; then out+=$line; quiet=0; else sleep 0.1; (( quiet++ )); fi
-    done
+    drain() {
+      local quiet=0
+      while (( quiet < 10 )); do
+        if zpty -r -t z line; then out+=$line; quiet=0; else sleep 0.1; (( quiet++ )); fi
+      done
+    }
+    out=""; zpty -w -n z "$2"$'\t'; drain
+    [[ -n $3 ]] && { zpty -w -n z "$3"; drain; }
     zpty -d z
     print -r -- "$out" | sed 's/\r//g; s/\x1b\[[0-9;?]*[A-Za-z]//g' | grep -v '^% ' | grep -v '^$'
   ZSH
@@ -94,6 +113,13 @@ module ShellHarness
   end
 
   private
+
+  def bash_answer(dir, line, env, bash_completion: false)
+    script = bash_completion ? "source #{BASH_COMPLETION}\n#{BASH_ANSWER}" : BASH_ANSWER
+    lines = run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line)
+    separator = lines.index('--')
+    [lines[0...separator], lines[(separator + 1)..]]
+  end
 
   def write_stub(dir)
     bin = File.join(dir, 'bin')
