@@ -420,12 +420,16 @@ the names of your projects and groups, asked from the program itself each time y
 The pages ship with the gem. `slipway man` opens `slipway(1)` and `slipway man get` opens
 `slipway-get(1)` with `man(1)`, colored like the help page when color is on; if any of
 `MANPAGER`, `MANROFFOPT`, `LESS_TERMCAP_md` or `GROFF_NO_SGR` is non-empty, your pager
-settings win and slipway passes nothing of its own. `slipway man --install` copies them to
-`${XDG_DATA_HOME:-~/.local/share}/man/man1`, where man-db looks when `~/.local/bin` is on
-`PATH`; `slipway man --install=DIR` copies them into DIR, which must be named `man1`, and
-prints the `MANPATH` line for its parent. `man` finds section 1 pages in the `man1` directory
-under each `MANPATH` entry, so any other DIR is refused with exit status 2. To read them
-without installing:
+settings win and slipway passes nothing of its own.
+
+`slipway man --install` copies the pages to `${XDG_DATA_HOME:-~/.local/share}/man/man1` (a
+relative `XDG_DATA_HOME` is ignored), and `slipway man --install=DIR` copies them into DIR,
+which must be named `man1`: `man` finds section 1 pages in the `man1` directory under each
+`MANPATH` entry, so any other DIR is refused with exit status 2. When the pages land in
+`~/.local/share/man/man1`, man-db looks there on its own as long as `~/.local/bin` is on
+`PATH`, and the command ends by saying so. Anywhere else, such as under a custom
+`XDG_DATA_HOME`, it ends with the `MANPATH` line for the parent directory, which makes `man`
+find the pages. To read them without installing:
 
 ```sh
 export MANPATH="$(dirname "$(slipway man --path)"):$MANPATH"

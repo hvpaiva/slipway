@@ -70,7 +70,8 @@ module Slipway
         Command.new(
           name: 'man', section: 'Settings Commands', summary: 'Show the manual page of a command',
           description: "Show the manual page of #{program} or of one of its commands with man(1).\n" \
-                       'The pages ship with the gem; --install copies them where man-db looks for user pages.',
+                       'The pages ship with the gem; --install copies them into a man1 directory and ' \
+                       'says how man(1) finds them.',
           examples: man_examples,
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
                                        completer: ->(given) { subcommand_names(resolve.call, given) })],
