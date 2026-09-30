@@ -59,6 +59,7 @@ class LabelIntegrationTest < Minitest::Test
 
       assert_equal [0, "group/work labeled\n", ''], slipway('label', 'group', 'work', 'team=platform', env:)
       assert_equal "team=platform\n", slipway!('label', 'group', 'work', '--list', env:)
+      assert_equal 'team=platform', table(slipway!('get', 'groups', '--show-labels', env:)).last.last
     end
   end
 
