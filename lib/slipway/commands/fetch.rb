@@ -3,6 +3,7 @@
 require_relative 'base'
 require_relative 'results'
 require_relative '../fetcher'
+require_relative '../outcome'
 
 module Slipway
   module Commands
@@ -29,15 +30,10 @@ module Slipway
                     'that runs past the networkTimeout setting is killed, and only the transports in the ' \
                     'protocols setting are allowed. The exit status is 1 when any project was denied or failed.'
       USAGE = '[NAME... | project/NAME...]'
-      FETCHED = Fetcher::FETCHED
-      UNCHANGED = Fetcher::UNCHANGED
-      SKIPPED = Fetcher::SKIPPED
-      PAUSED = Fetcher::PAUSED
-      DENIED = Fetcher::DENIED
-      FAILED = Fetcher::FAILED
       # In the order the closing summary counts them.
-      ROLES = { FETCHED => :result_changed, UNCHANGED => :result_unchanged, SKIPPED => :result_skipped,
-                PAUSED => :result_paused, DENIED => :result_denied, FAILED => :result_failed }.freeze
+      ROLES = { Outcome::FETCHED => :result_changed, Outcome::UNCHANGED => :result_unchanged,
+                Outcome::SKIPPED => :result_skipped, Outcome::PAUSED => :result_paused,
+                Outcome::DENIED => :result_denied, Outcome::FAILED => :result_failed }.freeze
 
       RESULTS = CLI::Glossary.new(
         title: 'Results',
@@ -46,21 +42,24 @@ module Slipway
                'line and the count end in (dry run). Ctrl-C stops the git processes slipway started and exits with ' \
                'status 130.',
         entries: {
-          FETCHED => "The remote moved refs, and up to #{Fetcher::REF_LIMIT} follow: origin/main a1b2c3d..e4f5a6b " \
-                     'for a ref that moved, origin/feature d09a085 (new) for a new one and origin/feature deleted ' \
-                     '(was d09a085) for one --prune removed. A last line, and N more, counts the rest. Tags appear ' \
-                     'under their bare name. With git before 2.41, every fetch that succeeds reads fetched, without ' \
-                     'the refs.',
-          UNCHANGED => 'The remote answered and had nothing new.',
-          "#{SKIPPED} (Reason)" => 'No fetch ran: git could not read the repository (Missing, NotARepo, Unsafe, ' \
-                                   'Unknown), git has no remote to pick because there is no upstream, no origin and ' \
-                                   "either no remote or more than one (#{Fetcher::NO_REMOTE}), or the branch tracks " \
-                                   'a local branch (LocalUpstream).',
-          PAUSED => 'spec.paused is true, so no git command ran in the project.',
-          "#{DENIED} (Reason)" => 'Git needed a password, a passphrase or a host key (AuthRequired). Run the ' \
-                                  'git -C PATH fetch printed below it once in a terminal to see what git needs.',
-          "#{FAILED} (Reason)" => 'The fetch ran past networkTimeout (Timeout), used a transport protocols leaves ' \
-                                  'out (ProtocolNotAllowed), or git failed for another reason (Unknown).'
+          Outcome::FETCHED => "The remote moved refs, and up to #{Fetcher::REF_LIMIT} follow: origin/main " \
+                              'a1b2c3d..e4f5a6b for a ref that moved, origin/feature d09a085 (new) for a new one ' \
+                              'and origin/feature deleted (was d09a085) for one --prune removed. A last line, and ' \
+                              'N more, counts the rest. Tags appear under their bare name. With git before 2.41, ' \
+                              'every fetch that succeeds reads fetched, without the refs.',
+          Outcome::UNCHANGED => 'The remote answered and had nothing new.',
+          "#{Outcome::SKIPPED} (Reason)" => 'No fetch ran: git could not read the repository (Missing, NotARepo, ' \
+                                            'Unsafe, Unknown), git has no remote to pick because there is no ' \
+                                            'upstream, no origin and either no remote or more than one ' \
+                                            "(#{Fetcher::NO_REMOTE}), or the branch tracks a local branch " \
+                                            '(LocalUpstream).',
+          Outcome::PAUSED => 'spec.paused is true, so no git command ran in the project.',
+          "#{Outcome::DENIED} (Reason)" => 'Git needed a password, a passphrase or a host key (AuthRequired). Run ' \
+                                           'the git -C PATH fetch printed below it once in a terminal to see what ' \
+                                           'git needs.',
+          "#{Outcome::FAILED} (Reason)" => 'The fetch ran past networkTimeout (Timeout), used a transport ' \
+                                           'protocols leaves out (ProtocolNotAllowed), or git failed for another ' \
+                                           'reason (Unknown).'
         }
       )
       ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, fetch every project across all groups. The ' \
@@ -106,7 +105,7 @@ module Slipway
           results.stream(projects, workers: runtime.config.parallel, work: fetcher.method(:attempt))
           results.summarize
         end
-        raise Failed if results.any?(DENIED, FAILED)
+        raise Failed if results.any?(Outcome::DENIED, Outcome::FAILED)
       end
     end
   end

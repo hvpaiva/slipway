@@ -1,50 +1,15 @@
 # frozen_string_literal: true
 
 require_relative 'git'
+require_relative 'outcome'
 require_relative 'paths'
-require_relative 'state'
 
 module Slipway
-  # Fetches one project and names the outcome in the words the verbs that fetch share. Several
-  # workers call it at once.
+  # Fetches one project and reports its Outcome. Several workers call it at once.
   class Fetcher
-    # `details` are printed under the result line as they are; the printer redacts them and
-    # makes them plain. The verbs that move a branch name their failures in the same words.
-    Outcome = Data.define(:project, :word, :reason, :details) do
-      def initialize(project:, word:, reason: nil, details: []) = super
-
-      # The line above already names the project, so the path is cut from the message.
-      def self.failure(project, error)
-        reason = REASONS.fetch(error.class) { State.for_error(error) }
-        new(project:, word: ERROR_WORDS.fetch(error.class, FAILED), reason:,
-            details: [detail(error), error.hint].compact)
-      end
-
-      # Nothing else in the result says which directory could not be read, so it leads the
-      # detail, as the manifest writes it.
-      def self.unreadable(project, inspection)
-        error = inspection.error
-        new(project:, word: SKIPPED, reason: inspection.state,
-            details: ["#{project.path}: #{detail(error)}", error.hint].compact)
-      end
-
-      def self.detail(error) = error.message.delete_prefix("#{error.path}: ")
-      private_class_method :detail
-    end
-
-    FETCHED = 'fetched'
-    UNCHANGED = 'unchanged'
-    SKIPPED = 'skipped'
-    PAUSED = 'paused'
-    DENIED = 'denied'
-    FAILED = 'failed'
     # With no remote to pick, git fetch exits 0 and prints nothing, which would read as unchanged.
     NO_REMOTE = 'NoRemote'
     NO_REMOTE_DETAIL = 'no upstream, no origin and no single remote to fetch from'
-    ERROR_WORDS = { Git::AuthRequired => DENIED, Git::LocalUpstream => SKIPPED }.freeze
-    REASONS = { Git::AuthRequired => 'AuthRequired', Git::LocalUpstream => 'LocalUpstream',
-                Git::Timeout => 'Timeout', Git::WriteTimeout => 'Timeout',
-                Git::ProtocolNotAllowed => 'ProtocolNotAllowed' }.freeze
     REF_LIMIT = 5
     ABBREV = Git::Porcelain::ABBREVIATION
     ZERO_ID = /\A0+\z/
@@ -60,7 +25,7 @@ module Slipway
 
     # The whole of the fetch verb for one project.
     def attempt(project)
-      return Outcome.new(project:, word: PAUSED) if project.paused
+      return Outcome.new(project:, word: Outcome::PAUSED) if project.paused
 
       inspection = @runtime.inspector.examine(project)
       return Outcome.unreadable(project, inspection) if inspection.error
@@ -94,7 +59,7 @@ module Slipway
     def rehearse(project)
       raise Git::LocalUpstream, path(project) if @runtime.git.local_upstream?(path(project))
 
-      Outcome.new(project:, word: FETCHED)
+      Outcome.new(project:, word: Outcome::FETCHED)
     end
 
     # An origin or an upstream settles it without a spawn; git is asked only when neither
@@ -104,15 +69,17 @@ module Slipway
         !@runtime.git.default_remote?(path(inspection.project))
     end
 
-    def no_remote(project) = Outcome.new(project:, word: SKIPPED, reason: NO_REMOTE, details: [NO_REMOTE_DETAIL])
+    def no_remote(project)
+      Outcome.new(project:, word: Outcome::SKIPPED, reason: NO_REMOTE, details: [NO_REMOTE_DETAIL])
+    end
 
     # Git before 2.41 lists no refs, so a fetch that succeeded there reads as fetched.
     def fetched(project, result)
       updates = result.updates
-      return Outcome.new(project:, word: FETCHED) if updates.nil?
-      return Outcome.new(project:, word: UNCHANGED) if updates.empty?
+      return Outcome.new(project:, word: Outcome::FETCHED) if updates.nil?
+      return Outcome.new(project:, word: Outcome::UNCHANGED) if updates.empty?
 
-      Outcome.new(project:, word: FETCHED, details: refs(updates))
+      Outcome.new(project:, word: Outcome::FETCHED, details: refs(updates))
     end
 
     def refs(updates)

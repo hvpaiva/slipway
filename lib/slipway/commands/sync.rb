@@ -5,6 +5,7 @@ require_relative 'manual'
 require_relative 'fetch'
 require_relative 'results'
 require_relative '../fetcher'
+require_relative '../outcome'
 require_relative '../sync'
 
 module Slipway
@@ -50,10 +51,10 @@ module Slipway
           Sync::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits it ' \
                                   'gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the ' \
                                   "move; a move up to a spec.revision pin ends in #{Sync::Executor::TO_PIN}.",
-          Fetcher::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
-          Fetcher::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
+          Outcome::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
+          Outcome::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
                                 'moved remote-tracking refs.',
-          "#{Fetcher::SKIPPED} (Reason)" => 'The branch stayed where it was: a blocker stopped it, under the name ' \
+          "#{Outcome::SKIPPED} (Reason)" => 'The branch stayed where it was: a blocker stopped it, under the name ' \
                                             'slipway diff gives it; git refused the fast-forward (WouldOverwrite ' \
                                             'for untracked files in the way, WouldLoseChanges for local changes git ' \
                                             'status does not show, Busy for a lock another git process holds on ' \
@@ -61,10 +62,10 @@ module Slipway
                                             'gained a commit since the check); or the project was skipped before ' \
                                             'its fetch, as in slipway fetch (Missing, NotARepo, Unsafe, Unknown, ' \
                                             'NoRemote, LocalUpstream).',
-          Fetcher::PAUSED => 'spec.paused is true, so no git command ran in the project.',
-          "#{Fetcher::DENIED} (Reason)" => 'The fetch or the fast-forward needed a password, a passphrase or a ' \
+          Outcome::PAUSED => 'spec.paused is true, so no git command ran in the project.',
+          "#{Outcome::DENIED} (Reason)" => 'The fetch or the fast-forward needed a password, a passphrase or a ' \
                                            'host key (AuthRequired), as in slipway fetch.',
-          "#{Fetcher::FAILED} (Reason)" => 'The fetch or the fast-forward ran past networkTimeout (Timeout), used ' \
+          "#{Outcome::FAILED} (Reason)" => 'The fetch or the fast-forward ran past networkTimeout (Timeout), used ' \
                                            'a transport protocols leaves out (ProtocolNotAllowed), or git failed ' \
                                            'for another reason (Unknown). A fast-forward stopped at the deadline ' \
                                            'leaves the branch where it was, but the files git had already written ' \
@@ -73,10 +74,10 @@ module Slipway
         }
       )
       # In the order the closing summary counts them.
-      ROLES = { Sync::FAST_FORWARDED => :result_changed, Fetcher::FETCHED => :result_changed,
-                Fetcher::UNCHANGED => :result_unchanged, Fetcher::SKIPPED => :result_skipped,
-                Fetcher::PAUSED => :result_paused, Fetcher::DENIED => :result_denied,
-                Fetcher::FAILED => :result_failed }.freeze
+      ROLES = { Sync::FAST_FORWARDED => :result_changed, Outcome::FETCHED => :result_changed,
+                Outcome::UNCHANGED => :result_unchanged, Outcome::SKIPPED => :result_skipped,
+                Outcome::PAUSED => :result_paused, Outcome::DENIED => :result_denied,
+                Outcome::FAILED => :result_failed }.freeze
       ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, sync every project across all groups. The ' \
                                                          'group in the current configuration is ignored even if ' \
                                                          'specified with --group.')
@@ -120,7 +121,7 @@ module Slipway
           unfetched(context, executor.unfetched)
           results.summarize
         end
-        raise Failed if results.any?(Fetcher::DENIED, Fetcher::FAILED)
+        raise Failed if results.any?(Outcome::DENIED, Outcome::FAILED)
       end
 
       private

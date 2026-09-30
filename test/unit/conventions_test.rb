@@ -79,8 +79,8 @@ class ConventionsTest < Minitest::Test
               schema.rb manifest.rb store.rb scanner.rb yaml.rb error.rb git.rb git/ state.rb drift.rb plan.rb
               rollout.rb version.rb].freeze
   OUTPUT = %w[output.rb output/].freeze
-  UPPER_LAYERS = %w[commands.rb commands/ views.rb views/ runtime.rb inspector.rb fetcher.rb sync.rb rollback.rb
-                    pool.rb slipway.rb].freeze
+  UPPER_LAYERS = %w[commands.rb commands/ views.rb views/ runtime.rb inspector.rb fetcher.rb outcome.rb sync.rb
+                    rollback.rb pool.rb slipway.rb].freeze
   CLI_EXTERNAL_EDGES = { 'cli/errors.rb' => ['error.rb'] }.freeze
 
   def test_the_gem_has_no_runtime_dependencies

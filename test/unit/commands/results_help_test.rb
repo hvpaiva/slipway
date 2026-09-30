@@ -7,7 +7,7 @@ require 'test_helper'
 class ResultsHelpTest < Minitest::Test
   UNREADABLE = [Slipway::Git::MissingPath, Slipway::Git::NotARepository, Slipway::Git::UnsafeRepository,
                 Slipway::Git::Error].map { Slipway::State.for_error(it.allocate) }.freeze
-  FETCH = [*Slipway::Fetcher::REASONS.values, Slipway::Fetcher::NO_REMOTE, *UNREADABLE].uniq.freeze
+  FETCH = [*Slipway::Outcome::REASONS.values, Slipway::Fetcher::NO_REMOTE, *UNREADABLE].uniq.freeze
   SYNC = [*FETCH, *Slipway::Sync::Executor::ADVICE.keys].freeze
   UNDO = [*UNREADABLE, *Slipway::Rollback::REFUSALS.keys, *Slipway::Rollback::RELAYED.keys, 'Busy',
           Slipway::Rollback::NOT_PINNED, 'AuthRequired', 'Timeout'].uniq.freeze

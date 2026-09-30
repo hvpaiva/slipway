@@ -3,7 +3,7 @@
 require_relative 'base'
 require_relative 'manual'
 require_relative 'results'
-require_relative '../fetcher'
+require_relative '../outcome'
 require_relative '../rollback'
 
 module Slipway
@@ -48,8 +48,8 @@ module Slipway
             Rollback::ROLLED_BACK => 'The branch moved, or it already stood at the revision and only spec.revision ' \
                                      'changed. The detail names the commits it crossed and the command that lets ' \
                                      'sync follow the upstream again.',
-            Fetcher::UNCHANGED => 'The branch already stood at the revision and spec.revision already held it.',
-            "#{Fetcher::SKIPPED} (Reason)" => 'Nothing moved and nothing was written. git could not read the ' \
+            Outcome::UNCHANGED => 'The branch already stood at the revision and spec.revision already held it.',
+            "#{Outcome::SKIPPED} (Reason)" => 'Nothing moved and nothing was written. git could not read the ' \
                                               'repository (Missing, NotARepo, Unsafe, Unknown); the branch cannot ' \
                                               'move (Conflicted, Detached, Unborn, NoUpstream, Gone, InProgress); ' \
                                               'the history has no such revision (NoHistory, NoPrevious, ' \
@@ -61,10 +61,10 @@ module Slipway
                                               'upstream (OffUpstream); or git refused the move (WouldLoseChanges, ' \
                                               'WouldOverwrite for untracked or ignored files in the way, Busy, ' \
                                               'NotFastForward for a branch that moved since the check).',
-            "#{Fetcher::DENIED} (Reason)" => 'A partial clone had to fetch the files the move writes and the remote ' \
+            "#{Outcome::DENIED} (Reason)" => 'A partial clone had to fetch the files the move writes and the remote ' \
                                              'asked for a password, a passphrase or a host key (AuthRequired), as ' \
                                              'in slipway fetch.',
-            "#{Fetcher::FAILED} (Reason)" => 'The move ran past networkTimeout (Timeout) or git failed for another ' \
+            "#{Outcome::FAILED} (Reason)" => 'The move ran past networkTimeout (Timeout) or git failed for another ' \
                                              'reason (Unknown), and spec.revision was not written, though a move ' \
                                              'stopped at the deadline keeps the files git had already written, as ' \
                                              'in slipway sync; or the branch moved but spec.revision could not be ' \
@@ -72,9 +72,9 @@ module Slipway
                                              '--to-revision command that writes it without moving the branch again.'
           }
         )
-        ROLES = { Rollback::ROLLED_BACK => :result_changed, Fetcher::UNCHANGED => :result_unchanged,
-                  Fetcher::SKIPPED => :result_skipped, Fetcher::DENIED => :result_denied,
-                  Fetcher::FAILED => :result_failed }.freeze
+        ROLES = { Rollback::ROLLED_BACK => :result_changed, Outcome::UNCHANGED => :result_unchanged,
+                  Outcome::SKIPPED => :result_skipped, Outcome::DENIED => :result_denied,
+                  Outcome::FAILED => :result_failed }.freeze
 
         def self.command(factory)
           CLI::Command.new(
@@ -109,7 +109,7 @@ module Slipway
           scope.select(Resources::PROJECTS, names) do |projects|
             projects.each { results.report(rollback.undo(it, number:)) }
           end
-          raise Failed if results.any?(Fetcher::SKIPPED, Fetcher::DENIED, Fetcher::FAILED)
+          raise Failed if results.any?(Outcome::SKIPPED, Outcome::DENIED, Outcome::FAILED)
         end
 
         private

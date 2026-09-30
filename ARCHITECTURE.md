@@ -15,7 +15,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Reconciliation | `drift.rb`, `plan.rb`, `rollout.rb` | `Drift`, `Plan` and `Rollout::History`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
 | Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
-| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Sync::Executor`, `Rollback` and `Pool`. |
+| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Sync::Executor`, `Rollback` and `Pool`. |
 
 The domain holds the rules for what may enter the registry and how it is stored: `Store` writes
 each manifest as a plain file, `Manifest` parses and checks one, and `Yaml` writes every YAML
@@ -48,14 +48,14 @@ I/O. `Runtime` bundles the config, paths, store, git, inspector and clock of one
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values, the plan and output; output paints through the command layer's `Context`. The
 command layer and the domain (with the git adapter and reconciliation) sit at the bottom:
-neither requires commands, views, the runtime, the inspector, the fetcher, sync, the rollback or
-the pool. The command layer requires one domain file, the one allowed edge: `cli/errors.rb`
-requires `error.rb`, because `CLI::UsageError` is a `Slipway::Error`. The domain may use the
-command layer: `labels.rb`, `selector.rb` and `field_selector.rb` raise `CLI::UsageError`, and
-`config.rb` validates against `CLI::Theme` and `CLI::Style`. `test/unit/conventions_test.rb`
-reads every `require_relative` under `lib/`, fails on an edge that breaks these rules and on a
-file that belongs to no layer or to two, and `test/unit/require_graph_test.rb` loads every file
-under `lib/` on its own.
+neither requires commands, views, the runtime, the inspector, the fetcher, sync, the rollback,
+the `Outcome` they report or the pool. The command layer requires one domain file, the one
+allowed edge: `cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a
+`Slipway::Error`. The domain may use the command layer: `labels.rb`, `selector.rb` and
+`field_selector.rb` raise `CLI::UsageError`, and `config.rb` validates against `CLI::Theme` and
+`CLI::Style`. `test/unit/conventions_test.rb` reads every `require_relative` under `lib/`, fails
+on an edge that breaks these rules and on a file that belongs to no layer or to two, and
+`test/unit/require_graph_test.rb` loads every file under `lib/` on its own.
 
 ## One invocation
 

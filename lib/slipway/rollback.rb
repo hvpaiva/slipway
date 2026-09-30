@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative 'fetcher'
 require_relative 'git'
+require_relative 'outcome'
 require_relative 'paths'
 require_relative 'plan'
 require_relative 'rollout'
@@ -78,7 +78,7 @@ module Slipway
     # `number` is a revision the history lists; nil or 0 is the one before the current one.
     def undo(project, number: nil)
       inspection = @runtime.inspector.examine(project)
-      return Fetcher::Outcome.unreadable(project, inspection) if inspection.error
+      return Outcome.unreadable(project, inspection) if inspection.error
 
       ready(inspection)
       step = plan(inspection, number)
@@ -151,7 +151,7 @@ module Slipway
     rescue Git::Blocked => e
       relayed(step.project, e)
     rescue Git::Error => e
-      Fetcher::Outcome.failure(step.project, e)
+      Outcome.failure(step.project, e)
     end
 
     def move(step)
@@ -170,8 +170,8 @@ module Slipway
       pin(step)
       settled(step, from:, count:)
     rescue Error => e
-      Fetcher::Outcome.new(project: step.project, word: Fetcher::FAILED, reason: NOT_PINNED,
-                           details: [position(step, from, count), unpinned(step, e)])
+      Outcome.new(project: step.project, word: Outcome::FAILED, reason: NOT_PINNED,
+                  details: [position(step, from, count), unpinned(step, e)])
     end
 
     def unpinned(step, error)
@@ -188,8 +188,8 @@ module Slipway
     def settled(step, from: step.head, count: step.count)
       project = step.project
       changed = count.positive? || project.revision != step.revision.sha
-      Fetcher::Outcome.new(project:, word: changed ? ROLLED_BACK : Fetcher::UNCHANGED,
-                           details: ["#{position(step, from, count)}; #{HELD}", following(project, step.status)])
+      Outcome.new(project:, word: changed ? ROLLED_BACK : Outcome::UNCHANGED,
+                  details: ["#{position(step, from, count)}; #{HELD}", following(project, step.status)])
     end
 
     def position(step, from, count)
@@ -215,8 +215,8 @@ module Slipway
 
     def skipped(project, reason, detail)
       words = COMMANDS[reason]
-      Fetcher::Outcome.new(project:, word: Fetcher::SKIPPED, reason:,
-                           details: [detail, words && Plan.git(project, *words)].compact)
+      Outcome.new(project:, word: Outcome::SKIPPED, reason:,
+                  details: [detail, words && Plan.git(project, *words)].compact)
     end
 
     def refuse(reason, **values) = raise(Refused.new(reason, values))

@@ -47,7 +47,7 @@ class ReadmeTest < Minitest::Test
   def test_fetch_table_names_every_reason_a_fetch_gives
     unreadable = [Slipway::Git::MissingPath, Slipway::Git::NotARepository, Slipway::Git::UnsafeRepository,
                   Slipway::Git::Error].map { Slipway::State.for_error(it.allocate) }
-    reasons = [*Slipway::Fetcher::REASONS.values, Slipway::Fetcher::NO_REMOTE, *unreadable]
+    reasons = [*Slipway::Outcome::REASONS.values, Slipway::Fetcher::NO_REMOTE, *unreadable]
     documented = rows(RESULTS, after: '### Fetching').flat_map { it.scan(/`([A-Z][A-Za-z]+)`|\(([A-Z][A-Za-z]+)\)`/) }
 
     assert_equal reasons.uniq.sort, documented.flatten.compact.uniq.sort - ['Reason']

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require_relative 'drift'
-require_relative 'fetcher'
 require_relative 'git'
+require_relative 'outcome'
 require_relative 'plan'
 require_relative 'rollout'
 
@@ -18,7 +18,7 @@ module Slipway
       # The plan for a project whose fetch went through, made from what git answered after it.
       Observed = Data.define(:project, :inspection, :fetched, :plan)
 
-      REACHED = [Fetcher::FETCHED, Fetcher::UNCHANGED].freeze
+      REACHED = [Outcome::FETCHED, Outcome::UNCHANGED].freeze
       ABBREV = Git::Porcelain::ABBREVIATION
       TO_PIN = '(to the pinned revision)'
       # Git leaves the branch where it was on each refusal. A lock may belong to a git that is
@@ -42,7 +42,7 @@ module Slipway
 
       # Runs on a worker thread: an Outcome when nothing is left to do, else an Observed.
       def observe(project)
-        return Fetcher::Outcome.new(project:, word: Fetcher::PAUSED) if project.paused
+        return Outcome.new(project:, word: Outcome::PAUSED) if project.paused
 
         inspection = @runtime.inspector.examine(project)
         return unreadable(inspection) if inspection.error
@@ -85,7 +85,7 @@ module Slipway
       rescue Git::Blocked => e
         refused(step, e)
       rescue Git::Error => e
-        Fetcher::Outcome.failure(project, e)
+        Outcome.failure(project, e)
       end
 
       def moved(step, forward)
@@ -101,12 +101,12 @@ module Slipway
         reason = error.reason
         detail = [error.message.delete_prefix("#{error.path}: "), ADVICE[reason]].compact.join('; ')
         command = Plan.git(step.project, 'status') unless reason == 'Busy'
-        outcome(step.project, Fetcher::SKIPPED, [detail, command, *declared(step.plan)], reason:)
+        outcome(step.project, Outcome::SKIPPED, [detail, command, *declared(step.plan)], reason:)
       end
 
       def skipped(step)
         blocker = step.plan.skips.first
-        outcome(step.project, Fetcher::SKIPPED, [blocker.message, blocker.command, *declared(step.plan)],
+        outcome(step.project, Outcome::SKIPPED, [blocker.message, blocker.command, *declared(step.plan)],
                 reason: blocker.type)
       end
 
@@ -114,7 +114,7 @@ module Slipway
       # brought; for any other, sync reports the branch.
       def still(step)
         fetched = step.fetched if step.project.sync_policy == SyncPolicy::FETCH_ONLY
-        outcome(step.project, fetched&.word || Fetcher::UNCHANGED,
+        outcome(step.project, fetched&.word || Outcome::UNCHANGED,
                 [*fetched&.details, held(step), *drift(step.plan.reports)])
       end
 
@@ -125,7 +125,7 @@ module Slipway
       # Worded as diff words it, with the command that shows or resolves it.
       def unreadable(inspection)
         item = Plan.for(inspection).items.first
-        outcome(inspection.project, Fetcher::SKIPPED, [item.message, item.command], reason: item.type)
+        outcome(inspection.project, Outcome::SKIPPED, [item.message, item.command], reason: item.type)
       end
 
       # A move or a blocker already says where the branch stands against its upstream or its pin.
@@ -134,7 +134,7 @@ module Slipway
       def drift(items) = items.map { "#{it.type}: #{it.message}" }
 
       def outcome(project, word, details, reason: nil)
-        Fetcher::Outcome.new(project:, word:, reason:, details: details.compact)
+        Outcome.new(project:, word:, reason:, details: details.compact)
       end
     end
   end
