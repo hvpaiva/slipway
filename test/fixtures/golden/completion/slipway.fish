@@ -17,6 +17,12 @@ function __slipway_complete
         set -e lines[-1]
         set -g __slipway_results $lines
     end
+    if test (count $__slipway_results) -eq 1; and test (math "bitand($__slipway_directive, 2)") -ne 0
+        set -l value (string split -m 1 \t -- $__slipway_results[1])[1]
+        if not string match -qr '[@=/:.,]$' -- $value
+            set -g __slipway_results $value $value.
+        end
+    end
 end
 
 function __slipway_wants_files

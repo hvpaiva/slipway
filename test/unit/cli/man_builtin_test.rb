@@ -16,7 +16,7 @@ class ManBuiltinTest < Minitest::Test
     assert_equal ['--path', '--install[=DIR]'], man.options.map(&:label)
     candidates, = Slipway::CLI::Completer.new(fixture.registry).complete(['man', ''])
 
-    assert_equal %w[get create config], candidates.map(&:first).first(3)
+    assert_equal %w[get create explain config], candidates.map(&:first).first(4)
   end
 
   def test_execs_man_on_the_page_of_the_command

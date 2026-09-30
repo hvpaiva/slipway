@@ -61,7 +61,7 @@ class RegistryTest < Minitest::Test
     sections = @registry.root.sections
 
     assert_equal ['Basic Commands', 'Settings Commands', 'Other Commands'], sections.map(&:first)
-    assert_equal [%w[get create], %w[config completion man], %w[help version]],
+    assert_equal [%w[get create explain], %w[config completion man], %w[help version]],
                  sections.map { |_, commands| commands.map(&:name) }.to_a
   end
 

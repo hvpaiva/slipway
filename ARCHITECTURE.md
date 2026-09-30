@@ -284,9 +284,12 @@ an `enum` is also its completion list.
 **A completer.** Give an `Option` or `Positional` a `completer:` proc. It receives the
 positional words typed so far and the word being completed, and returns an Array of values, a
 Hash of value to description, or `CLI::Completer::FILES` to hand the shell its file completion.
-`Options.name_positional` shows the pattern for values that need the store: build the runtime
-through the factory, and return `[]` on any error, because a completion must never fail in the
-shell.
+Values wrapped in `CLI::Completer::NoSpace` ask the shell to add no space after the one it
+inserts, for a value the user goes on typing, such as a path extended one segment at a time.
+The directive covers the whole answer, so such a completer filters by the word itself and wraps
+its values only when a match goes on. `Options.name_positional` shows the pattern for values
+that need the store: build the runtime through the factory, and return `[]` on any error,
+because a completion must never fail in the shell.
 
 **A theme role.** Add the role to `CLI::Theme::DARK` (and to the `LIGHT` merge when the light
 value differs), as an SGR parameter string or an Array for roles cycled by index. Paint with

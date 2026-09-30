@@ -3,7 +3,7 @@
 require 'stringio'
 
 # Exercises every feature of the command layer: verbs with enums, a repeatable and a required
-# option, a nested group and a raw command.
+# option, a nested group, a raw command and a positional whose candidates go on after a dot.
 class FixtureRegistry
   Call = Data.define(:name, :args, :opts, :context)
 
@@ -13,6 +13,9 @@ class FixtureRegistry
   TYPES = %w[projects groups].freeze
   FORMATS = %w[table wide json yaml name].freeze
   PROJECT_NAMES = %w[alpha beta].freeze
+  # Each path explain completes, with the paths one level under it.
+  FIELD_PATHS = { '' => %w[projects groups], 'projects' => %w[projects.kind projects.spec],
+                  'projects.spec' => %w[projects.spec.path] }.freeze
 
   attr_reader :calls, :registry
   # An exception instance or class; once set, every handler raises it.
@@ -21,7 +24,8 @@ class FixtureRegistry
   def initialize
     @calls = []
     @registry = Slipway::CLI::Registry.new(program: PROGRAM, version: VERSION, description: DESCRIPTION,
-                                           globals: Slipway::CLI::Globals::ALL, commands: [get, create, config, raw])
+                                           globals: Slipway::CLI::Globals::ALL,
+                                           commands: [get, create, explain, config, raw])
   end
 
   def run(*argv, env: {}, tty: false, err_tty: false, color: nil, theme: nil)
@@ -90,6 +94,22 @@ class FixtureRegistry
       Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', enum: %w[table yaml json], default: 'table',
                                description: 'Output format.')
     ]
+  end
+
+  def explain
+    Slipway::CLI::Command.new(
+      name: 'explain', summary: 'Describe the fields of a resource type', section: 'Basic Commands',
+      positionals: [Slipway::CLI::Positional.new(name: 'FIELD', completer: lambda { |_given, current|
+        field_paths(current)
+      })],
+      handler: handler('explain')
+    )
+  end
+
+  # A path with paths under it goes on after a dot, so the shell adds no space after it.
+  def field_paths(current)
+    paths = FIELD_PATHS.fetch(current.rpartition('.').first, []).select { it.start_with?(current) }
+    paths.any? { FIELD_PATHS.key?(it) } ? Slipway::CLI::Completer::NoSpace.new(paths) : paths
   end
 
   def config

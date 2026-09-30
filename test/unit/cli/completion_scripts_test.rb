@@ -82,9 +82,17 @@ class CompletionScriptsTest < Minitest::Test
     end
   end
 
+  def test_bash_leaves_out_the_space_only_when_the_directive_says_so
+    with_completion_stub do |dir, env|
+      assert_equal [%w[projects], ['-o nospace']], answer(dir, 'slipway explain proj', env)
+      assert_equal [%w[projects.kind projects.spec], ['-o nospace']], answer(dir, 'slipway explain projects.', env)
+      assert_equal [%w[projects.kind], []], answer(dir, 'slipway explain projects.k', env)
+    end
+  end
+
   def test_bash_strips_descriptions
     with_completion_stub do |dir, env|
-      assert_equal %w[get create config help version completion man], bash_completions(dir, 'slipway ', env)
+      assert_equal %w[get create explain config help version completion man], bash_completions(dir, 'slipway ', env)
     end
   end
 
@@ -100,6 +108,15 @@ class CompletionScriptsTest < Minitest::Test
     end
   end
 
+  def test_zsh_leaves_out_the_space_only_when_the_directive_says_so
+    skip 'zsh is not installed' unless shell_installed?('zsh')
+
+    with_completion_stub do |dir, env|
+      assert_equal 'slipway explain projects', zsh_buffer(dir, 'slipway explain proj', env)
+      assert_equal 'slipway explain projects.kind ', zsh_buffer(dir, 'slipway explain projects.k', env)
+    end
+  end
+
   def test_fish_lists_candidates_with_descriptions
     skip 'fish is not installed' unless shell_installed?('fish')
 
@@ -109,4 +126,20 @@ class CompletionScriptsTest < Minitest::Test
       assert_equal %w[alpha beta], fish_completions(dir, 'slipway get projects ', env).sort
     end
   end
+
+  # fish adds no space after a candidate that is not the only one, so the directive doubles a
+  # lone candidate, the second copy ending in a dot.
+  def test_fish_leaves_out_the_space_only_when_the_directive_says_so
+    skip 'fish is not installed' unless shell_installed?('fish')
+
+    with_completion_stub do |dir, env|
+      assert_equal %w[projects projects.], fish_completions(dir, 'slipway explain proj', env)
+      assert_equal %w[projects.kind projects.spec], fish_completions(dir, 'slipway explain projects.', env)
+      assert_equal %w[projects.kind], fish_completions(dir, 'slipway explain projects.k', env)
+    end
+  end
+
+  private
+
+  def answer(dir, line, env) = [bash_completions(dir, line, env), bash_compopt(dir, line, env)]
 end

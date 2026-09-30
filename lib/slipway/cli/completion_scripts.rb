@@ -110,7 +110,10 @@ module Slipway
       end
 
       # Both completion conditions call __PROGRAM_complete, so the answer is cached per command
-      # line. fish reads `value<TAB>description` lines natively.
+      # line. fish reads `value<TAB>description` lines natively. It has no switch to leave out the
+      # space after a candidate: it adds none only after one that ends in one of @=/:., or while
+      # several remain. So, as cobra does, a lone candidate under the no-space directive gets a
+      # copy with a dot after it, and fish inserts what the two share.
       module Fish
         def self.render(program)
           <<~FISH
@@ -132,6 +135,12 @@ module Slipway
                     set -g __#{program}_directive (string replace -r '^:' '' -- $lines[-1])
                     set -e lines[-1]
                     set -g __#{program}_results $lines
+                end
+                if test (count $__#{program}_results) -eq 1; and test (math "bitand($__#{program}_directive, 2)") -ne 0
+                    set -l value (string split -m 1 \\t -- $__#{program}_results[1])[1]
+                    if not string match -qr '[@=/:.,]$' -- $value
+                        set -g __#{program}_results $value $value.
+                    end
                 end
             end
 

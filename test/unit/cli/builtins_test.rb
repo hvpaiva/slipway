@@ -75,7 +75,8 @@ class BuiltinsTest < Minitest::Test
     status, out, err = @fixture.run('__complete', '')
 
     assert_equal 0, status
-    assert_equal %w[get create config help version completion man], out.lines.map { it[/\A[^\t\n]+/] }.first(7)
+    assert_equal %w[get create explain config help version completion man],
+                 out.lines.map { it[/\A[^\t\n]+/] }.first(8)
     assert_equal ":4\n", out.lines.last
     assert_empty err
   end

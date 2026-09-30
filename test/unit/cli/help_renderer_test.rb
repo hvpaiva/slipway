@@ -9,6 +9,7 @@ class HelpRendererTest < Minitest::Test
     Basic Commands:
       get             Display one or many resources
       create          Create a resource
+      explain         Describe the fields of a resource type
 
     Settings Commands:
       config          Modify the configuration
