@@ -48,6 +48,8 @@ module Slipway
       end
       private_class_method :examples
 
+      def kinds = Resources::KINDS
+
       def run(runtime, context, _args, opts)
         dry_run = opts[:dry_run] == true
         session = Session.new(runtime.store, default_group: scope(runtime, context, opts).group, dry_run:)

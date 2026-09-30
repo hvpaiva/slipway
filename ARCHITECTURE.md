@@ -254,16 +254,19 @@ prints under the description and the man page renders as its EXIT STATUS section
 prints words a reader needs explained passes `glossaries:`. Reuse `Options::TYPE`,
 `Options.name_positional(factory)`, `Options::DRY_RUN` and friends; a verb that acts on
 repositories takes `Options.project_positional(factory)` and reads it with
-`Scope#project_targets`. Require the file in `commands.rb` and add the class to `VERBS` in help
-order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
-`Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
-group. Print results through `result_line` (`project/hldr created`), or through
-`Commands::Results` for a verb that prints one outcome per repository, and warnings through
-`Output.warning`, and raise `Slipway::Error` or `CLI::UsageError` rather than writing to
-stderr. Run `rake generate` so the new man page and help fixture land in `man/man1` and
-`test/fixtures/golden`, add the verb's row to the README Usage table and a line to
-`CHANGELOG.md`. A new file outside the directories `conventions_test.rb` lists goes into
-exactly one of its layer lists, and every file under `lib/` must load on its own.
+`Scope#project_targets`. A verb that acts on resources overrides `kinds` with the
+`Resources::Kind` values it accepts, which is how `api-resources -o wide` lists it under VERBS.
+Require the file in `commands.rb` and add the class to `VERBS` in help order;
+`test/unit/commands/registry_test.rb` asserts that order, holds a verb that takes a TYPE to every
+kind and one that takes only project names to projects, and fails when a `Commands::Base`
+subclass is reachable from `VERBS` neither directly nor as a subcommand of a group. Print results
+through `result_line` (`project/hldr created`), or through `Commands::Results` for a verb that
+prints one outcome per repository, and warnings through `Output.warning`, and raise
+`Slipway::Error` or `CLI::UsageError` rather than writing to stderr. Run `rake generate` so the
+new man page and help fixture land in `man/man1` and `test/fixtures/golden`, add the verb's row
+to the README Usage table and a line to `CHANGELOG.md`. A new file outside the directories
+`conventions_test.rb` lists goes into exactly one of its layer lists, and every file under `lib/`
+must load on its own.
 
 **An option.** Add a `CLI::Option` (`long:`, optional `short:`, `argument:` for a value,
 `enum:` for a closed set, `default:`, `repeatable:`, `required:`, `optional:` plus `implicit:`

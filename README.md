@@ -136,7 +136,7 @@ OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
-| `api-resources` | List the resource types with their short names and kind, and whether they live in a group. |
+| `api-resources` | List the resource types with their short names and kind, and whether they live in a group; `-o wide` adds the verbs that act on each. |
 | `version` | Print the version, the Ruby it runs on and the platform, as `slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]`. |
 | `help [COMMAND]` | Print the same text as `--help`. |
 
@@ -767,12 +767,17 @@ $ slipway api-resources
 NAME       SHORTNAMES   KIND      GROUPED
 groups     <none>       Group     false
 projects   proj         Project   true
+
+$ slipway api-resources -o wide
+NAME       SHORTNAMES   KIND      GROUPED   VERBS
+groups     <none>       Group     false     apply,create,delete,describe,edit,get,label
+projects   proj         Project   true      apply,create,delete,describe,diff,edit,fetch,get,label,rollout,sync
 ```
 
 A command accepts a type by its NAME, its singular or one of its SHORTNAMES, and KIND is what a
 manifest of the type declares in `kind`. GROUPED plays the part of kubectl's NAMESPACED: it says
-whether the resources of a type live in a group, so that `-n` and `-A` scope them. `-o name`
-prints the names alone.
+whether the resources of a type live in a group, so that `-n` and `-A` scope them. VERBS lists
+the commands that act on the type, and `-o name` prints the names alone.
 
 ## Configuration
 

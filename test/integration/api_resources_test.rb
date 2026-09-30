@@ -10,10 +10,16 @@ class APIResourcesIntegrationTest < Minitest::Test
     groups     <none>       Group     false
     projects   proj         Project   true
   TABLE
+  WIDE = <<~TABLE
+    NAME       SHORTNAMES   KIND      GROUPED   VERBS
+    groups     <none>       Group     false     apply,create,delete,describe,edit,get,label
+    projects   proj         Project   true      apply,create,delete,describe,diff,edit,fetch,get,label,rollout,sync
+  TABLE
 
   def test_prints_the_resource_types_in_each_format
     with_home do |env|
       assert_equal [0, TABLE, ''], slipway('api-resources', env:)
+      assert_equal [0, WIDE, ''], slipway('api-resources', '-o', 'wide', env:)
       assert_equal [0, "groups\nprojects\n", ''], slipway('api-resources', '-o', 'name', env:)
     end
   end
@@ -42,7 +48,7 @@ class APIResourcesIntegrationTest < Minitest::Test
 
   def test_json_is_refused_with_the_formats_it_prints
     with_home do |env|
-      assert_equal [2, '', "error: invalid argument \"json\" for --output: must be one of table, name\n" \
+      assert_equal [2, '', "error: invalid argument \"json\" for --output: must be one of table, wide, name\n" \
                            "See 'slipway api-resources --help' for usage.\n"],
                    slipway('api-resources', '-o', 'json', env:)
     end

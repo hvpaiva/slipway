@@ -57,6 +57,8 @@ module Slipway
           )
         end
 
+        def kinds = [Resources::PROJECTS]
+
         def run(runtime, context, args, opts)
           scope = scope(runtime, context, opts)
           names = scope.project_targets(args, verb: 'view the rollout history of')

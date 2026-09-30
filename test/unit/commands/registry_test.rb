@@ -42,6 +42,17 @@ class CommandsRegistryTest < Minitest::Test
     assert_includes handlers, Slipway::Commands::ConfigCommand::Path
   end
 
+  def test_the_kinds_a_verb_acts_on_follow_its_arguments
+    verbs = Slipway::Commands::VERBS.flat_map { leaves(it.command(->(_context, _opts) { raise 'unused' })) }
+    typed, rest = verbs.partition { it.positionals.include?(Slipway::Commands::Options::TYPE) }
+    named, bare = rest.partition { it.positionals.any? }
+    every = %w[projects groups]
+
+    assert_equal %w[get describe create delete edit label].to_h { [it, every] }, kinds_by_name(typed)
+    assert_equal %w[fetch diff sync history undo unpin pause resume].to_h { [it, %w[projects]] }, kinds_by_name(named)
+    assert_equal({ 'apply' => every, 'view' => [], 'path' => [], 'api-resources' => [] }, kinds_by_name(bare))
+  end
+
   def test_command_classes_reach_every_descendant_but_abstract_bases
     base = Class.new
     abstract = Class.new(base)
@@ -112,6 +123,10 @@ class CommandsRegistryTest < Minitest::Test
   def command_classes(base) = descendants(base).select { it.respond_to?(:command) }
 
   def handler_classes(command) = [command.handler.class, *command.subcommands.flat_map { handler_classes(it) }]
+
+  def leaves(command) = command.group? ? command.subcommands.flat_map { leaves(it) } : [command]
+
+  def kinds_by_name(commands) = commands.to_h { [it.name, it.handler.kinds.map(&:plural)] }
 
   def write_config(env, text)
     path = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')

@@ -98,7 +98,7 @@ class CompletionIntegrationTest < Minitest::Test
     with_home do |env|
       assert_equal [0, "api-resources\tPrint the supported resource types\n:4\n", ''],
                    slipway('__complete', 'api', env:)
-      assert_equal [0, "table\nname\n:4\n", ''], slipway('__complete', 'api-resources', '-o', '', env:)
+      assert_equal [0, "table\nwide\nname\n:4\n", ''], slipway('__complete', 'api-resources', '-o', '', env:)
       assert_equal [0, "--no-headers\tWhen using the default output format, don't print headers.\n:4\n", ''],
                    slipway('__complete', 'api-resources', '--no', env:)
       assert_equal [0, ":4\n", ''], slipway('__complete', 'api-resources', '', env:)
