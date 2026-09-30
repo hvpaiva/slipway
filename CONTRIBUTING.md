@@ -247,9 +247,11 @@ docker, it stops and tells you what to install.
 
 - Conventional Commits in English and the imperative: `feat: add the label verb`,
   `fix: prune the group directory after the last delete`, `docs:`, `test:`, `refactor:`,
-  `chore:`, `ci:`. An optional scope is allowed, as in `chore(deps): bump rubocop`. The subject
-  git writes for a revert, `Revert "<subject>"` (or `Reapply "<subject>"` for a revert of a
-  revert), is accepted when the quoted subject follows these rules.
+  `chore:`, `ci:`. The summary starts with a lowercase letter. An optional scope is allowed, as
+  in `chore(deps): bump rubocop`, and a `!` before the colon marks a breaking change, as in
+  `feat!: rename the group key`. The subject git writes for a revert, `Revert "<subject>"` (or
+  `Reapply "<subject>"` for a revert of a revert), is accepted when the quoted subject follows
+  these rules.
 - One change per commit, with its tests and generated files. No `WIP`, `fixup!`, `amend!` or
   `squash!` commits in a pull request, and no summary that starts with `wip`.
 - Commits are signed by their author (`git commit -S`, with an SSH or GPG key registered on
