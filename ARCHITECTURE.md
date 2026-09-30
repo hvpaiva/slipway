@@ -136,6 +136,15 @@ value differs), as an SGR parameter string or an Array for roles cycled by index
 holds a copy of both presets and `seams_test.rb` checks that every `State::ROLES` entry exists
 in both themes.
 
+**A sync action.** Name the drift in `Drift` (its type in `TYPES`, and in `MOVES` when it
+changes a working tree) with its message and, for a refusal, a `BLOCKERS` sentence built with
+`Drift.blocker`. `Plan::Planner` decides when the action applies and which obstacles block it;
+it reads only the inspection it is given, so its tests need no repository. Only
+`Sync::Executor` performs the action, through a `Git::Repository` method, inside
+`Fetcher#exclusively` and with its own reflog action. The action reports a result word in
+`Commands::Sync::ROLES` whose role exists in both themes. It keeps every promise in
+[SECURITY.md](SECURITY.md#safety-promises), or updates that list in the same pull request.
+
 ## Testing
 
 Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under `test/`;
