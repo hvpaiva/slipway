@@ -12,7 +12,7 @@ module Slipway
   # planned by Plan.for, and its checked-out branch fast-forwarded when the plan says so. It
   # observes and plans on the workers and moves branches on the calling thread, one project at a
   # time, so no two of its writes run at once.
-  class Sync
+  class Syncer
     # The plan for a project whose fetch went through, made from what git answered after it.
     Observed = Data.define(:project, :inspection, :fetched, :plan)
 

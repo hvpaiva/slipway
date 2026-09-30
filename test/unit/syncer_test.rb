@@ -4,7 +4,7 @@ require 'test_helper'
 
 # How sync runs: failures kept to their project, one write at a time, a dry run that only reads,
 # and git's refusals and races relayed as they come.
-class SyncExecutorTest < Minitest::Test
+class SyncerTest < Minitest::Test
   include CommandsHelper
 
   NEW = 'e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3'

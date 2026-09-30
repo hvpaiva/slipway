@@ -6,11 +6,10 @@ require_relative 'fetch'
 require_relative 'results'
 require_relative '../fetcher'
 require_relative '../outcome'
-require_relative '../sync'
+require_relative '../syncer'
 
 module Slipway
   module Commands
-    # Named apart from Slipway::Sync, the executor it drives.
     class SyncCommand < Base
       # Raised once every line has printed: the lines already say what went wrong, so it adds no
       # error line, only exit status 1.
@@ -48,9 +47,9 @@ module Slipway
                '--dry-run every line and the count end in (dry run). Ctrl-C stops the git processes slipway ' \
                'started and exits with status 130; a fast-forward it stops ends as one stopped at the deadline.',
         entries: {
-          Sync::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits it ' \
-                                  'gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the ' \
-                                  "move; a move up to a spec.revision pin ends in #{Sync::TO_PIN}.",
+          Syncer::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits ' \
+                                    'it gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes ' \
+                                    "the move; a move up to a spec.revision pin ends in #{Syncer::TO_PIN}.",
           Outcome::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
           Outcome::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
                                 'moved remote-tracking refs.',
@@ -74,7 +73,7 @@ module Slipway
         }
       )
       # In the order the closing summary counts them.
-      ROLES = { Sync::FAST_FORWARDED => :result_changed, Outcome::FETCHED => :result_changed,
+      ROLES = { Syncer::FAST_FORWARDED => :result_changed, Outcome::FETCHED => :result_changed,
                 Outcome::UNCHANGED => :result_unchanged, Outcome::SKIPPED => :result_skipped,
                 Outcome::PAUSED => :result_paused, Outcome::DENIED => :result_denied,
                 Outcome::FAILED => :result_failed }.freeze
@@ -110,7 +109,7 @@ module Slipway
         names = scope.project_targets(args, verb: 'sync')
         dry_run = opts[:dry_run] == true
         fetcher = Fetcher.new(runtime, prune: opts[:prune] == true, dry_run:)
-        syncer = Sync.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
+        syncer = Syncer.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
         results = Results.new(context, ROLES, dry_run:)
         scope.select(Resources::PROJECTS, names) do |projects|
           next scope.report_none(Resources::PROJECTS) if projects.empty?

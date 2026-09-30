@@ -15,7 +15,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Reconciliation | `drift.rb`, `plan.rb`, `command_line.rb`, `rollout.rb` | `Drift`, `Plan`, `CommandLine` (the git command lines slipway prints and never runs) and `Rollout::History`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
 | Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
-| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Sync`, `Rollback` and `Pool`. |
+| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `syncer.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Syncer`, `Rollback` and `Pool`. |
 
 The domain holds the rules for what may enter the registry and how it is stored: `Store` writes
 each manifest as a plain file, `Manifest` parses and checks one, and `Yaml` writes every YAML
@@ -48,9 +48,9 @@ I/O. `Runtime` bundles the config, paths, store, git, inspector and clock of one
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values, the plan and output; output paints through the command layer's `Context`. The
 command layer and the domain (with the git adapter and reconciliation) sit at the bottom:
-neither requires commands, views, the runtime, the inspector, the fetcher, sync, the rollback,
-the `Outcome` they report or the pool. The command layer requires one domain file, the one
-allowed edge: `cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a
+neither requires commands, views, the runtime, the inspector, the fetcher, the syncer, the
+rollback, the `Outcome` they report or the pool. The command layer requires one domain file, the
+one allowed edge: `cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a
 `Slipway::Error`. The domain may use the command layer: `labels.rb`, `selector.rb` and
 `field_selector.rb` raise `CLI::UsageError`, and `config.rb` validates against `CLI::Theme` and
 `CLI::Style`. `test/unit/conventions_test.rb` reads every `require_relative` under `lib/`, fails
@@ -184,7 +184,7 @@ There are two pool sizes. `Inspector` reads repositories on a fixed `DEFAULT_WOR
 threads: a read is local, and the `parallel` setting paces network commands only.
 `Commands::Results` runs the work of `fetch` and `sync` on `parallel` threads and prints each
 result through `each_ordered` as soon as every earlier one is done.
-`Sync` splits sync in two: its workers inspect, fetch through `Fetcher`, inspect
+`Syncer` splits sync in two: its workers inspect, fetch through `Fetcher`, inspect
 again and plan, and the calling thread fast-forwards each project as its result comes up,
 inside `Fetcher#exclusively`, so no two of its writes run at once. `Rollback` runs on the
 calling thread for its one project and is the only caller of the move back.
@@ -192,7 +192,7 @@ calling thread for its one project and is the only caller of the move back.
 Ctrl-C raises `Interrupt` in the main thread. The pool's `ensure` kills its workers, each
 runner's `ensure` stops its process group, and `CLI::Runner#execute` writes a line feed to
 stderr, so the shell prompt starts on its own line, and returns 130. `test/unit/pool_test.rb`,
-`test/unit/sync_executor_test.rb` and `test/integration/fetch_process_test.rb` pin this.
+`test/unit/syncer_test.rb` and `test/integration/fetch_process_test.rb` pin this.
 
 ## Printing untrusted text
 
@@ -217,7 +217,7 @@ passes them to the terminal. SECURITY.md names it.
 the writes to a working tree, the environment git gets and what reaches the terminal. A few
 places keep those promises: `Git::Runner` spawns every git process and sets its environment;
 `Git::Repository` holds every git argv, its `FastForwarding` part the fast-forward, which only
-`Sync` and `Rollback` call, and its `RollingBack` part the reset, which only
+`Syncer` and `Rollback` call, and its `RollingBack` part the reset, which only
 `Rollback` calls; `Manifest`, through `Git::Url` and `Git::BranchName`, checks each field that
 can reach git before a manifest enters the store; `Output.plain`, `CLI::Style.plain` and
 `Git::Url.redact` treat what is printed; and `Plan` and the git errors quote each word they put
@@ -315,7 +315,7 @@ changes a working tree) with its message and its line in `TYPE_MEANINGS` and, fo
 `BLOCKERS` sentence built with `Drift.blocker` and a line in `BLOCKER_MEANINGS`; the README
 tables follow both. `Plan::Planner` decides when the action applies and which obstacles block
 it; it reads only the inspection it is given, so its tests need no repository. Only
-`Sync` performs the action, through a `Git::Repository` method, inside
+`Syncer` performs the action, through a `Git::Repository` method, inside
 `Fetcher#exclusively` and with its own reflog action. The action reports a result word in
 `Commands::SyncCommand::ROLES` whose role exists in both themes, and the verb's Results
 glossary explains it. It keeps every promise in [SECURITY.md](SECURITY.md#safety-promises), or
