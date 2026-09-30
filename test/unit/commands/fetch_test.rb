@@ -86,7 +86,7 @@ class FetchTest < Minitest::Test
       asked = runtime.git.calls.filter_map { it[1] if it.first == :default_remote? }
 
       assert_equal [0, expected, "3 projects: 1 fetched, 1 unchanged, 1 skipped\n"], [status, out, err]
-      assert_equal(%w[fork twins], asked.map { File.basename(it) })
+      assert_equal(%w[fork twins], asked.map { File.basename(it) }.sort)
     end
   end
 
