@@ -54,10 +54,10 @@ class FieldSelectorTest < Minitest::Test
 
   # Under the C locale ARGV is BINARY while git and the manifest hand over UTF-8.
   def test_a_binary_expression_compares_as_utf8
-    object = { 'status' => { 'branch' => 'ação' } }
+    object = { 'status' => { 'branch' => 'café' } }
 
-    assert selects?('status.branch=ação'.b, object)
-    refute selects?('status.branch!=ação'.b, object)
+    assert selects?('status.branch=café'.b, object)
+    refute selects?('status.branch!=café'.b, object)
     error = assert_raises(Slipway::CLI::UsageError) { parse("status.branch=\xFF".b) }
     assert_equal 'invalid field selector "status.branch=\\xFF": invalid UTF-8', error.message
   end
