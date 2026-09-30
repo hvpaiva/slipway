@@ -158,6 +158,31 @@ class GitRepositoryTest < Minitest::Test
     assert_nil @repo.remote_url(fixture('clean'))
   end
 
+  # A fetch without a remote argument takes the branch's remote, else the only remote, else
+  # origin, and with none of them fetches nothing yet exits 0.
+  def test_default_remote_is_whether_git_would_find_a_remote_to_fetch_from
+    dir = fixture('clean')
+    answers = [@repo.default_remote?(dir)]
+    git!(dir, 'remote', 'add', 'github', "#{dir}-github.git")
+    answers << @repo.default_remote?(dir)
+    git!(dir, 'remote', 'add', 'gitlab', "#{dir}-gitlab.git")
+    answers << @repo.default_remote?(dir)
+    git!(dir, 'config', 'branch.main.remote', 'gitlab')
+    answers << @repo.default_remote?(dir)
+    git!(dir, 'checkout', '-q', '--detach')
+
+    assert_equal [false, true, false, true, false], answers << @repo.default_remote?(dir)
+  end
+
+  def test_default_remote_raises_when_git_fails_for_another_reason
+    dir = fixture('clean')
+    repo = Slipway::Git::Repository.new(runner: CannedRunner.new(128, "fatal: bad config line 3 in file .git/config\n"))
+
+    error = assert_raises(Slipway::Git::Error) { repo.default_remote?(dir) }
+
+    assert_equal "#{dir}: git exited with status 128: fatal: bad config line 3 in file .git/config", error.message
+  end
+
   def test_a_missing_path_raises_without_spawning_git
     missing = File.join(@root, 'missing')
     repo = Slipway::Git::Repository.new(runner: Slipway::Git::Runner.new(binary: 'slipway-missing-git'))

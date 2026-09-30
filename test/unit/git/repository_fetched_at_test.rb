@@ -48,17 +48,33 @@ class GitRepositoryFetchedAtTest < Minitest::Test
     assert_equal @repo.fetched_at(dir), repo.fetched_at(dir)
   end
 
-  def test_fetched_at_asks_git_where_a_worktree_keeps_fetch_head
-    dir = fixture('stale')
-    worktree = File.join(@root, 'worktree')
-    git!(dir, 'worktree', 'add', '-q', '-b', 'side', worktree)
+  def test_a_fetch_in_a_linked_worktree_dates_the_whole_repository
+    dir, worktree = linked_worktree
 
     assert_nil @repo.fetched_at(worktree)
 
     @repo.fetch(worktree, prune: false)
 
     assert_instance_of Time, @repo.fetched_at(worktree)
-    assert_nil @repo.fetched_at(dir)
+    assert_equal @repo.fetched_at(worktree), @repo.fetched_at(dir)
+  end
+
+  def test_a_fetch_in_the_main_worktree_dates_a_linked_one
+    dir, worktree = linked_worktree
+    @repo.fetch(dir, prune: false)
+
+    assert_instance_of Time, @repo.fetched_at(dir)
+    assert_equal @repo.fetched_at(dir), @repo.fetched_at(worktree)
+  end
+
+  def test_the_newest_fetch_head_among_the_worktrees_wins
+    dir, worktree = linked_worktree
+    @repo.fetch(dir, prune: false)
+    @repo.fetch(worktree, prune: false)
+    File.utime(Time.utc(2026, 1, 1), Time.utc(2026, 1, 1), File.join(dir, '.git', 'FETCH_HEAD'))
+    newest = File.mtime(File.join(dir, '.git', 'worktrees', 'worktree', 'FETCH_HEAD')).utc
+
+    assert_equal [newest, newest], [@repo.fetched_at(dir), @repo.fetched_at(worktree)]
   end
 
   def test_fetched_at_of_a_missing_path_or_a_plain_directory_raises
@@ -69,4 +85,11 @@ class GitRepositoryFetchedAtTest < Minitest::Test
   private
 
   def fixture(state) = build_repo(File.join(@root, state), state)
+
+  def linked_worktree
+    dir = fixture('stale')
+    worktree = File.join(@root, 'worktree')
+    git!(dir, 'worktree', 'add', '-q', '-b', 'side', worktree)
+    [dir, worktree]
+  end
 end

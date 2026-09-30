@@ -5,12 +5,15 @@ require 'test_helper'
 class StatesIntegrationTest < Minitest::Test
   include IntegrationHelper
 
+  # BRANCH, STATUS and FETCHED. The gone fixture fetched to prune its branch, so only its FETCHED
+  # is a duration.
   EXPECTED = {
-    'ahead' => %w[main Ahead], 'behind' => %w[main Behind], 'clean' => %w[main Clean],
-    'conflicted' => %w[main Conflicted], 'detached' => %w[(detached) Detached], 'diverged' => %w[main Diverged],
-    'gone' => %w[feature Gone], 'missing' => %w[<none> Missing], 'plain' => %w[<none> NotARepo],
-    'staged' => %w[main Dirty], 'stash' => %w[main Clean], 'unborn' => %w[main Unborn],
-    'unstaged' => %w[main Dirty], 'untracked' => %w[main Dirty]
+    'ahead' => %w[main Ahead <never>], 'behind' => %w[main Behind <never>], 'clean' => %w[main Clean <never>],
+    'conflicted' => %w[main Conflicted <never>], 'detached' => %w[(detached) Detached <never>],
+    'diverged' => %w[main Diverged <never>], 'gone' => ['feature', 'Gone', :age],
+    'missing' => %w[<none> Missing <none>], 'plain' => %w[<none> NotARepo <none>],
+    'staged' => %w[main Dirty <never>], 'stash' => %w[main Clean <never>], 'unborn' => %w[main Unborn <never>],
+    'unstaged' => %w[main Dirty <never>], 'untracked' => %w[main Dirty <never>]
   }.freeze
   FIXTURE_OF = { 'missing' => nil, 'plain' => 'plain_dir' }.freeze
 
@@ -24,8 +27,7 @@ class StatesIntegrationTest < Minitest::Test
       status, out, err = slipway('get', 'projects', env:)
 
       assert_equal [0, ''], [status, err]
-      assert_table [%w[NAME BRANCH STATUS AGE], *EXPECTED.map { |name, (branch, state)| [name, branch, state, :age] }],
-                   out
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE], *EXPECTED.map { |name, cells| [name, *cells, :age] }], out
     end
   end
 
@@ -57,8 +59,9 @@ class StatesIntegrationTest < Minitest::Test
 
       assert_equal 0, status
       assert_equal "warning: git executable \"git\" not found on PATH\n", err
-      assert_table [%w[NAME BRANCH STATUS AGE], ['clean', '<none>', 'Unknown', :age],
-                    ['dirty', '<none>', 'Unknown', :age], ['missing', '<none>', 'Missing', :age]], out
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE], ['clean', '<none>', 'Unknown', '<none>', :age],
+                    ['dirty', '<none>', 'Unknown', '<none>', :age], ['missing', '<none>', 'Missing', '<none>', :age]],
+                   out
       assert_equal [0, "project/clean\nproject/dirty\nproject/missing\n", ''],
                    slipway('get', 'projects', '-o', 'name', env: env.merge('PATH' => '/nonexistent'))
     end

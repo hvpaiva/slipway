@@ -51,7 +51,7 @@ module Slipway
     # Credentials, a passphrase or a host key confirmation were missing or refused, and network
     # commands never prompt for them.
     class AuthRequired < Error
-      def initialize(path) = super(path, 'authentication required and prompts are disabled')
+      def initialize(path, detail = 'authentication required and prompts are disabled') = super
 
       def hint = "Run 'git -C #{Shellwords.escape(path)} fetch' once in a terminal to see what git needs."
     end

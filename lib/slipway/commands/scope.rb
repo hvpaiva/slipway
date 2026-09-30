@@ -37,6 +37,16 @@ module Slipway
         [kind, names]
       end
 
+      # A verb that acts on repositories names projects alone, bare or in the TYPE/NAME form
+      # `get projects -o name` prints, since a group holds no repository of its own.
+      def project_targets(words, verb:)
+        kind, names = words.any? { it.include?('/') } ? slashed(words) : [Resources::PROJECTS, words]
+        raise CLI::UsageError, "cannot #{verb} a group" unless kind == Resources::PROJECTS
+
+        names.each { check_name(kind, it) }
+        names
+      end
+
       def target(words)
         kind, names = targets(words)
         raise CLI::UsageError, NAME_MISSING if names.empty?

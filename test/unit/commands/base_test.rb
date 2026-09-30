@@ -39,6 +39,14 @@ class BaseTest < Minitest::Test
     end
   end
 
+  def test_result_text_neutralizes_the_name_and_puts_the_reason_before_the_dry_run_suffix
+    context = Slipway::CLI::Context.new(out: StringIO.new, err: StringIO.new).with_color('always')
+    text = Slipway::Commands::Base.result_text(context, Slipway::Resources::PROJECTS, "a\e[2Jb", 'skipped',
+                                               :result_skipped, reason: 'Missing', dry_run: true)
+
+    assert_equal "project/a^[[2Jb \e[33mskipped\e[0m (Missing) \e[36m(dry run)\e[0m", text
+  end
+
   def test_the_factory_receives_the_context_and_the_parsed_options
     received = []
     factory = lambda do |context, opts|

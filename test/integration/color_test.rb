@@ -6,12 +6,15 @@ require 'pty'
 class ColorIntegrationTest < Minitest::Test
   include IntegrationHelper
 
-  HEADER = "\e[1mNAME    BRANCH   STATUS     AGE\e[0m"
+  HEADER = "\e[1mNAME    BRANCH   STATUS     FETCHED   AGE\e[0m"
+  NEVER = '\e\[90;3m<never>\e\[0m'
+  NONE = '\e\[90;3m<none>\e\[0m'
+  CLEAN = '\e\[32mClean\e\[0m'
   # The AGE cell is painted too, so it is the one cell matched loosely.
-  CLEAN_ROW = /\A\e\[37mclean\e\[0m   \e\[36mmain\e\[0m     \e\[32mClean\e\[0m      \e\[36m#{DURATION}\e\[0m\z/
-  PLAIN_ROW = /\A\e\[37mplain\e\[0m   \e\[90;3m<none>\e\[0m   \e\[31mNotARepo\e\[0m   \e\[36m#{DURATION}\e\[0m\z/
-  LIGHT_ROW = /\A\e\[30mclean\e\[0m   \e\[34mmain\e\[0m     \e\[32mClean\e\[0m      \e\[34m#{DURATION}\e\[0m\z/
-  PLAIN = "NAME    BRANCH   STATUS     AGE\n"
+  CLEAN_ROW = /\A\e\[37mclean\e\[0m   \e\[36mmain\e\[0m     #{CLEAN}      #{NEVER}   \e\[37m#{DURATION}\e\[0m\z/
+  PLAIN_ROW = /\A\e\[37mplain\e\[0m   #{NONE}   \e\[31mNotARepo\e\[0m   #{NONE}    \e\[37m#{DURATION}\e\[0m\z/
+  LIGHT_ROW = /\A\e\[30mclean\e\[0m   \e\[34mmain\e\[0m     #{CLEAN}      #{NEVER}   \e\[30m#{DURATION}\e\[0m\z/
+  PLAIN = "NAME    BRANCH   STATUS     FETCHED   AGE\n"
 
   def two(env)
     seed(env, manifest('Project', 'clean', path: repo(env, 'clean')),

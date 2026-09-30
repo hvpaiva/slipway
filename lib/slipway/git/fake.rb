@@ -7,7 +7,7 @@ module Slipway
     # +calls+ lists every question asked, as [name, path] or [:fetch, path, { prune: }], so a test
     # can tell which repositories a command reached.
     class Fake
-      Entry = Data.define(:status, :commit, :remote, :fetch, :fetched_at)
+      Entry = Data.define(:status, :commit, :remote, :remotes, :fetch, :fetched_at)
 
       NOTHING_FETCHED = FetchResult.new(updates: [].freeze)
 
@@ -19,10 +19,12 @@ module Slipway
       end
 
       # +fetch+ is the FetchResult a fetch returns, or an error raised the way fail raises it.
-      def add(path, status:, commit: nil, remote: nil, fetch: NOTHING_FETCHED, fetched_at: nil)
+      # +remotes+ names the configured remotes, origin alone when +remote+ is its URL.
+      def add(path, status:, commit: nil, remote: nil, remotes: nil, fetch: NOTHING_FETCHED, fetched_at: nil)
         key = File.expand_path(path)
         @failures.delete(key)
-        @entries[key] = Entry.new(status:, commit:, remote:, fetch:, fetched_at:)
+        remotes ||= remote ? ['origin'] : []
+        @entries[key] = Entry.new(status:, commit:, remote:, remotes:, fetch:, fetched_at:)
         self
       end
 
@@ -50,7 +52,22 @@ module Slipway
         outcome
       end
 
+      # Read from the canned fetch, since the real fetch raises LocalUpstream exactly when this holds.
+      def local_upstream?(path)
+        key = File.expand_path(path)
+        failure(key, entry(:local_upstream?, key).fetch).is_a?(LocalUpstream)
+      end
+
+      # Git takes the branch's remote, which an upstream implies, else the only remote, else origin.
+      def default_remote?(path)
+        answer = entry(:default_remote?, path)
+        [answer.status.upstream, answer.remote].any? || answer.remotes.size == 1
+      end
+
       def fetched_at(path) = entry(:fetched_at, path).fetched_at
+
+      # Each path is a repository of its own.
+      def common_dir(path) = File.expand_path(path)
 
       private
 

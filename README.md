@@ -28,15 +28,15 @@ $ slipway create project notes --path '~/dev/notes' --label kind=docs
 project/notes created
 
 $ slipway get projects -A
-GROUP      NAME    BRANCH   STATUS   AGE
-default    notes   main     Ahead    0s
-personal   augur   main     Dirty    1s
-personal   hldr    main     Clean    1s
+GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
+default    notes   main     Ahead    2d        0s
+personal   augur   main     Dirty    <never>   1s
+personal   hldr    main     Clean    5h        1s
 
 $ slipway get projects -n personal -o wide
-NAME    BRANCH   STATUS   AGE   PATH          HEAD      LAST-COMMIT
-augur   main     Dirty    1s    ~/dev/augur   8f9cdbb   11h
-hldr    main     Clean    1s    ~/dev/hldr    e001395   32h
+NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT
+augur   main     Dirty    <never>   1s    ~/dev/augur   8f9cdbb   11h
+hldr    main     Clean    5h        1s    ~/dev/hldr    e001395   32h
 
 $ slipway describe project augur -n personal
 Name:         augur
@@ -59,6 +59,7 @@ Repository:
   Conflicted:  0
   Stashes:     0
   Remote:      <none>
+  Last Fetch:  <never>
 Last Commit:
   Hash:     8f9cdbbc5ff8982322347d8e6a76ea3ab8821b51
   Author:   Highlander <contact@hvpaiva.dev>
@@ -95,6 +96,7 @@ bundle exec rake install
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
+| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `denied` or `failed`. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -118,17 +120,17 @@ first, and `slipway delete group default` is refused.
 
 ```console
 $ slipway get projects -A -l lang=rust
-GROUP      NAME   BRANCH   STATUS   AGE
-personal   hldr   main     Clean    1s
+GROUP      NAME   BRANCH   STATUS   FETCHED   AGE
+personal   hldr   main     Clean    5h        1s
 ```
 
 Set-based:
 
 ```console
 $ slipway get projects -A -l 'lang in (rust,bash)'
-GROUP      NAME    BRANCH   STATUS   AGE
-personal   augur   main     Dirty    1s
-personal   hldr    main     Clean    1s
+GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
+personal   augur   main     Dirty    <never>   1s
+personal   hldr    main     Clean    5h        1s
 ```
 
 `key!=value`, `key notin (a,b)`, `key` (exists) and `!key` (does not exist) work as well, and
@@ -142,7 +144,11 @@ commit) to projects and DESCRIPTION to groups. `-o json` and `-o yaml` print the
 plus a `status` section, as one object when a single name is given and as a `kind: List`
 otherwise. `-o name` prints `project/hldr` lines. `--no-headers` drops the header row and
 `--show-labels` appends a LABELS column with `lang=rust` style pairs. AGE is the time since
-the resource was registered, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`).
+the resource was registered, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`). FETCHED is the
+time since the repository was last fetched, by slipway or by git itself and from any of its
+worktrees, and reads `<never>` when no fetch has run there or the last one failed: git empties
+`FETCH_HEAD` as a fetch starts, so a failed fetch leaves no time behind. `describe` shows the
+same time as `Last Fetch` and json and yaml as `status.lastFetch`.
 
 ### Status words
 
@@ -157,12 +163,60 @@ STATUS is one word per project, chosen in this order of precedence:
 | `Detached` | HEAD points at a commit rather than a branch. |
 | `Unborn` | The branch has no commits yet. |
 | `Dirty` | Staged, modified or untracked files are present. |
-| `Gone` | An upstream is configured but its ref no longer exists. |
-| `Diverged` | The branch is both ahead of and behind its upstream. |
+| `Gone` | An upstream is configured but its ref no longer exists, as of the last fetch (FETCHED). |
+| `Diverged` | The branch is both ahead of and behind its upstream, as of the last fetch (FETCHED). |
 | `Ahead` | Commits not yet pushed to the upstream. |
-| `Behind` | Commits on the upstream not yet pulled. |
+| `Behind` | Commits on the upstream not yet pulled, as of the last fetch (FETCHED). |
 | `Clean` | Nothing to do. |
 | `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
+
+`get` and `describe` never contact a remote, so the words that compare a branch with its
+upstream are as fresh as the last fetch. `slipway fetch` refreshes them.
+
+### Fetching
+
+```console
+$ slipway fetch -A
+project/notes fetched
+  origin/main 1c2d3e4..5f6a7b8
+project/augur skipped (NoRemote)
+  no upstream, no origin and no single remote to fetch from
+project/hldr unchanged
+3 projects: 1 fetched, 1 unchanged, 1 skipped
+```
+
+`slipway fetch` runs `git fetch` in the projects of the current group, in the projects named
+(`hldr` or `project/hldr`, so `slipway get projects -o name | xargs slipway fetch` works), in
+the ones `-l` selects, or with `-A` in every project. Git fetches from the remote of the
+checked-out branch, else from the only remote, else from origin, as a `git fetch` typed in the
+repository would: slipway passes no remote, and nothing from a manifest reaches git's arguments.
+Git updates the refs the remote's fetch refspecs name (remote-tracking refs by default), tags and
+`FETCH_HEAD`, never the checked-out branch or the working tree.
+`slipway fetch -A && slipway get projects -A` shows every STATUS as of now.
+
+Up to `parallel` projects (4 by default) fetch at once. Each prints one result, in the order the
+projects are listed, as soon as it and every project before it are done:
+
+| Result | Meaning |
+| --- | --- |
+| `fetched` | The remote moved refs. Up to five follow, as `origin/main a1b2c3d..e4f5a6b`, then `and N more`. |
+| `unchanged` | The remote answered and had nothing new. |
+| `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (`NoRemote`), or its branch tracks a local branch (`LocalUpstream`). |
+| `denied (AuthRequired)` | Git needed a password, a passphrase or a host key. Run the `git -C PATH fetch` printed below it once in a terminal to see what git needs. |
+| `failed (Reason)` | The fetch ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). |
+
+When more than one project ran, a count of the results closes the run on stderr. The exit
+status is 1 when any project was denied or failed, once every line has printed. `--prune` also
+removes the remote-tracking refs of branches deleted on the remote. `--dry-run=client` reads the
+repositories as `get` does and prints `fetched (dry run)` for each project a fetch would reach,
+without running `git fetch`.
+
+Git never prompts during a fetch: slipway sets `GIT_TERMINAL_PROMPT=0`, points `GIT_ASKPASS` and
+`SSH_ASKPASS` at `false`, and sets `SSH_ASKPASS_REQUIRE=force` so ssh never reads the terminal.
+Your ssh configuration, `SSH_AUTH_SOCK` and credential helpers are used as they are. Only the
+transports in `protocols` are allowed, a fetch that runs past `networkTimeout` is killed with
+every process it started, submodules are not fetched, and gc, automatic maintenance and bundle
+URIs are off. On Ctrl-C slipway stops the git processes it started and exits with status 130.
 
 ### Manifests
 
@@ -236,6 +290,7 @@ theme: light             # dark or light
 editor: code --wait
 group: personal          # used when -n is not given
 networkTimeout: 60       # seconds before a git network command is killed
+parallel: 4              # git network commands at once, from 1 to 16
 protocols: [ssh, https]  # transports git may use; add file for local mirrors
 ```
 
@@ -253,6 +308,7 @@ named in the URL, and `fd` reads from file descriptors.
 | `SLIPWAY_EDITOR` | Editor for `edit`; outranks the config key, `VISUAL` and `EDITOR`. |
 | `SLIPWAY_GROUP` | Group used when `-n` is not given. |
 | `SLIPWAY_NETWORK_TIMEOUT` | Seconds a git network command may run before it is killed. |
+| `SLIPWAY_PARALLEL` | How many git network commands run at once, from 1 to 16. |
 | `SLIPWAY_PROTOCOLS` | Transports git may use in network commands, separated by colons: `ssh:https`. |
 | `SLIPWAY_DEBUG` | When non-empty, unexpected errors also print their class and backtrace. |
 | `NO_COLOR` | When non-empty, disables color in `auto` mode. |

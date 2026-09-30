@@ -6,24 +6,24 @@ class GetTest < Minitest::Test
   include CommandsHelper
 
   WIDE = <<~TABLE
-    NAME    BRANCH   STATUS   AGE   PATH          HEAD      LAST-COMMIT
-    fresh   main     Unborn   3h    ~/dev/fresh   <none>    <none>
-    hldr    main     Clean    3h    ~/dev/hldr    a1b2c3d   45m
+    NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT
+    fresh   main     Unborn   <never>   3h    ~/dev/fresh   <none>    <none>
+    hldr    main     Clean    12m       3h    ~/dev/hldr    a1b2c3d   45m
   TABLE
   ALL_GROUPS = <<~TABLE
-    GROUP     NAME   BRANCH   STATUS   AGE
-    default   hldr   main     Clean    3h
-    work      job    main     Clean    3h
+    GROUP     NAME   BRANCH   STATUS   FETCHED   AGE
+    default   hldr   main     Clean    <never>   3h
+    work      job    main     Clean    <never>   3h
   TABLE
   BROKEN = <<~TABLE
-    NAME     BRANCH   STATUS     AGE
-    gone     <none>   Missing    3h
-    plain    <none>   NotARepo   3h
-    theirs   <none>   Unsafe     3h
+    NAME     BRANCH   STATUS     FETCHED   AGE
+    gone     <none>   Missing    <none>    3h
+    plain    <none>   NotARepo   <none>    3h
+    theirs   <none>   Unsafe     <none>    3h
   TABLE
-  PAINTED = "\e[37mhldr\e[0m    \e[36mmain\e[0m     \e[32mClean\e[0m     \e[36m3h\e[0m\n" \
-            "\e[37mnotes\e[0m   \e[36mmain\e[0m     \e[33mDirty\e[0m     \e[36m3h\e[0m\n" \
-            "\e[37mslow\e[0m    \e[90;3m<none>\e[0m   \e[90;3mUnknown\e[0m   \e[36m3h\e[0m\n"
+  PAINTED = "\e[37mhldr\e[0m    \e[36mmain\e[0m     \e[32mClean\e[0m     \e[36m12m\e[0m       \e[37m3h\e[0m\n" \
+            "\e[37mnotes\e[0m   \e[36mmain\e[0m     \e[33mDirty\e[0m     \e[90;3m<never>\e[0m   \e[37m3h\e[0m\n" \
+            "\e[37mslow\e[0m    \e[90;3m<none>\e[0m   \e[90;3mUnknown\e[0m   \e[90;3m<none>\e[0m    \e[37m3h\e[0m\n"
 
   def test_all_groups_leaves_the_other_columns_with_the_colors_they_have_without_it
     with_runtime do |runtime|
@@ -31,19 +31,21 @@ class GetTest < Minitest::Test
       _, plain, = run_commands('get', 'projects', '--no-headers', '--color=always', runtime:)
       _, grouped, = run_commands('get', 'projects', '-A', '--no-headers', '--color=always', runtime:)
 
-      assert_equal "\e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[36m3h\e[0m\n", plain
-      assert_equal "\e[36mdefault\e[0m   \e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[36m3h\e[0m\n",
-                   grouped
+      assert_equal "\e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[90;3m<never>\e[0m   \e[37m3h\e[0m\n",
+                   plain
+      assert_equal "\e[36mdefault\e[0m   \e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   " \
+                   "\e[90;3m<never>\e[0m   \e[37m3h\e[0m\n", grouped
     end
   end
 
   def test_projects_print_as_a_table_of_the_current_group
     with_runtime do |runtime|
-      register(runtime, 'hldr', labels: { 'lang' => 'rust' })
+      register(runtime, 'hldr', labels: { 'lang' => 'rust' }, fetched_at: FETCHED)
       register(runtime, 'notes', status: DIRTY)
       register_group(runtime, 'work')
       register(runtime, 'job', group: 'work')
-      expected = "NAME    BRANCH   STATUS   AGE\nhldr    main     Clean    3h\nnotes   main     Dirty    3h\n"
+      expected = "NAME    BRANCH   STATUS   FETCHED   AGE\nhldr    main     Clean    12m       3h\n" \
+                 "notes   main     Dirty    <never>   3h\n"
 
       assert_equal [0, expected, ''], run_commands('get', 'projects', runtime:)
       assert_equal expected, run_commands('get', 'proj', runtime:)[1]
@@ -52,7 +54,7 @@ class GetTest < Minitest::Test
 
   def test_wide_adds_path_head_and_last_commit_age
     with_runtime do |runtime|
-      register(runtime, 'hldr')
+      register(runtime, 'hldr', fetched_at: FETCHED)
       register(runtime, 'fresh', status: UNBORN)
 
       assert_equal [0, WIDE, ''], run_commands('get', 'projects', '-o', 'wide', runtime:)
@@ -76,7 +78,7 @@ class GetTest < Minitest::Test
       register(runtime, 'hldr')
       register(runtime, 'job', group: 'work', status: DETACHED)
 
-      assert_equal "NAME   BRANCH       STATUS     AGE\njob    (detached)   Detached   3h\n",
+      assert_equal "NAME   BRANCH       STATUS     FETCHED   AGE\njob    (detached)   Detached   <never>   3h\n",
                    run_commands('get', 'projects', '-n', 'work', runtime:)[1]
     end
   end
@@ -85,8 +87,9 @@ class GetTest < Minitest::Test
     with_runtime do |runtime|
       register(runtime, 'hldr', labels: { 'lang' => 'rust', 'app' => 'web' })
       register(runtime, 'notes')
-      expected = "NAME    BRANCH   STATUS   AGE   LABELS\nhldr    main     Clean    3h    app=web,lang=rust\n" \
-                 "notes   main     Clean    3h    <none>\n"
+      expected = "NAME    BRANCH   STATUS   FETCHED   AGE   LABELS\n" \
+                 "hldr    main     Clean    <never>   3h    app=web,lang=rust\n" \
+                 "notes   main     Clean    <never>   3h    <none>\n"
 
       assert_equal [0, expected, ''], run_commands('get', 'projects', '--show-labels', runtime:)
     end
@@ -96,7 +99,8 @@ class GetTest < Minitest::Test
     with_runtime do |runtime|
       register(runtime, 'hldr')
 
-      assert_equal [0, "hldr   main   Clean   3h\n", ''], run_commands('get', 'projects', '--no-headers', runtime:)
+      assert_equal [0, "hldr   main   Clean   <never>   3h\n", ''],
+                   run_commands('get', 'projects', '--no-headers', runtime:)
     end
   end
 
@@ -106,11 +110,12 @@ class GetTest < Minitest::Test
       register(runtime, 'notes', labels: { 'lang' => 'md' })
       register(runtime, 'plain')
 
-      assert_equal "NAME   BRANCH   STATUS   AGE\nhldr   main     Clean    3h\n",
+      assert_equal "NAME   BRANCH   STATUS   FETCHED   AGE\nhldr   main     Clean    <never>   3h\n",
                    run_commands('get', 'projects', '-l', 'lang=rust', runtime:)[1]
-      assert_equal "NAME    BRANCH   STATUS   AGE\nnotes   main     Clean    3h\nplain   main     Clean    3h\n",
+      assert_equal "NAME    BRANCH   STATUS   FETCHED   AGE\nnotes   main     Clean    <never>   3h\n" \
+                   "plain   main     Clean    <never>   3h\n",
                    run_commands('get', 'projects', '--selector', 'lang!=rust', runtime:)[1]
-      assert_equal "NAME    BRANCH   STATUS   AGE\nplain   main     Clean    3h\n",
+      assert_equal "NAME    BRANCH   STATUS   FETCHED   AGE\nplain   main     Clean    <never>   3h\n",
                    run_commands('get', 'projects', '-l', '!lang', runtime:)[1]
     end
   end
@@ -121,7 +126,8 @@ class GetTest < Minitest::Test
       register(runtime, 'notes')
       register(runtime, 'plain')
 
-      assert_equal "NAME    BRANCH   STATUS   AGE\nplain   main     Clean    3h\nhldr    main     Clean    3h\n",
+      assert_equal "NAME    BRANCH   STATUS   FETCHED   AGE\nplain   main     Clean    <never>   3h\n" \
+                   "hldr    main     Clean    <never>   3h\n",
                    run_commands('get', 'projects', 'plain', 'hldr', runtime:)[1]
     end
   end
@@ -141,8 +147,8 @@ class GetTest < Minitest::Test
       register_failing(runtime, 'one', Slipway::Git::NotInstalled)
       register_failing(runtime, 'two', Slipway::Git::NotInstalled)
       register_failing(runtime, 'slow', Slipway::Git::Timeout)
-      expected = "NAME   BRANCH   STATUS    AGE\none    <none>   Unknown   3h\nslow   <none>   Unknown   3h\n" \
-                 "two    <none>   Unknown   3h\n"
+      expected = "NAME   BRANCH   STATUS    FETCHED   AGE\none    <none>   Unknown   <none>    3h\n" \
+                 "slow   <none>   Unknown   <none>    3h\ntwo    <none>   Unknown   <none>    3h\n"
 
       status, out, err = run_commands('get', 'projects', runtime:)
 
@@ -165,7 +171,7 @@ class GetTest < Minitest::Test
 
   def test_color_paints_status_by_state_and_the_warning_prefix
     with_runtime do |runtime|
-      register(runtime, 'hldr')
+      register(runtime, 'hldr', fetched_at: FETCHED)
       register(runtime, 'notes', status: DIRTY)
       register_failing(runtime, 'slow', Slipway::Git::Timeout)
 

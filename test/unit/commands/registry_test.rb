@@ -10,7 +10,7 @@ class CommandsRegistryTest < Minitest::Test
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
 
-    assert_equal %w[get describe create apply delete edit label config help version completion man __complete],
+    assert_equal %w[get describe create apply delete edit label fetch config help version completion man __complete],
                  registry.root.subcommands.map(&:name)
     assert_equal ['slipway', Slipway::VERSION, 'A kubectl-style registry for the git repositories on your machine'],
                  [registry.program, registry.version, registry.description]
@@ -23,7 +23,10 @@ class CommandsRegistryTest < Minitest::Test
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
     sections = registry.root.visible_subcommands.group_by(&:section).transform_values { |list| list.map(&:name) }
 
+    assert_equal ['Basic Commands', 'Repository Commands', 'Settings Commands', 'Other Commands'],
+                 registry.root.sections.map(&:first)
     assert_equal %w[get describe create apply delete edit label], sections.fetch('Basic Commands')
+    assert_equal %w[fetch], sections.fetch('Repository Commands')
     assert_equal %w[config completion man], sections.fetch('Settings Commands')
     assert_equal %w[help version], sections.fetch('Other Commands')
   end
@@ -52,7 +55,7 @@ class CommandsRegistryTest < Minitest::Test
       runtime = sandbox_runtime(env)
       register(runtime, 'hldr')
 
-      assert_equal [0, "NAME   BRANCH   STATUS   AGE\nhldr   main     Clean    3h\n", ''],
+      assert_equal [0, "NAME   BRANCH   STATUS   FETCHED   AGE\nhldr   main     Clean    <never>   3h\n", ''],
                    run_cli('get', 'projects', env:, runtime:)
       assert_equal [0, '', "No resources found in work group.\n"],
                    run_cli('get', 'projects', '-n', 'work', env:, runtime:)
@@ -71,9 +74,11 @@ class CommandsRegistryTest < Minitest::Test
       _, light, = run_cli('get', 'projects', '--no-headers', "--config=#{other}", env:, runtime:)
       _, plain, = run_cli('get', 'projects', '--no-headers', '--color=never', env:, runtime:)
 
-      assert_equal "\e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[36m3h\e[0m\n", dark
-      assert_equal "\e[30mhldr\e[0m   \e[34mmain\e[0m   \e[32mClean\e[0m   \e[34m3h\e[0m\n", light
-      assert_equal "hldr   main   Clean   3h\n", plain
+      assert_equal "\e[37mhldr\e[0m   \e[36mmain\e[0m   \e[32mClean\e[0m   \e[90;3m<never>\e[0m   \e[37m3h\e[0m\n",
+                   dark
+      assert_equal "\e[30mhldr\e[0m   \e[34mmain\e[0m   \e[32mClean\e[0m   \e[90;3m<never>\e[0m   \e[30m3h\e[0m\n",
+                   light
+      assert_equal "hldr   main   Clean   <never>   3h\n", plain
     end
   end
 
@@ -85,7 +90,7 @@ class CommandsRegistryTest < Minitest::Test
 
       assert_equal [1, ''], [status, out]
       assert_equal "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
-                   "protocols, theme)\n", err
+                   "parallel, protocols, theme)\n", err
     end
   end
 

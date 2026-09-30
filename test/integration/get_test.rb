@@ -12,11 +12,11 @@ class GetIntegrationTest < Minitest::Test
       status, out, err = slipway('get', 'projects', env:)
 
       assert_equal [0, ''], [status, err]
-      assert_table [%w[NAME BRANCH STATUS AGE],
-                    ['clean', 'main', 'Clean', :age],
-                    ['dirty', 'main', 'Dirty', :age],
-                    ['gone', '<none>', 'Missing', :age],
-                    ['plain', '<none>', 'NotARepo', :age]], out
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE],
+                    ['clean', 'main', 'Clean', '<never>', :age],
+                    ['dirty', 'main', 'Dirty', '<never>', :age],
+                    ['gone', '<none>', 'Missing', '<none>', :age],
+                    ['plain', '<none>', 'NotARepo', '<none>', :age]], out
     end
   end
 
@@ -26,11 +26,11 @@ class GetIntegrationTest < Minitest::Test
       status, out, err = slipway('get', 'projects', '-o', 'wide', env:)
 
       assert_equal [0, ''], [status, err]
-      assert_table [%w[NAME BRANCH STATUS AGE PATH HEAD LAST-COMMIT],
-                    ['clean', 'main', 'Clean', :age, '~/dev/clean', HEAD, :age],
-                    ['dirty', 'main', 'Dirty', :age, '~/dev/dirty', HEAD, :age],
-                    ['gone', '<none>', 'Missing', :age, '~/dev/gone', '<none>', '<none>'],
-                    ['plain', '<none>', 'NotARepo', :age, '~/dev/plain', '<none>', '<none>']], out
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT],
+                    ['clean', 'main', 'Clean', '<never>', :age, '~/dev/clean', HEAD, :age],
+                    ['dirty', 'main', 'Dirty', '<never>', :age, '~/dev/dirty', HEAD, :age],
+                    ['gone', '<none>', 'Missing', '<none>', :age, '~/dev/gone', '<none>', '<none>'],
+                    ['plain', '<none>', 'NotARepo', '<none>', :age, '~/dev/plain', '<none>', '<none>']], out
     end
   end
 
@@ -39,11 +39,11 @@ class GetIntegrationTest < Minitest::Test
       registry(env)
       _, out, = slipway('get', 'projects', '--show-labels', env:)
 
-      assert_table [%w[NAME BRANCH STATUS AGE LABELS],
-                    ['clean', 'main', 'Clean', :age, 'lang=rust'],
-                    ['dirty', 'main', 'Dirty', :age, 'lang=go'],
-                    ['gone', '<none>', 'Missing', :age, '<none>'],
-                    ['plain', '<none>', 'NotARepo', :age, '<none>']], out
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE LABELS],
+                    ['clean', 'main', 'Clean', '<never>', :age, 'lang=rust'],
+                    ['dirty', 'main', 'Dirty', '<never>', :age, 'lang=go'],
+                    ['gone', '<none>', 'Missing', '<none>', :age, '<none>'],
+                    ['plain', '<none>', 'NotARepo', '<none>', :age, '<none>']], out
     end
   end
 
@@ -52,13 +52,13 @@ class GetIntegrationTest < Minitest::Test
       registry(env)
       _, out, = slipway('get', 'projects', '-A', env:)
 
-      assert_table [%w[GROUP NAME BRANCH STATUS AGE],
-                    ['default', 'clean', 'main', 'Clean', :age],
-                    ['default', 'dirty', 'main', 'Dirty', :age],
-                    ['default', 'gone', '<none>', 'Missing', :age],
-                    ['default', 'plain', '<none>', 'NotARepo', :age],
-                    ['work', 'ahead', 'main', 'Ahead', :age],
-                    ['work', 'detached', '(detached)', 'Detached', :age]], out
+      assert_table [%w[GROUP NAME BRANCH STATUS FETCHED AGE],
+                    ['default', 'clean', 'main', 'Clean', '<never>', :age],
+                    ['default', 'dirty', 'main', 'Dirty', '<never>', :age],
+                    ['default', 'gone', '<none>', 'Missing', '<none>', :age],
+                    ['default', 'plain', '<none>', 'NotARepo', '<none>', :age],
+                    ['work', 'ahead', 'main', 'Ahead', '<never>', :age],
+                    ['work', 'detached', '(detached)', 'Detached', '<never>', :age]], out
     end
   end
 
@@ -66,13 +66,16 @@ class GetIntegrationTest < Minitest::Test
     with_home do |env|
       registry(env)
       _, out, = slipway('get', 'projects', '-A', '-o', 'wide', '--show-labels', '--no-headers', env:)
+      none = ['<none>'] * 3
 
-      assert_table [['default', 'clean', 'main', 'Clean', :age, '~/dev/clean', HEAD, :age, 'lang=rust'],
-                    ['default', 'dirty', 'main', 'Dirty', :age, '~/dev/dirty', HEAD, :age, 'lang=go'],
-                    ['default', 'gone', '<none>', 'Missing', :age, '~/dev/gone', '<none>', '<none>', '<none>'],
-                    ['default', 'plain', '<none>', 'NotARepo', :age, '~/dev/plain', '<none>', '<none>', '<none>'],
-                    ['work', 'ahead', 'main', 'Ahead', :age, '~/dev/ahead', '0182104', :age, 'lang=rust,tier=api'],
-                    ['work', 'detached', '(detached)', 'Detached', :age, '~/dev/detached', HEAD, :age, '<none>']],
+      assert_table [['default', 'clean', 'main', 'Clean', '<never>', :age, '~/dev/clean', HEAD, :age, 'lang=rust'],
+                    ['default', 'dirty', 'main', 'Dirty', '<never>', :age, '~/dev/dirty', HEAD, :age, 'lang=go'],
+                    ['default', 'gone', '<none>', 'Missing', '<none>', :age, '~/dev/gone', *none],
+                    ['default', 'plain', '<none>', 'NotARepo', '<none>', :age, '~/dev/plain', *none],
+                    ['work', 'ahead', 'main', 'Ahead', '<never>', :age, '~/dev/ahead', '0182104', :age,
+                     'lang=rust,tier=api'],
+                    ['work', 'detached', '(detached)', 'Detached', '<never>', :age, '~/dev/detached', HEAD, :age,
+                     '<none>']],
                    out
     end
   end
@@ -84,11 +87,11 @@ class GetIntegrationTest < Minitest::Test
       _, go, = slipway('get', 'projects', '-l', 'lang in (go),tier!=api', env:)
       _, no_lang, err = slipway('get', 'projects', '-l', '!lang', env:)
 
-      assert_table [%w[GROUP NAME BRANCH STATUS AGE], ['default', 'clean', 'main', 'Clean', :age],
-                    ['work', 'ahead', 'main', 'Ahead', :age]], rust
-      assert_table [%w[NAME BRANCH STATUS AGE], ['dirty', 'main', 'Dirty', :age]], go
-      assert_table [%w[NAME BRANCH STATUS AGE], ['gone', '<none>', 'Missing', :age],
-                    ['plain', '<none>', 'NotARepo', :age]], no_lang
+      assert_table [%w[GROUP NAME BRANCH STATUS FETCHED AGE], ['default', 'clean', 'main', 'Clean', '<never>', :age],
+                    ['work', 'ahead', 'main', 'Ahead', '<never>', :age]], rust
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE], ['dirty', 'main', 'Dirty', '<never>', :age]], go
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE], ['gone', '<none>', 'Missing', '<none>', :age],
+                    ['plain', '<none>', 'NotARepo', '<none>', :age]], no_lang
       assert_empty err
     end
   end

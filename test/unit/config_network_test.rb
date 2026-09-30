@@ -9,6 +9,7 @@ class ConfigNetworkTest < Minitest::Test
   PROTOCOLS_VARIABLE = 'must be lowercase git transport names separated by colons, such as ssh:https'
   EXT = 'must not include ext, which runs a command named in the URL'
   FD = 'must not include fd, which reads from file descriptors'
+  PARALLEL = 'must be an integer from 1 to 16'
 
   def test_network_keys_come_from_the_file
     with_sandbox do |env|
@@ -28,6 +29,29 @@ class ConfigNetworkTest < Minitest::Test
 
       assert_equal [86_400, %w[https file]], [varied.network_timeout, varied.protocols]
       assert_equal [5, %w[ssh]], [empty.network_timeout, empty.protocols]
+    end
+  end
+
+  def test_parallel_defaults_to_four_and_comes_from_the_file_or_its_variable
+    with_sandbox do |env|
+      default = load(env).parallel
+      write(env, "parallel: 16\n")
+
+      assert_equal [4, 16, 1], [default, load(env).parallel, load(env.merge('SLIPWAY_PARALLEL' => '1')).parallel]
+    end
+  end
+
+  def test_parallel_is_an_integer_from_one_to_sixteen
+    with_sandbox do |env|
+      ["parallel: 0\n", "parallel: 17\n", "parallel: -1\n", "parallel: '4'\n", "parallel: 2.5\n",
+       "parallel: true\n"].each do |text|
+        assert_file_error "\"parallel\" #{PARALLEL}", env, text
+      end
+      write(env, '')
+
+      ['0', '17', 'x', '4.0', ' '].each do |value|
+        assert_config_error "SLIPWAY_PARALLEL: #{PARALLEL}", env.merge('SLIPWAY_PARALLEL' => value)
+      end
     end
   end
 
@@ -84,7 +108,7 @@ class ConfigNetworkTest < Minitest::Test
   end
 
   def test_a_setting_member_is_its_key_in_snake_case
-    assert_equal %i[color editor group network_timeout protocols theme],
+    assert_equal %i[color editor group network_timeout parallel protocols theme],
                  Slipway::Config::SETTINGS.map(&:attribute)
   end
 

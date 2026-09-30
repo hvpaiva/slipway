@@ -28,6 +28,24 @@ class GitRepositoryFetchAnswersTest < Minitest::Test
     end
   end
 
+  # What git, ssh, askpass or the remote print when a credential is missing or refused, and the
+  # line kept as the reason, whatever was printed around it.
+  REFUSALS = {
+    "fatal: could not read Username for 'https://example.com': terminal prompts disabled\n" =>
+      "fatal: could not read Username for 'https://example.com': terminal prompts disabled",
+    "error: unable to read askpass response from '/usr/bin/false'\nfatal: could not read Password for 'x'\n" =>
+      "fatal: could not read Password for 'x'",
+    "remote: Invalid username or password.\nfatal: Authentication failed for 'https://example.com/x/'\n" =>
+      "fatal: Authentication failed for 'https://example.com/x/'",
+    "Warning: Permanently added 'example.com' to the list of known hosts.\n" \
+    "git@example.com: Permission denied (publickey).\nfatal: Could not read from remote repository.\n" =>
+      'git@example.com: Permission denied (publickey).',
+    "Host key verification failed.\nfatal: Could not read from remote repository.\n" =>
+      'Host key verification failed.',
+    "fatal: unable to access 'https://bot:t0ken@example.com/x/': The requested URL returned error: 403\n" =>
+      "fatal: unable to access 'https://***@example.com/x/': The requested URL returned error: 403"
+  }.freeze
+
   def setup
     @root = Dir.mktmpdir('slipway-fetch-answers-')
   end
@@ -87,16 +105,11 @@ class GitRepositoryFetchAnswersTest < Minitest::Test
   end
 
   def test_git_and_remote_phrases_that_mean_a_missing_or_refused_credential
-    [
-      "fatal: could not read Username for 'https://example.com': terminal prompts disabled\n",
-      "error: unable to read askpass response from '/usr/bin/false'\nfatal: could not read Password for 'x'\n",
-      "remote: Invalid username or password.\nfatal: Authentication failed for 'https://example.com/x/'\n",
-      "Host key verification failed.\nfatal: Could not read from remote repository.\n",
-      "fatal: unable to access 'https://example.com/x/': The requested URL returned error: 403\n"
-    ].each do |stderr|
+    REFUSALS.each do |stderr, detail|
       repo = Slipway::Git::Repository.new(runner: CannedRunner.new(status: 128, err: stderr))
+      error = assert_raises(Slipway::Git::AuthRequired, stderr) { repo.fetch(@root, prune: false) }
 
-      assert_raises(Slipway::Git::AuthRequired, stderr) { repo.fetch(@root, prune: false) }
+      assert_equal "#{@root}: #{detail}", error.message
     end
   end
 

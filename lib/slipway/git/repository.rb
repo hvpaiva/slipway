@@ -7,22 +7,26 @@ module Slipway
       # Six NUL separated fields in the order Commit.parse expects; -z terminates the record.
       LOG_ARGS = ['log', '-1', '-z', '--format=%H%x00%h%x00%ct%x00%an%x00%ae%x00%s'].freeze
       REMOTE_ARGS = %w[config --get remote.origin.url].freeze
-      # No remote argument: git fetches the remote of the current branch, else origin, as the
-      # user's own `git fetch` would, so nothing from a manifest reaches this argv. --no-all
-      # overrides fetch.all (git 2.44 and later), under which git would fetch every remote and
-      # --atomic would refuse to run.
+      # No remote argument: git fetches the remote of the current branch, else the only remote,
+      # else origin, as the user's own `git fetch` would, so nothing from a manifest reaches this
+      # argv. --no-all overrides fetch.all (git 2.44 and later), under which git would fetch every
+      # remote and --atomic would refuse to run.
       FETCH_ARGS = %w[--no-all --atomic --no-recurse-submodules --no-auto-maintenance].freeze
       # A branch that tracks another local branch has "." as its remote, and a remote-less fetch
       # would read the repository itself: no remote-tracking ref moves, yet FETCH_HEAD is rewritten.
       UPSTREAM_REMOTE_ARGS = ['for-each-ref', '--format=%(HEAD)%(upstream:remotename)', 'refs/heads/'].freeze
       CURRENT_LOCAL_UPSTREAM = '*.'
+      # ls-remote without a remote picks one the way fetch does, and --get-url prints its URL
+      # without contacting it; with none to pick, git dies with this message, untranslated.
+      DEFAULT_REMOTE_ARGS = %w[ls-remote --get-url].freeze
+      NO_DEFAULT_REMOTE = 'No remote configured'
       # Git learned `fetch --porcelain` in 2.41. An older git rejects the option as a usage error
       # before it connects, and the fetch runs again without it.
       PORCELAIN = '--porcelain'
       PORCELAIN_UNKNOWN = /\Aerror: unknown option .porcelain'$/
       USAGE_STATUS = 129
       FETCH_HEAD = 'FETCH_HEAD'
-      FETCH_HEAD_ARGS = ['rev-parse', '--git-path', FETCH_HEAD].freeze
+      COMMON_DIR_ARGS = %w[rev-parse --git-common-dir].freeze
       # `git config --get` exits 1 when the key is absent, which is an answer, not a failure.
       ABSENT_KEY_STATUS = 1
       UNBORN_MESSAGE = 'does not have any commits yet'
@@ -80,13 +84,32 @@ module Slipway
         FetchResult.new(updates: nil)
       end
 
+      def local_upstream?(path)
+        run(path, *UPSTREAM_REMOTE_ARGS).out.lines(chomp: true).include?(CURRENT_LOCAL_UPSTREAM)
+      end
+
+      def default_remote?(path)
+        run(path, *DEFAULT_REMOTE_ARGS, accept: method(:no_default_remote?)).success?
+      end
+
       # nil for a repository that was never fetched or whose last fetch failed: git empties
       # FETCH_HEAD before it contacts the remote and writes a line for each ref it fetched.
+      # Every worktree shares the remote-tracking refs, but git writes FETCH_HEAD in the worktree
+      # that ran the fetch, so the newest one dates them.
       def fetched_at(path)
-        head = File.stat(fetch_head(File.expand_path(path)))
-        head.mtime.utc unless head.zero?
-      rescue Errno::ENOENT
-        nil
+        head = fetch_heads(File.expand_path(path)).filter_map { File.stat(it) if File.file?(it) }.max_by(&:mtime)
+        head.mtime.utc if head && !head.zero?
+      end
+
+      # Symlinks are resolved, so projects on one repository name the same directory however
+      # their paths are written. A .git directory is read without a spawn, so listing projects
+      # costs no extra git process.
+      def common_dir(path)
+        directory = File.expand_path(path)
+        git_dir = File.join(directory, '.git')
+        return File.realpath(git_dir) if File.directory?(git_dir)
+
+        File.realpath(run(directory, *COMMON_DIR_ARGS).out.chomp, directory)
       end
 
       private
@@ -107,22 +130,18 @@ module Slipway
                                                        timeout: @network_timeout, env: @network_environment)
       end
 
-      # A .git directory is read without a spawn, so listing projects costs no extra git process;
-      # a worktree or a separate git directory keeps FETCH_HEAD where rev-parse says.
-      def fetch_head(directory)
-        git_dir = File.join(directory, '.git')
-        return File.join(git_dir, FETCH_HEAD) if File.directory?(git_dir)
-
-        File.expand_path(run(directory, *FETCH_HEAD_ARGS).out.chomp, directory)
-      end
-
-      def local_upstream?(path)
-        run(path, *UPSTREAM_REMOTE_ARGS).out.lines(chomp: true).include?(CURRENT_LOCAL_UPSTREAM)
+      # base: keeps glob metacharacters in the repository path literal.
+      def fetch_heads(directory)
+        common = common_dir(directory)
+        worktrees = File.join(common, 'worktrees')
+        [File.join(common, FETCH_HEAD), *Dir.glob("*/#{FETCH_HEAD}", base: worktrees).map { File.join(worktrees, it) }]
       end
 
       def unborn?(result) = result.err.include?(UNBORN_MESSAGE)
 
       def porcelain_unknown?(result) = result.status == USAGE_STATUS && PORCELAIN_UNKNOWN.match?(result.err)
+
+      def no_default_remote?(result) = result.status == DIE_STATUS && result.err.include?(NO_DEFAULT_REMOTE)
 
       def classify(path, result, network:)
         failure = network ? network_failure(path, result) : local_failure(path, result)
@@ -144,12 +163,15 @@ module Slipway
         refusal = PROTOCOL_REFUSED.match(result.err) if result.status == DIE_STATUS
         return ProtocolNotAllowed.new(path, protocol: refusal[:protocol], source: @protocols_source) if refusal
 
-        AuthRequired.new(path) if AUTH_REQUIRED.match?(result.err)
+        refused = result.err.each_line.find { AUTH_REQUIRED.match?(it) }
+        AuthRequired.new(path, redacted(refused)) if refused
       end
+
+      def first_line(err) = redacted(err.lines.first)
 
       # Git quotes the URL it failed on, credentials included, and a server can add lines of its
       # own. Redacting before the cut keeps a password from surviving as a truncated URL.
-      def first_line(err) = Url.redact(err.lines.first.to_s.strip)[0, MESSAGE_LIMIT]
+      def redacted(line) = Url.redact(line.to_s.strip)[0, MESSAGE_LIMIT]
     end
   end
 end

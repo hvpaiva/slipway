@@ -30,6 +30,12 @@ module Slipway
         label_labeled: '32',
         label_unlabeled: '33',
         label_not_labeled: '90;3',
+        result_changed: '32',
+        result_unchanged: '35',
+        result_skipped: '33',
+        result_paused: '90;3',
+        result_denied: '31',
+        result_failed: '31',
         dry_run: '36',
         error: '31',
         warning: '33'

@@ -41,6 +41,12 @@ module Slipway
         CLI::Positional.new(name: 'NAME', variadic:, required:, completer: ->(given) { names(factory, given) })
       end
 
+      # No TYPE word comes first, so completion always offers project names.
+      def self.project_positional(factory)
+        CLI::Positional.new(name: 'NAME', variadic: true, required: false,
+                            completer: ->(_given) { names(factory, [Resources::PROJECTS.plural]) })
+      end
+
       def self.group_completer(factory) = ->(_given) { names(factory, [Resources::GROUPS.plural]) }
 
       # Runs during shell completion, with the process environment and no flags: any failure

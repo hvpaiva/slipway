@@ -38,6 +38,8 @@ module Slipway
 
       def warn(*lines) = write(:err) { err.puts(*lines) }
 
+      def unbuffer = out.sync = true
+
       def paint(role, text) = style.paint(role, text)
 
       def paint_err(role, text) = err_style.paint(role, text)

@@ -39,6 +39,10 @@ Edit a resource from the default editor
 .TP 12
 \fBlabel\fR
 Update the labels on a resource
+.SS "Repository Commands"
+.TP 12
+\fBfetch\fR
+Fetch from the remote of each project
 .SS "Settings Commands"
 .TP 12
 \fBconfig\fR
@@ -94,6 +98,9 @@ Default group scope; overridden by \-\-group.
 .TP
 \fBSLIPWAY_NETWORK_TIMEOUT\fR
 Seconds a git network command may run before it is killed.
+.TP
+\fBSLIPWAY_PARALLEL\fR
+How many git network commands run at once, from 1 to 16.
 .TP
 \fBSLIPWAY_PROTOCOLS\fR
 Transports git may use in network commands, separated by colons (ssh:https).
@@ -157,6 +164,9 @@ Group used when \-n is not given. Default: default.
 \fBnetworkTimeout\fR
 Seconds a git network command may run before it is killed with the processes it started. Default: 60.
 .TP
+\fBparallel\fR
+How many git network commands run at once, from 1 to 16. Default: 4.
+.TP
 \fBprotocols\fR
 Transports git may use in network commands, as a list; any other transport is refused, and so are ext and fd. Add file for local mirrors. Default: ssh, https.
 .TP
@@ -183,6 +193,7 @@ Interrupted by SIGINT.
 .BR slipway\-delete (1),
 .BR slipway\-edit (1),
 .BR slipway\-label (1),
+.BR slipway\-fetch (1),
 .BR slipway\-config (1),
 .BR slipway\-config\-view (1),
 .BR slipway\-config\-path (1),

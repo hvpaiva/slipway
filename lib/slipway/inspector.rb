@@ -7,10 +7,11 @@ require_relative 'state'
 
 module Slipway
   # +status+, +commit+ and +remote+ are nil when git could not answer; +error+ then holds the
-  # Git error and +state+ its word.
-  Inspection = Data.define(:project, :status, :commit, :remote, :state, :error) do
+  # Git error and +state+ its word. +fetched_at+ is nil then too, and for a repository no fetch
+  # has reached.
+  Inspection = Data.define(:project, :status, :commit, :remote, :fetched_at, :state, :error) do
     def self.failed(project, error)
-      new(project:, status: nil, commit: nil, remote: nil, state: State.for_error(error), error:)
+      new(project:, status: nil, commit: nil, remote: nil, fetched_at: nil, state: State.for_error(error), error:)
     end
   end
 
@@ -58,7 +59,8 @@ module Slipway
     def query(path)
       status = @git.status(path)
       commit = status.unborn? ? nil : @git.last_commit(path)
-      { status:, commit:, remote: @git.remote_url(path), state: State.derive(status) }
+      { status:, commit:, remote: @git.remote_url(path), fetched_at: @git.fetched_at(path),
+        state: State.derive(status) }
     end
 
     def collect_warnings(results)
