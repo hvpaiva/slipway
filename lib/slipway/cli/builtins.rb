@@ -145,6 +145,7 @@ module Slipway
         end
 
         def call(context, args, opts)
+          refuse_arguments(args, opts) if opts[:path] || opts[:install]
           return context.puts(@man_dir) if opts[:path]
           return install(context, opts[:install]) if opts[:install]
 
@@ -154,6 +155,15 @@ module Slipway
         private
 
         def registry = @resolve.call
+
+        # --path and --install ignore COMMAND, and since DIR is optional, a DIR given after a
+        # space arrives as one.
+        def refuse_arguments(args, opts)
+          return if args.empty?
+
+          hint = '; pass the directory as --install=DIR' if opts[:install] == true
+          raise UsageError, "unexpected argument #{args.first.inspect}#{hint}"
+        end
 
         def show(context, words)
           _, path = registry.resolve(words)

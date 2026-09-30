@@ -425,7 +425,8 @@ settings win and slipway passes nothing of its own.
 `slipway man --install` copies the pages to `${XDG_DATA_HOME:-~/.local/share}/man/man1` (a
 relative `XDG_DATA_HOME` is ignored), and `slipway man --install=DIR` copies them into DIR,
 which must be named `man1`: `man` finds section 1 pages in the `man1` directory under each
-`MANPATH` entry, so any other DIR is refused with exit status 2. When the pages land in
+`MANPATH` entry, so any other DIR is refused with exit status 2. DIR is optional, so it must
+follow the `=`; `slipway man --install DIR` is refused as well. When the pages land in
 `~/.local/share/man/man1`, man-db looks there on its own as long as `~/.local/bin` is on
 `PATH`, and the command ends by saying so. Anywhere else, such as under a custom
 `XDG_DATA_HOME`, it ends with the `MANPATH` line for the parent directory, which makes `man`

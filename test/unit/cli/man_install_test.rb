@@ -31,6 +31,29 @@ class ManInstallTest < Minitest::Test
     end
   end
 
+  def test_install_refuses_a_directory_given_after_a_space
+    with_pages do |dir, env|
+      target = File.join(env['HOME'], 'opt', 'man', 'man1')
+      status, out, err = run_cli('man', '--install', target, registry: registry(dir), env:)
+
+      assert_equal [2, ''], [status, out]
+      assert_equal "error: unexpected argument #{target.inspect}; pass the directory as --install=DIR\n" \
+                   "See 'slipway man --help' for usage.\n", err
+      refute_path_exists File.join(env['HOME'], 'opt')
+      refute_path_exists File.join(env['XDG_DATA_HOME'], 'man')
+    end
+  end
+
+  def test_install_takes_no_command
+    with_pages do |dir, env|
+      target = File.join(env['HOME'], 'opt', 'man', 'man1')
+
+      assert_equal [2, '', "error: unexpected argument \"get\"\nSee 'slipway man --help' for usage.\n"],
+                   run_cli('man', 'get', "--install=#{target}", registry: registry(dir), env:)
+      refute_path_exists File.join(env['HOME'], 'opt')
+    end
+  end
+
   def test_install_refuses_a_name_that_only_ends_in_man1
     with_pages do |dir, env|
       target = File.join(env['HOME'], 'share', 'man', 'xman1')

@@ -89,6 +89,14 @@ class ManBuiltinTest < Minitest::Test
     end
   end
 
+  def test_path_takes_no_command
+    with_pages do |dir, env|
+      assert_equal [2, '', "error: unexpected argument \"get\"\nSee 'slipway man --help' for usage.\n"],
+                   run_cli('man', '--path', 'get', registry: registry(dir), env:)
+      assert_empty man_calls
+    end
+  end
+
   def test_missing_man_binary_is_an_error_with_the_help_alternative
     with_pages do |dir, env|
       status, out, err = run_cli('man', 'config', 'view', registry: registry(dir), env: env.merge('PATH' => dir))

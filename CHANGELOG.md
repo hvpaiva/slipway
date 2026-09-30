@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration file at `$XDG_CONFIG_HOME/slipway/config.yaml` with the keys `color`, `editor`, `group`, `networkTimeout`, `parallel`, `protocols` and `theme`, `SLIPWAY_*` environment variables, and `config view` and `config path`.
 - Color per stream with `--color[=auto|always|never]`, `NO_COLOR`, `FORCE_COLOR` and `CLICOLOR_FORCE`, and `dark` and `light` themes following kubecolor.
 - Shell completion for bash, zsh and fish that covers commands, flags, values and resource names.
-- Bundled man pages for every command, with `slipway man`, `slipway man --path` and `slipway man --install[=DIR]`, which copies them into a `man1` directory and refuses any other DIR.
+- Bundled man pages for every command, with `slipway man`, `slipway man --path` and `slipway man --install[=DIR]`, which copies them into a `man1` directory; any other DIR, or a DIR after a space instead of `=`, is refused.
 - Text from git is printed with control and bidirectional characters made visible, and credentials in URLs are masked in `describe` and in error lines.
 - Exit statuses 0, 1, 2 and 130, `error:` lines on stderr with a help hint, and "Did you mean this?" suggestions for unknown commands.
 
