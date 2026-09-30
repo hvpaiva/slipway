@@ -376,15 +376,17 @@ why they are committed and shipped; `.gitattributes` marks them `linguist-genera
 ## Development code
 
 The Rakefile keeps the test, coverage, RuboCop, audit and documentation tasks, `generate:man`,
-`lint:man` and `lint:shell`, and `require_tool`, which stops a task that needs a missing program
-and which `rakelib/package.rake` calls too. Everything else a maintainer runs lives in
-`rakelib/`: `check.rake`, `generate.rake`, `package.rake`, `shells.rake`, `release.rake` and
-`github.rake`, which Rake loads on its own, and plain Ruby under `rakelib/support/` that the
-tasks and the scripts in `bin/` share: `changelog.rb` parses and cuts the changelog, `commits.rb`
-holds the commit rules `bin/lint-commits` applies and the range `rake check` hands it,
-`golden.rb` lists the fixtures `generate:golden` keeps, `release.rb` runs the release flow,
-`github.rb` wraps `gh api`, and `runner.rb` holds `CommandRunner`, the command runner
-`bin/release` and `rake github:setup` inject so their tests can pass a fake.
+`lint:man`, `lint:shell`, `lint:spelling`, `lint:workflows` and `lint:links`, and `require_tool`,
+which stops a task that needs a missing program and which `rakelib/package.rake` calls too.
+Everything else a maintainer runs lives in `rakelib/`: `check.rake`, `generate.rake`,
+`package.rake`, `shells.rake`, `release.rake` and `github.rake`, which Rake loads on its own, and
+plain Ruby under `rakelib/support/` that the tasks and the scripts in `bin/` share: `changelog.rb`
+parses and cuts the changelog, `commits.rb` holds the commit rules `bin/lint-commits` applies and
+the range `rake check` hands it, `golden.rb` lists the fixtures `generate:golden` keeps,
+`release.rb` runs the release flow, `github.rb` wraps `gh api`, `tools.rb` reads the tools
+`mise.toml` pins, the list `bin/setup` installs, and words the message `require_tool` gives for a
+missing one, and `runner.rb` holds `CommandRunner`, the command runner `bin/release` and
+`rake github:setup` inject so their tests can pass a fake.
 `rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
 of it ships in the gem. `bin/setup` and `bin/sandbox` are bash, checked by ShellCheck through
 `rake lint:shell`.

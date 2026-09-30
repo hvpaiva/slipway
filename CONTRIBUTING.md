@@ -7,10 +7,10 @@ explains where things live and how to add to them.
 
 You need Ruby 3.4 or newer (the repository pins 4.0.7 in `mise.toml`) and git 2.35 or newer.
 With a git older than 2.41 the fetch tests and the README examples that run `fetch` or `sync`
-are skipped, so run the whole suite with 2.41 or newer. `rake check` also needs `shellcheck`
-and `groff`. The other tools are optional: `zsh` and `fish` for the completion tests (or
-`docker`, which `rake test:shells` uses in their place), `gh` for the maintainer tasks, and
-`typos`, `zizmor` and `lychee`, which CI runs outside `rake check`.
+are skipped, so run the whole suite with 2.41 or newer. `rake check` also needs `shellcheck`,
+`groff`, `typos`, `zizmor` and `lychee`. The other tools are optional: `zsh` and `fish` for the
+completion tests (or `docker`, which `rake test:shells` uses in their place) and `gh` for the
+maintainer tasks.
 
 ```sh
 git clone https://github.com/hvpaiva/slipway.git
@@ -19,10 +19,14 @@ bin/setup
 bundle exec ruby -Ilib exe/slipway --help
 ```
 
-`bin/setup` runs `bundle install` and ends with a report: the Ruby it found against
-`mise.toml`, the git version (older than 2.35 is a hard failure, with the reason, and older
-than 2.41 names what skips), and one line per other tool saying which task skips or fails
-without it. `bin/console` opens IRB with the gem loaded.
+`bin/setup` runs `bundle install`. When [mise](https://mise.jdx.dev) is installed, it then
+installs `shellcheck`, `typos`, `zizmor` and `lychee` at the versions `mise.toml` pins, the ones
+CI runs, without root. It ends with a report: the Ruby it found against `mise.toml`, the git
+version (older than 2.35 is a hard failure, with the reason, and older than 2.41 names what
+skips), and one line per other tool saying which task skips or fails without it. A missing tool
+that `mise.toml` pins comes with the `mise install` command for it, and one that mise installed
+but your shell does not find says to activate mise, since the rake tasks look it up on `PATH`;
+the rest come from your package manager. `bin/console` opens IRB with the gem loaded.
 
 ## Tests and lint
 
@@ -32,25 +36,24 @@ bundle exec rake check   # what CI runs
 ```
 
 `rake check` runs, in this order, RuboCop, ShellCheck over `bin/setup`, `bin/sandbox` and the
-bash completion script, `groff -ww` over the man pages, `bin/lint-commits` over the commits your
-branch adds to `origin/main` ([Commits](#commits); on `main`, or without `origin/main`, it says
-so and lints nothing), the unit and golden tests under SimpleCov with the coverage minimums, the
-integration tests, the generated-files comparison, the package smoke test (build, install into a
-temporary `GEM_HOME`, run the installed executable) and, last, bundler-audit. Set
-`CHECK_OFFLINE=1` to skip the audit when you have no network; the task says so when it does. CI
-runs the same tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3.4
-and macOS entries of the test matrix, and the `completions` job, which fails when zsh or fish is
-missing (run it with `bundle exec rake test:shells`, see
-[Testing completions](#testing-completions)). CI also lints the commits of every pull request
-against its base branch, with its title and body, checks that a change under `lib/`, `exe/` or
-`man/` comes with a changelog line ([Pull requests](#pull-requests)), and runs the spelling,
-workflow and link checks, which you can run before pushing:
-
-```sh
-typos
-zizmor .github/workflows
-lychee --config lychee.toml './*.md' './.github/**/*.md'
-```
+bash completion script, `groff -ww` over the man pages, typos over the repository, zizmor over
+the workflows, lychee over the links and heading anchors of the Markdown files,
+`bin/lint-commits` over the commits your branch adds to `origin/main` ([Commits](#commits); on
+`main`, or without `origin/main`, it says so and lints nothing), the unit and golden tests under
+SimpleCov with the coverage minimums, the integration tests, the generated-files comparison, the
+package smoke test (build, install into a temporary `GEM_HOME`, run the installed executable)
+and, last, bundler-audit. A task whose tool is missing stops and names the command that installs
+it, or says to activate mise when mise installed it but your shell does not find it. lychee runs
+offline, as `lychee.toml` sets, so it checks relative links and anchors; no check follows
+external links, locally or in CI. zizmor adds the audits that query GitHub when `GH_TOKEN` holds
+a token, as it does in CI; to run them locally, use `GH_TOKEN=$(gh auth token) bundle exec rake
+lint:workflows`. Set `CHECK_OFFLINE=1` to skip the audit and those zizmor audits when you have
+no network; the task says so when it does. CI runs the same checks. What `rake check` leaves out
+is what one machine cannot cover: the Ruby 3.4 and macOS entries of the test matrix, and the
+`completions` job, which fails when zsh or fish is missing (run it with `bundle exec rake
+test:shells`, see [Testing completions](#testing-completions)). CI also lints the commits of
+every pull request against its base branch, with its title and body, and checks that a change
+under `lib/`, `exe/` or `man/` comes with a changelog line ([Pull requests](#pull-requests)).
 
 Everything runs against temporary directories and repositories created for the test, never
 against your own registry. The tasks defined under `rakelib/` are development tasks and are not
@@ -63,11 +66,14 @@ part of the gem.
 | `rake test:shells` | The completion script tests with zsh and fish required, locally when both are installed, otherwise with docker in an image built from `ruby:4.0`. |
 | `rake rubocop` | RuboCop with the minitest, performance and rake plugins. |
 | `rake audit` | Updates the advisory database and checks `Gemfile.lock` with bundler-audit. |
-| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `lint:commits`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
+| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `lint:spelling`, `lint:workflows`, `lint:links`, `lint:commits`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit and zizmor's online audits. |
 | `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help, completion and man page fixtures and removes the help and completion ones no command owns; `generate` runs the three and prints `git status` for `man`, `test/fixtures/golden` and `test/fixtures/man`. |
 | `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
 | `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
 | `rake lint:shell` | ShellCheck over `bin/setup`, `bin/sandbox` and the bash completion script. |
+| `rake lint:spelling` | typos over the repository, with the exclusions and ignore rules in `_typos.toml`. |
+| `rake lint:workflows` | zizmor over `.github/workflows`, with the audits that query GitHub when `GH_TOKEN` is set, unless `CHECK_OFFLINE=1`. |
+| `rake lint:links` | lychee over the Markdown files at the root and under `.github`, offline as `lychee.toml` sets: relative links and heading anchors. |
 | `rake lint:commits` | `bin/lint-commits` over `origin/main..HEAD`; on `main`, or without `origin/main`, it says so and lints nothing. |
 | `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
 | `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
@@ -158,8 +164,9 @@ Each of these fails `rake check` or CI when it is broken.
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
   release, dated `YYYY-MM-DD` and ordered newest first by version and date, and a link
   reference for every heading and a heading for every link reference.
-- Spelling, with `typos` over source and docs; the workflows, with `zizmor`; the links and
-  anchors in the guides, with `lychee`.
+- Spelling, with `typos` over source and docs (`rake lint:spelling`); the workflows, with
+  `zizmor` (`rake lint:workflows`); the relative links and anchors in the guides, with `lychee`
+  (`rake lint:links`).
 
 ### Reviewed by people
 

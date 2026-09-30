@@ -4,6 +4,18 @@ cd "$(dirname "$0")/.." || exit 1
 
 bundle install || exit 1
 
+pinned_tools=()
+while IFS= read -r tool; do
+  pinned_tools+=("$tool")
+done < <(ruby -Irakelib/support -rtools -e 'puts Tools.pinned.keys - %w[ruby]')
+
+mise=$(command -v mise)
+# An empty list would make mise install every tool mise.toml pins, Ruby included.
+if [ -n "$mise" ] && [ "${#pinned_tools[@]}" -gt 0 ]; then
+  printf '\nInstalling %s with mise, at the versions mise.toml pins\n' "${pinned_tools[*]}"
+  mise install "${pinned_tools[@]}" || printf 'mise install failed; the report below names what is missing\n'
+fi
+
 printf '\nTools:\n'
 
 wanted_ruby=$(sed -n 's/^ruby = "\(.*\)"$/\1/p' mise.toml)
@@ -32,24 +44,37 @@ else
   printf '  git         %s\n' "$git_version"
 fi
 
+pinned() {
+  local name
+  for name in "${pinned_tools[@]}"; do
+    [ "$name" = "$1" ] && return 0
+  done
+  return 1
+}
+
 report() {
   local tool=$1 without=$2
   if command -v "$tool" >/dev/null 2>&1; then
     printf '  %-11s found\n' "$tool"
-  else
+  elif ! pinned "$tool"; then
     printf '  %-11s missing: %s\n' "$tool" "$without"
+  elif [ -n "$mise" ] && mise which "$tool" >/dev/null 2>&1; then
+    printf '  %-11s installed by mise, not on PATH: %s until mise is activated in your shell (mise activate --help)\n' \
+      "$tool" "$without"
+  else
+    printf '  %-11s missing: %s; install it with: mise install %s\n' "$tool" "$without" "$tool"
   fi
 }
 
 report shellcheck 'rake lint:shell, rake package:check and rake check fail'
+report typos 'rake lint:spelling and rake check fail'
+report zizmor 'rake lint:workflows and rake check fail'
+report lychee 'rake lint:links and rake check fail'
 report groff 'rake lint:man and rake check fail'
 report zsh 'the zsh completion tests skip; rake test:shells falls back to docker'
 report fish 'the fish completion tests skip; rake test:shells falls back to docker'
 report docker 'rake test:shells fails unless zsh and fish are installed'
 report gh 'bin/release and rake github:setup fail'
-report typos 'spelling is checked only by CI (lint job)'
-report zizmor 'the workflows are checked only by CI (lint job)'
-report lychee 'the links in the guides are checked only by CI (links job)'
 
 printf '\nReady. Run "bundle exec rake" for the tests and RuboCop, "bundle exec rake check" for what CI runs,\n'
 printf 'or "bundle exec rake -T" to list every task.\n'
