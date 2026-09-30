@@ -94,7 +94,9 @@ Nothing about a verb is written twice. Help text, option descriptions and exampl
 verb's class (`DESCRIPTION`, `self.examples`, shared options in `Commands::Options`). What
 belongs to no verb, the ENVIRONMENT, FILES, CONFIGURATION and EXIT STATUS sections of
 slipway(1), lives in `Commands::Manual`, which `bin/generate-man` hands to `Manpage`; the
-CONFIGURATION entries are `Config::DOCUMENTATION`, built from `Config::SETTINGS`.
+CONFIGURATION entries are `Config::DOCUMENTATION`, built from `Config::SETTINGS`, and the
+ENVIRONMENT line of each setting's variable points at its entry instead of describing the value
+again.
 `test/unit/seams_test.rb` derives the list of variables the code reads by scanning `lib/` and
 compares it with `Commands::Manual::ENVIRONMENT`, so a new `env['X']` fails the test until it is
 documented. `HOME` and `PATH` are the only variables read without a line in

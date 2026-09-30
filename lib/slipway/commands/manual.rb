@@ -13,17 +13,21 @@ module Slipway
         '2' => 'Usage error: unknown command, unknown flag or invalid argument.',
         '130' => 'Interrupted by SIGINT.'
       }.freeze
+      # A setting's variable points at the CONFIGURATION entry that describes its value, so the
+      # value is described once.
+      def self.setting(key, rest = '')
+        variable = Config::SETTINGS.find { it.key == key }.variable
+        [variable, "Outranks the #{key} key (see CONFIGURATION)#{rest}."]
+      end
+      private_class_method :setting
+
       # Every variable the code reads but HOME and PATH, which test/unit/seams_test.rb checks.
       ENVIRONMENT = {
         'SLIPWAY_CONFIG' => 'Path of the configuration file; overridden by --config.',
         'SLIPWAY_DATA_HOME' => 'Directory holding the registry: group and project manifests.',
-        'SLIPWAY_COLOR' => 'When to use color (auto, always or never); overridden by --color.',
-        'SLIPWAY_THEME' => 'Color theme (dark or light).',
-        'SLIPWAY_EDITOR' => 'Editor used by edit; takes precedence over VISUAL and EDITOR.',
-        'SLIPWAY_GROUP' => 'Default group scope; overridden by --group.',
-        'SLIPWAY_NETWORK_TIMEOUT' => 'Seconds a git network command may run before it is killed.',
-        'SLIPWAY_PARALLEL' => 'How many git network commands run at once, from 1 to 16.',
-        'SLIPWAY_PROTOCOLS' => 'Transports git may use in network commands, separated by colons (ssh:https).',
+        **[setting('color', '; --color outranks both'), setting('theme'), setting('editor', ', VISUAL and EDITOR'),
+           setting('group', '; --group outranks both'), setting('networkTimeout'), setting('parallel'),
+           setting('protocols', '; the names are separated by colons, as in ssh:https')].to_h,
         'SLIPWAY_DEBUG' => 'When non-empty, unexpected errors also print their class and backtrace.',
         'NO_COLOR' => 'When non-empty, disables color in auto mode.',
         'FORCE_COLOR' => 'When non-empty, enables color in auto mode even without a terminal.',

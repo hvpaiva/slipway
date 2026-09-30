@@ -94,25 +94,25 @@ Path of the configuration file; overridden by \-\-config.
 Directory holding the registry: group and project manifests.
 .TP
 \fBSLIPWAY_COLOR\fR
-When to use color (auto, always or never); overridden by \-\-color.
+Outranks the color key (see CONFIGURATION); \-\-color outranks both.
 .TP
 \fBSLIPWAY_THEME\fR
-Color theme (dark or light).
+Outranks the theme key (see CONFIGURATION).
 .TP
 \fBSLIPWAY_EDITOR\fR
-Editor used by edit; takes precedence over VISUAL and EDITOR.
+Outranks the editor key (see CONFIGURATION), VISUAL and EDITOR.
 .TP
 \fBSLIPWAY_GROUP\fR
-Default group scope; overridden by \-\-group.
+Outranks the group key (see CONFIGURATION); \-\-group outranks both.
 .TP
 \fBSLIPWAY_NETWORK_TIMEOUT\fR
-Seconds a git network command may run before it is killed.
+Outranks the networkTimeout key (see CONFIGURATION).
 .TP
 \fBSLIPWAY_PARALLEL\fR
-How many git network commands run at once, from 1 to 16.
+Outranks the parallel key (see CONFIGURATION).
 .TP
 \fBSLIPWAY_PROTOCOLS\fR
-Transports git may use in network commands, separated by colons (ssh:https).
+Outranks the protocols key (see CONFIGURATION); the names are separated by colons, as in ssh:https.
 .TP
 \fBSLIPWAY_DEBUG\fR
 When non\-empty, unexpected errors also print their class and backtrace.
