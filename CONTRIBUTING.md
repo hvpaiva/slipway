@@ -6,7 +6,9 @@ explains where things live and how to add to them.
 ## Setup
 
 You need Ruby 3.4 or newer (the repository pins 4.0.7 in `mise.toml`) and git 2.35 or newer.
-The optional checks use `shellcheck`, `groff`, `zsh`, `fish`, `docker`, `gh` and `typos`.
+With a git older than 2.41 the fetch tests and the README examples that run `fetch` or `sync`
+are skipped, so run the whole suite with 2.41 or newer. The optional checks use `shellcheck`,
+`groff`, `zsh`, `fish`, `docker`, `gh`, `typos`, `zizmor` and `lychee`.
 
 ```sh
 git clone https://github.com/hvpaiva/slipway.git
@@ -16,9 +18,9 @@ bundle exec ruby -Ilib exe/slipway --help
 ```
 
 `bin/setup` runs `bundle install` and ends with a report: the Ruby it found against
-`mise.toml`, the git version (older than 2.35 is a hard failure, with the reason), and one line
-per optional tool saying which task skips or fails without it. `bin/console` opens IRB with the
-gem loaded.
+`mise.toml`, the git version (older than 2.35 is a hard failure, with the reason, and older
+than 2.41 names what skips), and one line per optional tool saying which task skips or fails
+without it. `bin/console` opens IRB with the gem loaded.
 
 ## Tests and lint
 
