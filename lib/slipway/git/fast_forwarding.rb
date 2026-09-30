@@ -5,7 +5,7 @@ require_relative 'errors'
 module Slipway
   module Git
     class Repository
-      # The one write to a working tree, and the checks and refusals around it. It runs through
+      # A write to a working tree, and the checks and refusals around it. It runs through
       # Repository's own runner, status and in-progress lookup.
       module FastForwarding
         UPSTREAM = '@{upstream}'
@@ -24,7 +24,9 @@ module Slipway
         REFUSALS = {
           /^(?:error|fatal): Unable to create '.*index\.lock': File exists/ => Busy,
           /^error: The following untracked working tree files would be (?:overwritten|removed)/ => WouldOverwrite,
+          /^error: Untracked working tree file '.*' would be (?:overwritten|removed)/ => WouldOverwrite,
           /^error: Updating the following directories would lose untracked files/ => WouldOverwrite,
+          /^error: Updating '.*' would lose untracked files in it/ => WouldOverwrite,
           /^error: Your local changes to the following files would be overwritten/ => WouldLoseChanges,
           /^error: Entry '.*' not uptodate\. Cannot merge/ => WouldLoseChanges,
           /^fatal: Not possible to fast-forward/ => NotFastForward
@@ -55,9 +57,11 @@ module Slipway
 
         private
 
-        def ready_status(directory)
+        # +clean+ refuses staged and unstaged changes; without it git alone decides whether the move
+        # would overwrite them.
+        def ready_status(directory, clean: true)
           status = status(directory)
-          blocker = blocker(status)
+          blocker = blocker(status, clean:)
           raise Blocked.new(directory, *blocker) if blocker
 
           locks = branch_locks(status.branch)
@@ -77,11 +81,16 @@ module Slipway
 
         # In State.derive's order, so a blocking state is named as the STATUS column names it.
         # Untracked files do not block: git refuses to overwrite one.
-        def blocker(status)
+        def blocker(status, clean:)
           return ['Conflicted', unmerged(status.conflicted)] if status.conflicted.positive?
           return ['Detached', "HEAD is detached at #{status.head}"] if status.detached?
           return ['Unborn', 'no commits yet'] if status.unborn?
-          return ['Dirty', changes(status)] unless (status.staged + status.unstaged).zero?
+          return ['Dirty', changes(status)] if clean && !(status.staged + status.unstaged).zero?
+
+          tracking(status)
+        end
+
+        def tracking(status)
           return ['NoUpstream', "#{status.branch} tracks no upstream"] if status.upstream.nil?
 
           ['Gone', "upstream #{status.upstream} no longer exists"] if status.upstream_gone?
@@ -108,11 +117,16 @@ module Slipway
         # A commit the upstream lacks could come from any branch or fork the repository has
         # fetched, so a named commit is reached only along the upstream.
         def along_upstream(directory, commit, upstream)
-          lacks = ->(failed) { failed.status == 1 }
-          return if run(directory, 'merge-base', '--is-ancestor', commit, UPSTREAM, accept: lacks).success?
+          return if upstream_holds?(directory, commit)
 
           short = commit[0, Porcelain::ABBREVIATION]
           raise Blocked.new(directory, 'OffUpstream', "commit #{short} is not on #{upstream}")
+        end
+
+        # merge-base --is-ancestor exits 1 without a word when the commit is not an ancestor.
+        def upstream_holds?(directory, commit)
+          lacks = ->(failed) { failed.status == 1 }
+          run(directory, 'merge-base', '--is-ancestor', commit, UPSTREAM, accept: lacks).success?
         end
 
         # A partial clone fetches the blobs a checkout needs, so the merge runs as a network command:

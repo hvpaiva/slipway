@@ -9,6 +9,8 @@ require_relative 'git/commit'
 require_relative 'git/fetch_result'
 require_relative 'git/fast_forward'
 require_relative 'git/distance'
+require_relative 'git/reflog'
+require_relative 'git/move_back'
 require_relative 'git/repository'
 require_relative 'git/fake'
 
