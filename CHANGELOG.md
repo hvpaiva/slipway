@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `spec.remote`, `spec.branch`, `spec.revision`, `spec.syncPolicy` and `spec.paused` in project manifests, validated when a manifest is read and shown by `describe`, `-o json` and `-o yaml`.
 - `create project --remote` and `--branch`, checked like the manifest fields they set.
 - `diff` verb printing where each project differs from its manifest and what blocks sync, with the git command that shows or resolves it, without writing anything or contacting a remote; it exits with 3 when anything differs, and its man page has an EXIT STATUS section.
-- Drift, where a repository differs from its manifest (Missing, Remote, Branch, Revision, Behind) and what blocks a fast-forward, in the DRIFT column of `-o wide`, in `status.drift` and in a Drift block of `describe`.
+- Drift, where a repository differs from its manifest (Missing, Remote, Branch, Revision, Behind) and what blocks a fast-forward onto the upstream or up to a `spec.revision` pin the upstream holds, never back to it, in the DRIFT column of `-o wide`, in `status.drift` and in a Drift block of `describe`.
 - `create -o name|yaml|json` prints the created resource instead of the result line; with `--dry-run=client` it prints the manifest without writing it.
 - `create project --from-dir DIR` registers every git repository at or under a directory, to `--depth` levels, named after its directory and with its origin URL stripped of credentials; a path already registered reports unchanged.
 - `edit` through `SLIPWAY_EDITOR`, the `editor` config key, `VISUAL` or `EDITOR`, reopening the file with the failure as a comment when the result is invalid.

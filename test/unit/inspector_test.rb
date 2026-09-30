@@ -38,6 +38,32 @@ class InspectorTest < Minitest::Test
     assert_equal(['rebase', nil, nil], [behind, dirty, paused].map { @inspector.examine(it).operation })
   end
 
+  def test_the_distance_to_the_pin_is_asked_only_of_a_pinned_project_whose_head_is_elsewhere
+    pin = 'b2c3d4e5f60718293a4b5c6d7e8f9012345678a1'
+    distance = Slipway::Git::Distance.new(ahead: 0, behind: 2)
+    away = repo('away', status: CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT, distance:).with(revision: pin)
+    held = repo('held', status: CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT, distance:)
+           .with(revision: CommandsHelper::SHA)
+    free = repo('free', status: CommandsHelper::CLEAN, commit: CommandsHelper::COMMIT, distance:)
+    fresh = repo('fresh', status: CommandsHelper::UNBORN, distance:).with(revision: pin)
+
+    assert_equal([distance, nil, nil, nil], [away, held, free, fresh].map { @inspector.examine(it).pin })
+    assert_equal([[:distance, File.join(@home, 'dev', 'away'), { revision: pin, tracking: true }]],
+                 @git.calls.select { it.first == :distance })
+  end
+
+  # Only a branch whose upstream exists can be compared with it.
+  def test_the_pin_is_compared_with_the_upstream_only_of_a_branch_that_tracks_one
+    pin = 'b2c3d4e5f60718293a4b5c6d7e8f9012345678a1'
+    statuses = { 'detached' => CommandsHelper::DETACHED, 'loose' => CommandsHelper::CLEAN.with(upstream: nil),
+                 'gone' => CommandsHelper::CLEAN.with(upstream_gone: true) }
+    statuses.each do |name, status|
+      @inspector.examine(repo(name, status:, commit: CommandsHelper::COMMIT).with(revision: pin))
+    end
+
+    assert_equal([false] * 3, @git.calls.select { it.first == :distance }.map { it.last[:tracking] })
+  end
+
   def test_an_unborn_repository_is_not_asked_for_its_last_commit
     project = repo('fresh', status: CommandsHelper::UNBORN, commit: CommandsHelper::COMMIT)
 
@@ -164,10 +190,10 @@ class InspectorTest < Minitest::Test
 
   private
 
-  def repo(name, status:, commit: nil, remote: nil, fetched_at: nil, operation: nil)
+  def repo(name, status:, commit: nil, remote: nil, fetched_at: nil, operation: nil, distance: nil)
     directory = File.join(@home, 'dev', name)
     FileUtils.mkdir_p(directory)
-    @git.add(directory, status:, commit:, remote:, fetched_at:, operation:)
+    @git.add(directory, status:, commit:, remote:, fetched_at:, operation:, distance:)
     Slipway::Project.new(name:, path: "~/dev/#{name}")
   end
 

@@ -13,7 +13,7 @@ class GitRepositoryWriteAnswersTest < Minitest::Test
 
   STATUS = ["# branch.oid #{FROM}", '# branch.head main', '# branch.upstream origin/main', '# branch.ab +0 -2']
            .map { "#{it}\0" }.join.freeze
-  READS = %w[status rev-parse rev-list].freeze
+  READS = %w[status rev-parse rev-list merge-base].freeze
   # What git prints under LC_ALL=C for each refusal, and the error it becomes.
   REFUSED = {
     "error: Unable to create '/srv/x/.git/index.lock': File exists.\n\nAnother git process seems to be " \
@@ -41,7 +41,8 @@ class GitRepositoryWriteAnswersTest < Minitest::Test
       '--verify' => { status: 1 },
       'rev-parse' => { out: "#{FROM}\n#{TO}\n" },
       'rev-list' => { out: "0\t2\n" },
-      'merge' => {}
+      'merge' => {},
+      'merge-base' => {}
     }.freeze
 
     attr_reader :calls

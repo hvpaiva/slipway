@@ -10,9 +10,10 @@ class SeamsTest < Minitest::Test
   # Universal variables every program reads; the man page does not list them.
   UNDOCUMENTED = %w[HOME PATH].freeze
   # Set for the git child process, to bound repository discovery and the transports a network
-  # command may use and to name slipway in the reflog, never read from the user.
+  # command may use, to name slipway in the reflog and to keep a read offline, never read from
+  # the user.
   CHILD_ONLY = [Slipway::Git::Runner::CEILING_VARIABLE, Slipway::Git::Runner::PROTOCOL_VARIABLE,
-                Slipway::Git::Repository::REFLOG_VARIABLE].freeze
+                Slipway::Git::Repository::REFLOG_VARIABLE, Slipway::Git::Repository::LAZY_FETCH_VARIABLE].freeze
   # Upper case, with the odd lower-case suffix such as LESS_TERMCAP_md.
   NAME = /[A-Z][A-Za-z0-9_]+/
   # env['X'], @env.fetch('X'), env.fetch 'X', ENV.key?('X'), context.env['X'], ...

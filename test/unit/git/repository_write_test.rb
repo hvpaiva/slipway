@@ -80,6 +80,20 @@ class GitRepositoryWriteTest < Minitest::Test
     assert_equal 1, @repo.fast_forward(dir).count
   end
 
+  # A pushed side branch holds a commit that descends from HEAD but that main upstream never had.
+  def test_a_full_object_name_the_upstream_lacks_is_off_upstream
+    dir = build_repo(File.join(@root, 'stale'), 'stale')
+    push_change("#{dir}-other", 'side.txt', "side\n", branch: 'side')
+    git!(dir, 'fetch', '-q')
+    side = git!(dir, 'rev-parse', 'origin/side').chomp
+    before = head(dir)
+
+    error = assert_raises(Slipway::Git::Blocked) { @repo.fast_forward(dir, onto: side) }
+
+    assert_equal ['OffUpstream', "#{dir}: commit #{side[0, 7]} is not on origin/main"], [error.reason, error.message]
+    assert_equal before, head(dir)
+  end
+
   def test_an_object_name_that_is_no_commit_here_is_revision_not_found
     dir = fetched('stale')
     before = head(dir)
@@ -188,9 +202,10 @@ class GitRepositoryWriteTest < Minitest::Test
 
   def reflog(dir) = git!(dir, 'reflog', 'show', '--format=%gs', 'refs/heads/main').lines(chomp: true)
 
-  def push_change(clone, name, text)
+  def push_change(clone, name, text, branch: 'main')
+    git!(clone, 'checkout', '-q', '-B', branch)
     commit(clone, name, text, "change #{name}")
-    git!(clone, 'push', '-q', 'origin', 'main')
+    git!(clone, 'push', '-q', 'origin', branch)
   end
 
   # Commits on the branch just before git merges, as a user working beside slipway would.

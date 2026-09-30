@@ -31,7 +31,8 @@ module Slipway
                     "project that matches its manifest prints nothing.\n\n" \
                     'The repositories are read as they are on disk: diff contacts no remote and writes nothing, ' \
                     'so Behind is as of the last fetch, which slipway fetch refreshes. A project pinned by ' \
-                    'spec.revision is compared with that commit instead of its upstream. A pinned, paused or ' \
+                    'spec.revision is compared with that commit instead of its upstream, and is blocked when the ' \
+                    'repository lacks the commit, HEAD is past it or its upstream does not hold it. A paused or ' \
                     'FetchOnly project shows a blocker only when git cannot read its repository.'
       USAGE = '[NAME... | project/NAME...]'
       EXIT_STATUSES = CLI::Manpage::EXIT_STATUSES.merge(

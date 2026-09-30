@@ -36,6 +36,16 @@ class GitFakeTest < Minitest::Test
     assert_equal 'rebase', @fake.in_progress('/srv/rebasing')
   end
 
+  def test_add_registers_the_distance_answered_for_any_revision
+    distance = Slipway::Git::Distance.new(ahead: 0, behind: 2)
+    @fake.add('/srv/pinned', status: STATUS, distance:)
+    @fake.add('/srv/lost', status: STATUS)
+
+    assert_equal distance, @fake.distance('/srv/pinned', 'b' * 40)
+    assert_nil @fake.distance('/srv/lost', 'b' * 40)
+    assert_equal [:distance, '/srv/pinned', { revision: 'b' * 40, tracking: false }], @fake.calls.first
+  end
+
   def test_paths_are_matched_after_expansion
     @fake.add('/srv/a/../hldr', status: STATUS)
 

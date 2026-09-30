@@ -39,14 +39,10 @@ class PlanDeclaredTest < Minitest::Test
 
   def test_a_pinned_revision_replaces_the_upstream
     held = plan(BEHIND.with(staged: 1), revision: CommandsHelper::SHA)
-    moved = plan(BEHIND, revision: PIN)
-    unborn = plan(CommandsHelper::UNBORN, commit: nil, revision: PIN)
-    detached = plan(CommandsHelper::DETACHED, revision: PIN)
+    moved = plan(BEHIND, revision: PIN, pin: Slipway::Git::Distance.new(ahead: 0, behind: 2, off_upstream: 0))
 
     assert_predicate held, :converged?
-    assert_equal [['Revision', 'HEAD is at a1b2c3d, manifest pins b2c3d4e']], lines(moved)
-    assert_equal [[], [], %w[Revision]], kinds(detached)
-    assert_equal [['Revision', 'HEAD has no commits, manifest pins b2c3d4e']], lines(unborn)
+    assert_equal [['Revision', 'HEAD is at a1b2c3d, manifest pins b2c3d4e; sync will fast-forward']], lines(moved)
   end
 
   def test_drift_lists_in_type_order_then_the_blocker

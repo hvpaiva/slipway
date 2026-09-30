@@ -344,12 +344,15 @@ disk, so Behind is as of the last fetch (FETCHED), and `slipway fetch` refreshes
 | `Missing` | The registered path is not a directory. With `spec.remote`, the `git clone` command that recreates it is shown. |
 | `Remote` | origin is absent or differs from `spec.remote`. Sync never changes a remote. |
 | `Branch` | HEAD is detached or on another branch than `spec.branch`. Sync never switches branches. |
-| `Revision` | HEAD is not the commit `spec.revision` pins. The pin replaces the upstream, so a pinned project is never Behind. |
+| `Revision` | HEAD is not the commit `spec.revision` pins. The pin replaces the upstream, so a pinned project is never Behind; under `FastForward` sync will fast-forward a branch behind the pin to it unless a blocker stops it, and never moves a branch back. |
 | `Behind` | The checked-out branch is behind its upstream. Under `FastForward` sync will fast-forward it unless a blocker stops it; under `FetchOnly`, or while `spec.paused` is true, it is only reported. |
 
-A blocker comes after the drift and says why the checked-out branch cannot be fast-forwarded. The
-first three mean git could not read the repository and apply to every project; the others apply
-only under `FastForward` to a project that is neither paused nor pinned by `spec.revision`:
+A blocker comes after the drift and says why the checked-out branch cannot be fast-forwarded,
+onto its upstream or, for a project pinned by `spec.revision`, onto the pin. The first three mean
+git could not read the repository and apply to every project; the others apply only under
+`FastForward` to a project that is not paused, and `RevisionNotFound`, `PastRevision` and
+`OffUpstream` only to a pinned one. Behind means behind the upstream or, when pinned, behind the
+pin:
 
 | Blocker | Meaning |
 | --- | --- |
@@ -360,6 +363,9 @@ only under `FastForward` to a project that is neither paused nor pinned by `spec
 | `Unborn` | The branch has no commits yet. |
 | `Gone` | The upstream is configured but its ref no longer exists. |
 | `NoUpstream` | The branch tracks no upstream. |
+| `RevisionNotFound` | The repository has no commit by the name `spec.revision` pins. |
+| `PastRevision` | HEAD is past the pinned commit or on another line of history, so reaching the pin would move the branch back. |
+| `OffUpstream` | The upstream does not hold the pinned commit, which may be on another branch or a fork; sync moves a branch only along its upstream. |
 | `Conflicted` | The branch is behind and the working tree has unmerged paths. |
 | `Dirty` | The branch is behind and has staged or unstaged changes; untracked files do not block. |
 | `Diverged` | The branch is behind and has commits of its own. |
