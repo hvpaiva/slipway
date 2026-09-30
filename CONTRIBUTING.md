@@ -90,6 +90,8 @@ Each of these fails `rake check` or CI when it is broken.
 - `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer,
   `Output.warning` is the only place that writes a `warning:` line, and nothing under `lib/`
   writes to stdout or stderr except `cli/context.rb`.
+- `Git::Fake`, which the command tests run against, answers every question `Git::Repository`
+  answers, with the same parameters (`test/unit/git/fake_test.rb`).
 - The man page ENVIRONMENT section and the README variable table list every variable the code
   reads except `HOME` and `PATH`. The README tables of STATUS words, drift, blockers, exit
   statuses and the results of `fetch`, `sync` and `rollout undo`, the reasons a fetch gives,
