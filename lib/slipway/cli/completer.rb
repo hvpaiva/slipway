@@ -6,9 +6,10 @@ module Slipway
     # `value<TAB>description`, then a final `:N` line where N is 4 (no file completion) or 0
     # (let the shell complete file names).
     #
-    # A completer proc on an Option or Positional may return an Array of values, a Hash of
-    # value to description, or FILES to request file completion. Never raises: on any error
-    # only `:4` is printed.
+    # A completer proc on an Option or Positional receives the positional words typed so far and
+    # the word being completed, without a `--flag=` in front of it, and may return an Array of
+    # values, a Hash of value to description, or FILES to request file completion. The candidates
+    # are filtered by that word afterwards. Never raises: on any error only `:4` is printed.
     class Completer
       FILES = :files
       NO_FILES_DIRECTIVE = 4
@@ -97,16 +98,16 @@ module Slipway
       def options_of(command) = @registry.globals + command.options
 
       def candidates_for(state, current)
-        return values_of(state.pending, state.args) if state.pending
+        return values_of(state.pending, state.args, prefix(state, current)) if state.pending
         return inline_value_candidates(state, current) if current.match?(INLINE_VALUE)
         return switch_candidates(state.command) if option_word?(current, state)
         return subcommand_candidates(state.command) if state.command.group?
 
-        values_of(state.command.positional_at(state.args.size), state.args)
+        values_of(state.command.positional_at(state.args.size), state.args, current)
       end
 
-      def values_of(target, args)
-        values = target&.candidates(args) || []
+      def values_of(target, args, current)
+        values = target&.candidates(args, current) || []
         return values if values == FILES
 
         values.is_a?(Hash) ? values.to_a : values.map { [it, nil] }
@@ -114,8 +115,8 @@ module Slipway
 
       # Values for `--flag=partial` carry the `--flag=` prefix so they replace the whole word.
       def inline_value_candidates(state, current)
-        flag, = current.split(EQUALS, 2)
-        values = values_of(option_for(state.command, flag.delete_prefix('--')), state.args)
+        flag, typed = current.split(EQUALS, 2)
+        values = values_of(option_for(state.command, flag.delete_prefix('--')), state.args, typed)
         return values if values == FILES
 
         values.map { |value, description| ["#{flag}=#{value}", description] }

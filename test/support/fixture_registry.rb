@@ -53,7 +53,8 @@ class FixtureRegistry
       ],
       positionals: [
         Slipway::CLI::Positional.new(name: 'TYPE', enum: TYPES),
-        Slipway::CLI::Positional.new(name: 'NAME', required: false, variadic: true, completer: ->(_) { PROJECT_NAMES })
+        Slipway::CLI::Positional.new(name: 'NAME', required: false, variadic: true,
+                                     completer: ->(_given, _current) { PROJECT_NAMES })
       ],
       options: list_options,
       handler: handler('get')

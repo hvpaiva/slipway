@@ -105,6 +105,19 @@ class CompleterTest < Minitest::Test
                  completer.complete(['apply', '--output', ''])
   end
 
+  def test_a_completer_receives_the_positional_words_and_the_word_being_completed
+    seen = []
+    completer = Slipway::CLI::Completer.new(recording_registry(seen))
+
+    completer.complete(%w[pick a b])
+    completer.complete(%w[pick a --from wo])
+    completer.complete(%w[pick --from=wo])
+    completer.complete(%w[pick --from = wo])
+    completer.complete(%w[pick --from =])
+
+    assert_equal [[%w[a], 'b'], [%w[a], 'wo'], [[], 'wo'], [[], 'wo'], [[], '']], seen
+  end
+
   def test_call_prints_candidates_then_the_directive
     status, out, err = @fixture.run('__complete', 'get', '')
 
@@ -132,22 +145,39 @@ class CompleterTest < Minitest::Test
   def files_registry
     apply = Slipway::CLI::Command.new(
       name: 'apply', summary: 'Apply a manifest',
-      positionals: [Slipway::CLI::Positional.new(name: 'FILE', required: false, completer: ->(_) { :files })],
+      positionals: [Slipway::CLI::Positional.new(name: 'FILE', required: false,
+                                                 completer: ->(_given, _current) { :files })],
       options: [
         Slipway::CLI::Option.new(long: 'filename', short: 'f', argument: 'FILE', description: 'Manifest.',
-                                 completer: ->(_) { Slipway::CLI::Completer::FILES }),
+                                 completer: ->(_given, _current) { Slipway::CLI::Completer::FILES }),
         Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', description: 'Output format.',
-                                 completer: ->(_) { { 'yaml' => 'One YAML document', 'json' => 'One JSON object' } })
+                                 completer: lambda do |_given, _current|
+                                   { 'yaml' => 'One YAML document', 'json' => 'One JSON object' }
+                                 end)
       ],
       handler: ->(*) {}
     )
     Slipway::CLI::Registry.new(program: 'slipway', version: '0', description: 'x', globals: [], commands: [apply])
   end
 
+  def recording_registry(seen)
+    record = lambda do |given, current|
+      seen << [given.dup, current]
+      []
+    end
+    pick = Slipway::CLI::Command.new(
+      name: 'pick', summary: 'Records what its completers receive',
+      positionals: [Slipway::CLI::Positional.new(name: 'ITEM', variadic: true, completer: record)],
+      options: [Slipway::CLI::Option.new(long: 'from', argument: 'WHERE', description: 'Where.', completer: record)],
+      handler: ->(*) {}
+    )
+    Slipway::CLI::Registry.new(program: 'slipway', version: '0', description: 'x', globals: [], commands: [pick])
+  end
+
   def exploding_command
     Slipway::CLI::Command.new(
       name: 'boom', summary: 'Fails while completing',
-      positionals: [Slipway::CLI::Positional.new(name: 'X', completer: ->(_) { raise 'no' })], handler: ->(*) {}
+      positionals: [Slipway::CLI::Positional.new(name: 'X', completer: ->(_given, _current) { raise 'no' })], handler: ->(*) {}
     )
   end
 end

@@ -146,7 +146,10 @@ class OptionTest < Minitest::Test
 
   def test_candidates_come_from_the_enum_or_the_completer
     assert_equal %w[a b], option(long: 'x', argument: 'V', enum: %w[a b]).candidates
-    assert_equal %w[given], option(long: 'x', argument: 'V', completer: ->(given) { given }).candidates(%w[given])
+    echo = option(long: 'x', argument: 'V', completer: ->(given, current) { [*given, current] })
+
+    assert_equal %w[given cur], echo.candidates(%w[given], 'cur')
+    assert_equal [''], echo.candidates
     assert_empty option(long: 'x', argument: 'V').candidates
   end
 

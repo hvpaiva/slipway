@@ -9,7 +9,7 @@ class GlobalsTest < Minitest::Test
   end
 
   def test_all_with_a_group_completer_attaches_it_to_the_group_option_only
-    globals = Slipway::CLI::Globals.all(group_completer: ->(_given) { %w[default work] })
+    globals = Slipway::CLI::Globals.all(group_completer: ->(_given, _current) { %w[default work] })
     group = globals.find { it.long == 'group' }
 
     assert_equal %w[default work], group.candidates([])
