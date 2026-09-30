@@ -9,134 +9,131 @@ require_relative 'rollout'
 
 module Slipway
   # Brings projects to their manifests by the one move that cannot lose work: each is fetched,
-  # planned by Plan.for, and its checked-out branch fast-forwarded when the plan says so.
-  module Sync
+  # planned by Plan.for, and its checked-out branch fast-forwarded when the plan says so. It
+  # observes and plans on the workers and moves branches on the calling thread, one project at a
+  # time, so no two of its writes run at once.
+  class Sync
+    # The plan for a project whose fetch went through, made from what git answered after it.
+    Observed = Data.define(:project, :inspection, :fetched, :plan)
+
     FAST_FORWARDED = 'fast-forwarded'
+    REACHED = [Outcome::FETCHED, Outcome::UNCHANGED].freeze
+    ABBREV = Git::Porcelain::ABBREVIATION
+    TO_PIN = '(to the pinned revision)'
+    # Git leaves the branch where it was on each refusal. A lock may belong to a git that is
+    # still running, so none is ever removed.
+    ADVICE = { 'Busy' => 'sync never removes a lock', 'WouldOverwrite' => 'move them and run sync again',
+               'WouldLoseChanges' => 'commit or move them and run sync again',
+               'NotFastForward' => 'sync never merges or rebases' }.freeze
 
-    # Observes and plans on the workers and moves branches on the calling thread, one project at
-    # a time, so no two of its writes run at once.
-    class Executor
-      # The plan for a project whose fetch went through, made from what git answered after it.
-      Observed = Data.define(:project, :inspection, :fetched, :plan)
+    # Dry-run projects that no fetch has reached, counted as they settle.
+    attr_reader :unfetched
 
-      REACHED = [Outcome::FETCHED, Outcome::UNCHANGED].freeze
-      ABBREV = Git::Porcelain::ABBREVIATION
-      TO_PIN = '(to the pinned revision)'
-      # Git leaves the branch where it was on each refusal. A lock may belong to a git that is
-      # still running, so none is ever removed.
-      ADVICE = { 'Busy' => 'sync never removes a lock', 'WouldOverwrite' => 'move them and run sync again',
-                 'WouldLoseChanges' => 'commit or move them and run sync again',
-                 'NotFastForward' => 'sync never merges or rebases' }.freeze
+    # `group` is the one a command without -n selects, so the undo command can leave it out; nil
+    # when -n was typed, so every undo command names its group.
+    def initialize(runtime, fetcher, dry_run:, group:)
+      @runtime = runtime
+      @fetcher = fetcher
+      @dry_run = dry_run
+      @group = group
+      @unfetched = 0
+    end
 
-      # Dry-run projects that no fetch has reached, counted as they settle.
-      attr_reader :unfetched
+    # Runs on a worker thread: an Outcome when nothing is left to do, else an Observed.
+    def observe(project)
+      return Outcome.new(project:, word: Outcome::PAUSED) if project.paused
 
-      # `group` is the one a command without -n selects, so the undo command can leave it out; nil
-      # when -n was typed, so every undo command names its group.
-      def initialize(runtime, fetcher, dry_run:, group:)
-        @runtime = runtime
-        @fetcher = fetcher
-        @dry_run = dry_run
-        @group = group
-        @unfetched = 0
-      end
+      inspection = @runtime.inspector.examine(project)
+      return unreadable(inspection) if inspection.error
 
-      # Runs on a worker thread: an Outcome when nothing is left to do, else an Observed.
-      def observe(project)
-        return Outcome.new(project:, word: Outcome::PAUSED) if project.paused
+      fetched = @fetcher.fetch(project, inspection)
+      return fetched unless REACHED.include?(fetched.word)
 
-        inspection = @runtime.inspector.examine(project)
-        return unreadable(inspection) if inspection.error
+      inspection = @runtime.inspector.examine(project) unless @dry_run
+      return unreadable(inspection) if inspection.error
 
-        fetched = @fetcher.fetch(project, inspection)
-        return fetched unless REACHED.include?(fetched.word)
+      Observed.new(project:, inspection:, fetched:, plan: Plan.for(inspection))
+    end
 
-        inspection = @runtime.inspector.examine(project) unless @dry_run
-        return unreadable(inspection) if inspection.error
+    # Runs on the calling thread, in the order the projects are listed.
+    def settle(step)
+      return step unless step.is_a?(Observed)
 
-        Observed.new(project:, inspection:, fetched:, plan: Plan.for(inspection))
-      end
+      @unfetched += 1 if @dry_run && step.inspection.fetched_at.nil?
+      plan = step.plan
+      return skipped(step) unless plan.skips.empty?
+      return move(step) if plan.fast_forward?
 
-      # Runs on the calling thread, in the order the projects are listed.
-      def settle(step)
-        return step unless step.is_a?(Observed)
+      still(step)
+    end
 
-        @unfetched += 1 if @dry_run && step.inspection.fetched_at.nil?
-        plan = step.plan
-        return skipped(step) unless plan.skips.empty?
-        return move(step) if plan.fast_forward?
+    private
 
-        still(step)
-      end
+    # The checks inside the fast-forward read the repository again right before git merges,
+    # and --ff-only is git's own last word.
+    def move(step)
+      project = step.project
+      plan = step.plan
+      return outcome(project, FAST_FORWARDED, drift(plan.items)) if @dry_run
 
-      private
+      onto = plan.to_revision? ? project.revision : Git::Repository::UPSTREAM
+      forward = @fetcher.exclusively(project) { @runtime.git.fast_forward(@fetcher.path(project), onto:) }
+      return still(step) unless forward.moved?
 
-      # The checks inside the fast-forward read the repository again right before git merges,
-      # and --ff-only is git's own last word.
-      def move(step)
-        project = step.project
-        plan = step.plan
-        return outcome(project, FAST_FORWARDED, drift(plan.items)) if @dry_run
+      outcome(project, FAST_FORWARDED, [moved(step, forward), *declared(plan)])
+    rescue Git::Blocked => e
+      refused(step, e)
+    rescue Git::Error => e
+      Outcome.failure(project, e)
+    end
 
-        onto = plan.to_revision? ? project.revision : Git::Repository::UPSTREAM
-        forward = @fetcher.exclusively(project) { @runtime.git.fast_forward(@fetcher.path(project), onto:) }
-        return still(step) unless forward.moved?
+    def moved(step, forward)
+      range = "#{step.inspection.status.branch} #{forward.from[0, ABBREV]}..#{forward.to[0, ABBREV]}"
+      return "#{range} #{TO_PIN}" if step.plan.to_revision?
 
-        outcome(project, FAST_FORWARDED, [moved(step, forward), *declared(plan)])
-      rescue Git::Blocked => e
-        refused(step, e)
-      rescue Git::Error => e
-        Outcome.failure(project, e)
-      end
+      gained = forward.count
+      undo = Rollout.command('undo', step.project, @group)
+      "#{range} (#{gained} commit#{'s' unless gained == 1}); undo with '#{undo}'"
+    end
 
-      def moved(step, forward)
-        range = "#{step.inspection.status.branch} #{forward.from[0, ABBREV]}..#{forward.to[0, ABBREV]}"
-        return "#{range} #{TO_PIN}" if step.plan.to_revision?
+    def refused(step, error)
+      reason = error.reason
+      detail = [error.message.delete_prefix("#{error.path}: "), ADVICE[reason]].compact.join('; ')
+      command = CommandLine.git(step.project, 'status') unless reason == 'Busy'
+      outcome(step.project, Outcome::SKIPPED, [detail, command, *declared(step.plan)], reason:)
+    end
 
-        gained = forward.count
-        undo = Rollout.command('undo', step.project, @group)
-        "#{range} (#{gained} commit#{'s' unless gained == 1}); undo with '#{undo}'"
-      end
+    def skipped(step)
+      blocker = step.plan.skips.first
+      outcome(step.project, Outcome::SKIPPED, [blocker.message, blocker.command, *declared(step.plan)],
+              reason: blocker.type)
+    end
 
-      def refused(step, error)
-        reason = error.reason
-        detail = [error.message.delete_prefix("#{error.path}: "), ADVICE[reason]].compact.join('; ')
-        command = CommandLine.git(step.project, 'status') unless reason == 'Busy'
-        outcome(step.project, Outcome::SKIPPED, [detail, command, *declared(step.plan)], reason:)
-      end
+    # Nothing moved, so the plan's drift says why. Only a FetchOnly project reports what its fetch
+    # brought; for any other, sync reports the branch.
+    def still(step)
+      fetched = step.fetched if step.project.sync_policy == SyncPolicy::FETCH_ONLY
+      outcome(step.project, fetched&.word || Outcome::UNCHANGED,
+              [*fetched&.details, held(step), *drift(step.plan.reports)])
+    end
 
-      def skipped(step)
-        blocker = step.plan.skips.first
-        outcome(step.project, Outcome::SKIPPED, [blocker.message, blocker.command, *declared(step.plan)],
-                reason: blocker.type)
-      end
+    def held(step)
+      "held at #{step.project.revision[0, ABBREV]} by spec.revision" if step.inspection.at_pin?
+    end
 
-      # Nothing moved, so the plan's drift says why. Only a FetchOnly project reports what its fetch
-      # brought; for any other, sync reports the branch.
-      def still(step)
-        fetched = step.fetched if step.project.sync_policy == SyncPolicy::FETCH_ONLY
-        outcome(step.project, fetched&.word || Outcome::UNCHANGED,
-                [*fetched&.details, held(step), *drift(step.plan.reports)])
-      end
+    # Worded as diff words it, with the command that shows or resolves it.
+    def unreadable(inspection)
+      item = Plan.for(inspection).items.first
+      outcome(inspection.project, Outcome::SKIPPED, [item.message, item.command], reason: item.type)
+    end
 
-      def held(step)
-        "held at #{step.project.revision[0, ABBREV]} by spec.revision" if step.inspection.at_pin?
-      end
+    # A move or a blocker already says where the branch stands against its upstream or its pin.
+    def declared(plan) = drift(plan.reports.reject { Drift::MOVES.include?(it.type) })
 
-      # Worded as diff words it, with the command that shows or resolves it.
-      def unreadable(inspection)
-        item = Plan.for(inspection).items.first
-        outcome(inspection.project, Outcome::SKIPPED, [item.message, item.command], reason: item.type)
-      end
+    def drift(items) = items.map { "#{it.type}: #{it.message}" }
 
-      # A move or a blocker already says where the branch stands against its upstream or its pin.
-      def declared(plan) = drift(plan.reports.reject { Drift::MOVES.include?(it.type) })
-
-      def drift(items) = items.map { "#{it.type}: #{it.message}" }
-
-      def outcome(project, word, details, reason: nil)
-        Outcome.new(project:, word:, reason:, details: details.compact)
-      end
+    def outcome(project, word, details, reason: nil)
+      Outcome.new(project:, word:, reason:, details: details.compact)
     end
   end
 end

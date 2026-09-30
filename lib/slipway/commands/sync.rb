@@ -50,7 +50,7 @@ module Slipway
         entries: {
           Sync::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits it ' \
                                   'gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the ' \
-                                  "move; a move up to a spec.revision pin ends in #{Sync::Executor::TO_PIN}.",
+                                  "move; a move up to a spec.revision pin ends in #{Sync::TO_PIN}.",
           Outcome::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
           Outcome::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
                                 'moved remote-tracking refs.',
@@ -110,15 +110,15 @@ module Slipway
         names = scope.project_targets(args, verb: 'sync')
         dry_run = opts[:dry_run] == true
         fetcher = Fetcher.new(runtime, prune: opts[:prune] == true, dry_run:)
-        executor = Sync::Executor.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
+        syncer = Sync.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
         results = Results.new(context, ROLES, dry_run:)
         scope.select(Resources::PROJECTS, names) do |projects|
           next scope.report_none(Resources::PROJECTS) if projects.empty?
 
-          results.stream(projects, workers: runtime.config.parallel, work: executor.method(:observe)) do |step|
-            executor.settle(step)
+          results.stream(projects, workers: runtime.config.parallel, work: syncer.method(:observe)) do |step|
+            syncer.settle(step)
           end
-          unfetched(context, executor.unfetched)
+          unfetched(context, syncer.unfetched)
           results.summarize
         end
         raise Failed if results.any?(Outcome::DENIED, Outcome::FAILED)

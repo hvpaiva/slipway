@@ -15,7 +15,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Reconciliation | `drift.rb`, `plan.rb`, `command_line.rb`, `rollout.rb` | `Drift`, `Plan`, `CommandLine` (the git command lines slipway prints and never runs) and `Rollout::History`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
 | Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
-| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Sync::Executor`, `Rollback` and `Pool`. |
+| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Sync`, `Rollback` and `Pool`. |
 
 The domain holds the rules for what may enter the registry and how it is stored: `Store` writes
 each manifest as a plain file, `Manifest` parses and checks one, and `Yaml` writes every YAML
@@ -184,7 +184,7 @@ There are two pool sizes. `Inspector` reads repositories on a fixed `DEFAULT_WOR
 threads: a read is local, and the `parallel` setting paces network commands only.
 `Commands::Results` runs the work of `fetch` and `sync` on `parallel` threads and prints each
 result through `each_ordered` as soon as every earlier one is done.
-`Sync::Executor` splits sync in two: its workers inspect, fetch through `Fetcher`, inspect
+`Sync` splits sync in two: its workers inspect, fetch through `Fetcher`, inspect
 again and plan, and the calling thread fast-forwards each project as its result comes up,
 inside `Fetcher#exclusively`, so no two of its writes run at once. `Rollback` runs on the
 calling thread for its one project and is the only caller of the move back.
@@ -217,7 +217,7 @@ passes them to the terminal. SECURITY.md names it.
 the writes to a working tree, the environment git gets and what reaches the terminal. A few
 places keep those promises: `Git::Runner` spawns every git process and sets its environment;
 `Git::Repository` holds every git argv, its `FastForwarding` part the fast-forward, which only
-`Sync::Executor` and `Rollback` call, and its `RollingBack` part the reset, which only
+`Sync` and `Rollback` call, and its `RollingBack` part the reset, which only
 `Rollback` calls; `Manifest`, through `Git::Url` and `Git::BranchName`, checks each field that
 can reach git before a manifest enters the store; `Output.plain`, `CLI::Style.plain` and
 `Git::Url.redact` treat what is printed; and `Plan` and the git errors quote each word they put
@@ -315,7 +315,7 @@ changes a working tree) with its message and its line in `TYPE_MEANINGS` and, fo
 `BLOCKERS` sentence built with `Drift.blocker` and a line in `BLOCKER_MEANINGS`; the README
 tables follow both. `Plan::Planner` decides when the action applies and which obstacles block
 it; it reads only the inspection it is given, so its tests need no repository. Only
-`Sync::Executor` performs the action, through a `Git::Repository` method, inside
+`Sync` performs the action, through a `Git::Repository` method, inside
 `Fetcher#exclusively` and with its own reflog action. The action reports a result word in
 `Commands::SyncCommand::ROLES` whose role exists in both themes, and the verb's Results
 glossary explains it. It keeps every promise in [SECURITY.md](SECURITY.md#safety-promises), or
