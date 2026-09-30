@@ -14,12 +14,16 @@ Examples:
   # Describe the projects labeled lang=rust
   slipway describe projects -l lang=rust
 
+  # Describe the projects on the main branch
+  slipway describe projects --field-selector status.branch=main
+
   # Describe a group
   slipway describe group work
 
 Options:
-  -l, --selector EXPR   Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
-  -A, --all-groups      If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
+  -l, --selector EXPR         Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
+      --field-selector EXPR   Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. --field-selector key1=value1,key2=value2). Projects support metadata.name, metadata.group, spec.path, status.state, status.branch, status.lastFetch; groups support metadata.name. status.lastFetch is never for a project with no fetch on record.
+  -A, --all-groups            If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
 
 Usage:
   slipway describe (TYPE [NAME...] | TYPE/NAME...) [flags]

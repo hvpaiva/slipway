@@ -137,6 +137,27 @@ personal   hldr    main     Clean    5h        1s
 comma-separated terms must all hold. Neither a selector nor `-A` can be combined with explicit
 names.
 
+`--field-selector EXPR` filters on the fields of the object `-o json` prints, with kubectl's
+field grammar: `path=value` (or `path==value`) and `path!=value`, comma-separated, all of which
+must hold.
+
+```console
+$ slipway get projects -A --field-selector status.state!=Clean
+GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
+default    notes   main     Ahead    2h        0s
+personal   augur   main     Dirty    <never>   1s
+```
+
+Projects support `metadata.name`, `metadata.group`, `spec.path`, `status.state`,
+`status.branch` and `status.lastFetch`; groups support `metadata.name`. Values compare exactly,
+case included, and `spec.path` is the path as registered (`~/dev/hldr`), not the expanded one.
+`status.lastFetch` compares as the RFC 3339 time `-o json` prints. A field the object leaves out
+compares as the empty value, so `status.branch=` selects the projects on a detached HEAD and
+those git could not read; `status.lastFetch` compares as `never` instead, so
+`status.lastFetch=never` selects the projects no fetch has reached, those whose last fetch
+failed and those git could not read. A backslash escapes `\`, `,` and `=` inside a value. Like a
+label selector, a field selector cannot be combined with explicit names.
+
 ### Output formats
 
 `-o table` is the default. `-o wide` adds PATH, HEAD and LAST-COMMIT (the age of the last

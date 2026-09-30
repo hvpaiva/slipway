@@ -17,7 +17,7 @@ module Slipway
           name: 'describe', summary: 'Show details of one or many resources',
           section: 'Basic Commands', description: DESCRIPTION, examples:, usage: Get::USAGE,
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: false)],
-          options: [Options::SELECTOR, Options::ALL_GROUPS],
+          options: [Options::SELECTOR, Options::FIELD_SELECTOR, Options::ALL_GROUPS],
           handler: new(factory)
         )
       end
@@ -28,6 +28,8 @@ module Slipway
           CLI::Example.new(comment: 'Describe every project in the work group', command: 'describe projects -n work'),
           CLI::Example.new(comment: 'Describe the projects labeled lang=rust',
                            command: 'describe projects -l lang=rust'),
+          CLI::Example.new(comment: 'Describe the projects on the main branch',
+                           command: 'describe projects --field-selector status.branch=main'),
           CLI::Example.new(comment: 'Describe a group', command: 'describe group work')
         ]
       end
@@ -36,10 +38,11 @@ module Slipway
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, names = scope.targets(args)
+        fields = scope.field_selector(kind, names)
         scope.select(kind, names) do |resources|
-          next scope.report_none(kind) if resources.empty?
+          blocks = kind.namespaced? ? projects(runtime, context, resources, fields) : groups(runtime, resources, fields)
+          next scope.report_none(kind) if blocks.empty?
 
-          blocks = kind.namespaced? ? projects(runtime, context, resources) : groups(runtime, resources)
           renderer = Output::Describe.new(context)
           context.print(blocks.map { renderer.render(it) }.join("\n"))
         end
@@ -47,15 +50,17 @@ module Slipway
 
       private
 
-      def projects(runtime, context, resources)
-        inspections = Base.examine(runtime, context, resources)
+      def projects(runtime, context, resources, fields)
+        inspections = fields.filter(Base.examine(runtime, context, resources)) { Views::Project.object(it) }
         now = runtime.clock.call
         inspections.map { Views::Project.describe(it, now:) }
       end
 
-      def groups(runtime, groups)
+      def groups(runtime, groups, fields)
         now = runtime.clock.call
-        groups.map { Views::Group.describe(it, count: runtime.store.project_count(it.name), now:) }
+        counted = groups.map { [it, runtime.store.project_count(it.name)] }
+        fields.filter(counted) { |group, count| Views::Group.object(group, count:) }
+              .map { |group, count| Views::Group.describe(group, count:, now:) }
       end
     end
   end
