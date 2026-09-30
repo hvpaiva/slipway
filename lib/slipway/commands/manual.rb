@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../config'
+require_relative '../git'
 
 module Slipway
   module Commands
@@ -42,6 +43,13 @@ module Slipway
         'LESS_TERMCAP_md' => 'Same as MANPAGER.',
         'GROFF_NO_SGR' => 'Same as MANPAGER.'
       }.freeze
+      # The variables slipway clears for git instead of reading them.
+      CLEARED = {
+        Git::Runner::ENVIRONMENT.filter_map { |name, value| name if value.nil? && name.start_with?('GIT_') }
+                                .join(', ') =>
+          'Ignored: every git command slipway runs starts without them, so an inherited value cannot point git at ' \
+          'another repository.'
+      }.freeze
       FILES = {
         '$XDG_CONFIG_HOME/slipway/config.yaml' =>
           'Configuration file; see CONFIGURATION. Also set by --config or SLIPWAY_CONFIG.',
@@ -51,7 +59,8 @@ module Slipway
 
       # The keyword arguments CLI::Manpage takes for slipway's own sections.
       def self.sections
-        { environment: ENVIRONMENT, files: FILES, configuration: Config::DOCUMENTATION, exit_statuses: EXIT_STATUSES }
+        { environment: ENVIRONMENT.merge(CLEARED), files: FILES, configuration: Config::DOCUMENTATION,
+          exit_statuses: EXIT_STATUSES }
       end
     end
   end
