@@ -3,10 +3,10 @@
 # steps that need the pull request or a tool outside the bundle: the commits job passes the
 # pull request's title and body to bin/lint-commits and reads its labels for the changelog
 # gate; the completions job runs the completion tests with zsh and fish installed, as
-# "bundle exec rake test:shells" does locally; typos and zizmor run through their actions in
-# the lint job and lychee through its action in the links job, at the versions mise.toml pins
-# for lint:spelling, lint:workflows and lint:links. The job names are the required status
-# checks of the main ruleset (GitHub::REQUIRED_CHECKS in rakelib/support/github.rb).
+# "bundle exec rake test:shells" does locally. ShellCheck, typos, zizmor and lychee come from
+# mise at the versions mise.toml pins, the ones rake check runs locally; Ruby is left to
+# setup-ruby, which caches the bundle. The job names are the required status checks of the
+# main ruleset (GitHub::REQUIRED_CHECKS in rakelib/support/github.rb).
 name: CI
 
 on:
@@ -43,18 +43,18 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.12
+          install_args: shellcheck typos zizmor
       - run: bundle exec rubocop
       - run: bundle exec rake lint:shell
       - run: bundle exec rake lint:man
-      - uses: crate-ci/typos@00f422f3b19c57bc6338715ebfe3316d38768461 # v1.50.3
-      # The action pins the zizmor image by digest for the version below. Annotations
-      # replace the SARIF upload, which would need security-events: write.
-      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
-        with:
-          inputs: .github/workflows
-          version: 1.30.1
-          advanced-security: false
-          annotations: true
+      - run: bundle exec rake lint:spelling
+      # The token turns on zizmor's audits that query GitHub.
+      - run: bundle exec rake lint:workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   commits:
     if: github.event_name == 'pull_request'
@@ -177,6 +177,10 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.12
+          install_args: shellcheck
       - run: bundle exec rake package:check
 
   # SLIPWAY_REQUIRE_SHELLS turns a missing zsh or fish into a failure instead of a skip.
@@ -193,6 +197,10 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
           bundler-cache: true
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.12
+          install_args: shellcheck
       - name: Run the completion scripts in bash, zsh and fish
         env:
           SLIPWAY_REQUIRE_SHELLS: '1'
@@ -206,6 +214,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with:
-          args: --config lychee.toml --no-progress './*.md' './.github/**/*.md'
+          bundler-cache: true
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.12
+          install_args: lychee
+      - run: bundle exec rake lint:links

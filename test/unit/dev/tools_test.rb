@@ -3,11 +3,13 @@
 require 'prism'
 require 'test_helper'
 require 'tmpdir'
+require 'yaml'
 require_relative '../../../rakelib/support/tools'
 
 class ToolsTest < Minitest::Test
   ROOT = File.expand_path('../../..', __dir__)
   SETUP = File.join(ROOT, 'bin', 'setup')
+  CI = File.join(ROOT, '.github', 'workflows', 'ci.yml')
 
   def test_every_tool_a_rake_task_requires_is_pinned_in_mise_toml_or_reported_by_bin_setup
     required = required_tools
@@ -15,6 +17,12 @@ class ToolsTest < Minitest::Test
     assert_empty required - Tools.pinned.keys - reported_tools
     assert_includes required, 'typos'
     assert_includes required, 'groff'
+  end
+
+  # mise install with a tool that mise.toml does not pin installs its latest release, so CI
+  # would drift from rake check without failing. Ruby comes from ruby/setup-ruby in CI.
+  def test_ci_installs_through_mise_exactly_the_tools_mise_toml_pins_besides_ruby
+    assert_equal Tools.pinned.keys.sort - ['ruby'], ci_mise_installs.sort
   end
 
   def test_pinned_reads_the_tools_table_and_nothing_else
@@ -62,6 +70,12 @@ class ToolsTest < Minitest::Test
       argument = call.arguments&.arguments&.first
       argument.unescaped if argument.is_a?(Prism::StringNode)
     end.uniq
+  end
+
+  def ci_mise_installs
+    steps = YAML.safe_load_file(CI).fetch('jobs').values.flat_map { it.fetch('steps') }
+    mise = steps.select { it['uses']&.start_with?('jdx/mise-action@') }
+    mise.flat_map { it.dig('with', 'install_args').split }.uniq
   end
 
   def reported_tools = File.read(SETUP).scan(/^report (\S+) /).flatten

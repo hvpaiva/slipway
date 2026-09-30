@@ -8,10 +8,11 @@ explains where things live and how to add to them.
 You need Ruby 3.4 or newer (the repository pins 4.0.7 in `mise.toml`) and git 2.35 or newer.
 With a git older than 2.41 the fetch tests and the README examples that run `fetch` or `sync`
 are skipped, so run the whole suite with 2.41 or newer. `rake check` also needs `shellcheck`,
-`groff`, `typos`, `zizmor` and `lychee`. `mise.toml` pins the last three at the versions CI
-runs, so with [mise](https://mise.jdx.dev) `mise install typos zizmor lychee` installs them
-without root. The other tools are optional: `zsh` and `fish` for the completion tests (or
-`docker`, which `rake test:shells` uses in their place) and `gh` for the maintainer tasks.
+`groff`, `typos`, `zizmor` and `lychee`. `mise.toml` pins all of them but `groff` at the
+versions CI runs, so with [mise](https://mise.jdx.dev)
+`mise install shellcheck typos zizmor lychee` installs them without root. The other tools are
+optional: `zsh` and `fish` for the completion tests (or `docker`, which `rake test:shells` uses
+in their place) and `gh` for the maintainer tasks.
 
 ```sh
 git clone https://github.com/hvpaiva/slipway.git
