@@ -187,7 +187,7 @@ class Release
   def open_pull_request
     body = "Releases slipway #{@version}. Its tag goes on the merge commit.\n\n#{@notes}\n"
     step(['gh', 'pr', 'create', '--base', @branch, '--head', release_branch, '--title', "chore: release #{tag}",
-          '--body', body]).strip.lines.last.to_s.strip
+          '--assignee', '@me', '--body', body]).strip.lines.last.to_s.strip
   end
 
   def print_next_steps(url)
