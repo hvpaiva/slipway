@@ -128,6 +128,13 @@ module Slipway
         USER_PAGER_VARIABLES = %w[LESS_TERMCAP_md MANPAGER MANROFFOPT GROFF_NO_SGR].freeze
         RESET = "\e[0m"
         NO_DEFAULT_DIR = 'no default install directory is configured; pass --install=DIR'
+        # man(1) looks for section 1 pages in the man1 directory of each MANPATH entry, so the
+        # MANPATH line printed for any other directory would find nothing.
+        SECTION_DIR = 'man1'
+        NOT_A_SECTION_DIR = "invalid argument %s for --install: must be a #{SECTION_DIR} directory, " \
+                            "such as ~/.local/share/man/#{SECTION_DIR}".freeze
+        # An empty DIR would expand to the working directory.
+        INSTALL_EMPTY = 'flag --install must not be empty'
 
         def initialize(resolve, man_dir:, exec:, paths:)
           @resolve = resolve
@@ -182,9 +189,7 @@ module Slipway
 
         def install(context, target)
           paths = @paths&.call(context.env)
-          raise Slipway::Error, NO_DEFAULT_DIR if target == true && paths.nil?
-
-          dir = target == true ? paths.man_install_dir : File.expand_path(target)
+          dir = target == true ? default_install_dir(paths) : named_install_dir(target)
           pages = Dir[File.join(@man_dir, '*.1')]
           raise Slipway::Error, "no manual pages found in #{@man_dir}" if pages.empty?
 
@@ -194,6 +199,21 @@ module Slipway
             context.puts("installed #{File.join(dir, File.basename(page))}")
           end
           context.puts(install_note(paths, dir))
+        end
+
+        def default_install_dir(paths)
+          raise Slipway::Error, NO_DEFAULT_DIR if paths.nil?
+
+          paths.man_install_dir
+        end
+
+        def named_install_dir(target)
+          raise UsageError, INSTALL_EMPTY if target.strip.empty?
+
+          dir = File.expand_path(target)
+          raise UsageError, format(NOT_A_SECTION_DIR, target.inspect) unless File.basename(dir) == SECTION_DIR
+
+          dir
         end
 
         # man-db adds ~/.local/share/man on its own only when ~/.local/bin is on PATH.

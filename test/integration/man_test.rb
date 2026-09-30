@@ -40,6 +40,27 @@ class ManIntegrationTest < Minitest::Test
     end
   end
 
+  def test_install_refuses_a_directory_that_is_not_man1
+    with_home do |env|
+      target = File.join(env['HOME'], 'sw', 'mandir')
+
+      assert_equal [2, '', "error: invalid argument #{target.inspect} for --install: must be a man1 directory, " \
+                           "such as ~/.local/share/man/man1\nSee 'slipway man --help' for usage.\n"],
+                   slipway('man', "--install=#{target}", env:)
+      refute_path_exists File.join(env['HOME'], 'sw')
+    end
+  end
+
+  def test_install_refuses_an_empty_directory_even_from_inside_man1
+    with_home do |env|
+      section = FileUtils.mkdir_p(File.join(env['HOME'], 'share', 'man', 'man1')).first
+
+      assert_equal [2, '', "error: flag --install must not be empty\nSee 'slipway man --help' for usage.\n"],
+                   slipway('man', '--install=', env:, chdir: section)
+      assert_empty Dir.children(section)
+    end
+  end
+
   def test_without_man_on_path_the_help_command_is_offered_instead
     with_home do |env|
       status, out, err = slipway('man', 'config', 'view', env: env.merge('PATH' => '/nonexistent'))

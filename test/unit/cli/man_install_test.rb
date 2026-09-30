@@ -18,6 +18,53 @@ class ManInstallTest < Minitest::Test
     end
   end
 
+  def test_install_into_a_directory_not_named_man1_is_a_usage_error
+    with_pages do |dir, env|
+      target = File.join(env['HOME'], 'sw', 'mandir')
+      status, out, err = run_cli('man', "--install=#{target}", registry: registry(dir), env:)
+
+      assert_equal 2, status
+      assert_empty out
+      assert_equal "error: invalid argument #{target.inspect} for --install: must be a man1 directory, " \
+                   "such as ~/.local/share/man/man1\nSee 'slipway man --help' for usage.\n", err
+      refute_path_exists File.join(env['HOME'], 'sw')
+    end
+  end
+
+  def test_install_refuses_a_name_that_only_ends_in_man1
+    with_pages do |dir, env|
+      target = File.join(env['HOME'], 'share', 'man', 'xman1')
+      status, out, = run_cli('man', "--install=#{target}", registry: registry(dir), env:)
+
+      assert_equal [2, ''], [status, out]
+      refute_path_exists target
+    end
+  end
+
+  def test_install_checks_the_expanded_directory
+    with_pages do |dir, env|
+      section = File.join(env['HOME'], 'share', 'man', 'man1')
+      accepted, = run_cli('man', "--install=#{section}/.", registry: registry(dir), env:)
+      refused, = run_cli('man', "--install=#{section}/..", registry: registry(dir), env:)
+
+      assert_equal [0, 2], [accepted, refused]
+      assert_equal PAGES.sort, Dir.children(section).sort
+    end
+  end
+
+  def test_install_refuses_an_empty_directory_even_from_inside_man1
+    with_pages do |dir, env|
+      section = FileUtils.mkdir_p(File.join(env['HOME'], 'man1')).first
+      results = Dir.chdir(section) do
+        ['', ' '].map { run_cli('man', "--install=#{it}", registry: registry(dir), env:) }
+      end
+
+      assert_equal [[2, '', "error: flag --install must not be empty\nSee 'slipway man --help' for usage.\n"]] * 2,
+                   results
+      assert_empty Dir.children(section)
+    end
+  end
+
   def test_install_defaults_to_the_xdg_data_home_and_explains_man_db_discovery
     with_pages do |dir, env|
       status, out, = run_cli('man', '--install', registry: registry(dir), env:)
