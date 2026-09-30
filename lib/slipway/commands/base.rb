@@ -35,6 +35,9 @@ module Slipway
         run(runtime, context, args, opts)
       end
 
+      # The resource types the verb acts on, the ones api-resources lists it under.
+      def kinds = []
+
       private
 
       def scope(runtime, context, opts) = Scope.new(runtime, context, opts)

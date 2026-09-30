@@ -102,6 +102,8 @@ module Slipway
       end
       private_class_method :examples
 
+      def kinds = [Resources::PROJECTS]
+
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         names = scope.project_targets(args, verb: 'sync')

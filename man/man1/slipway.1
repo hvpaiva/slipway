@@ -25,55 +25,58 @@ is given, and \-A covers every group.
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH COMMANDS
 .SS "Basic Commands"
-.TP 12
+.TP 15
 \fBget\fR
 Display one or many resources
-.TP 12
+.TP 15
 \fBdescribe\fR
 Show details of one or many resources
-.TP 12
+.TP 15
 \fBcreate\fR
 Create a resource by name
-.TP 12
+.TP 15
 \fBapply\fR
 Apply a configuration to a resource by file name or stdin
-.TP 12
+.TP 15
 \fBdelete\fR
 Delete resources by type and name
-.TP 12
+.TP 15
 \fBedit\fR
 Edit a resource from the default editor
-.TP 12
+.TP 15
 \fBlabel\fR
 Update the labels on a resource
 .SS "Repository Commands"
-.TP 12
+.TP 15
 \fBfetch\fR
 Fetch from the remote of each project
-.TP 12
+.TP 15
 \fBdiff\fR
 Show where projects differ from their manifests
-.TP 12
+.TP 15
 \fBsync\fR
 Fetch projects and fast\-forward their branches
-.TP 12
+.TP 15
 \fBrollout\fR
 Manage the rollout of a project
 .SS "Settings Commands"
-.TP 12
+.TP 15
 \fBconfig\fR
 Inspect the configuration in effect
-.TP 12
+.TP 15
 \fBcompletion\fR
 Output shell completion code for the specified shell (bash, zsh, fish)
-.TP 12
+.TP 15
 \fBman\fR
 Show the manual page of a command
 .SS "Other Commands"
-.TP 12
+.TP 15
+\fBapi\-resources\fR
+Print the supported resource types
+.TP 15
 \fBhelp\fR
 Help about any command
-.TP 12
+.TP 15
 \fBversion\fR
 Print the version of slipway
 .SH OPTIONS
@@ -229,6 +232,7 @@ The pages of these commands list their own statuses:
 .BR slipway\-config (1),
 .BR slipway\-config\-view (1),
 .BR slipway\-config\-path (1),
+.BR slipway\-api\-resources (1),
 .BR slipway\-help (1),
 .BR slipway\-version (1),
 .BR slipway\-completion (1),

@@ -20,6 +20,7 @@ require_relative 'commands/diff'
 require_relative 'commands/sync'
 require_relative 'commands/rollout'
 require_relative 'commands/config'
+require_relative 'commands/api_resources'
 
 module Slipway
   module Commands
@@ -39,7 +40,7 @@ module Slipway
                        "#{Options::TYPES_SENTENCE}".freeze
     # Help lists the verbs in this order within their sections.
     VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Fetch, Diff, SyncCommand, RolloutCommand,
-             ConfigCommand].freeze
+             ConfigCommand, APIResources].freeze
 
     def self.registry(factory)
       CLI::Registry.new(program: PROGRAM, version: VERSION, description: DESCRIPTION,

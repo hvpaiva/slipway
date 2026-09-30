@@ -75,6 +75,8 @@ module Slipway
       end
       private_class_method :examples
 
+      def kinds = Resources::KINDS
+
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, name, words = split(scope, args)

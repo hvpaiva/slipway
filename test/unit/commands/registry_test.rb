@@ -10,8 +10,8 @@ class CommandsRegistryTest < Minitest::Test
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
 
-    assert_equal %w[get describe create apply delete edit label fetch diff sync rollout config help version completion
-                    man __complete],
+    assert_equal %w[get describe create apply delete edit label fetch diff sync rollout config api-resources help
+                    version completion man __complete],
                  registry.root.subcommands.map(&:name)
     assert_equal ['slipway', Slipway::VERSION, 'A kubectl-style registry of the git repositories on your machine'],
                  [registry.program, registry.version, registry.description]
@@ -29,7 +29,7 @@ class CommandsRegistryTest < Minitest::Test
     assert_equal %w[get describe create apply delete edit label], sections.fetch('Basic Commands')
     assert_equal %w[fetch diff sync rollout], sections.fetch('Repository Commands')
     assert_equal %w[config completion man], sections.fetch('Settings Commands')
-    assert_equal %w[help version], sections.fetch('Other Commands')
+    assert_equal %w[api-resources help version], sections.fetch('Other Commands')
   end
 
   def test_every_command_class_is_reachable_from_the_verbs
@@ -40,6 +40,17 @@ class CommandsRegistryTest < Minitest::Test
     assert_empty(shipped.reject { handlers.include?(it) }.map(&:name))
     assert_operator shipped.size, :>, 8
     assert_includes handlers, Slipway::Commands::ConfigCommand::Path
+  end
+
+  def test_the_kinds_a_verb_acts_on_follow_its_arguments
+    verbs = Slipway::Commands::VERBS.flat_map { leaves(it.command(->(_context, _opts) { raise 'unused' })) }
+    typed, rest = verbs.partition { it.positionals.include?(Slipway::Commands::Options::TYPE) }
+    named, bare = rest.partition { it.positionals.any? }
+    every = %w[projects groups]
+
+    assert_equal %w[get describe create delete edit label].to_h { [it, every] }, kinds_by_name(typed)
+    assert_equal %w[fetch diff sync history undo unpin pause resume].to_h { [it, %w[projects]] }, kinds_by_name(named)
+    assert_equal({ 'apply' => every, 'view' => [], 'path' => [], 'api-resources' => [] }, kinds_by_name(bare))
   end
 
   def test_command_classes_reach_every_descendant_but_abstract_bases
@@ -112,6 +123,10 @@ class CommandsRegistryTest < Minitest::Test
   def command_classes(base) = descendants(base).select { it.respond_to?(:command) }
 
   def handler_classes(command) = [command.handler.class, *command.subcommands.flat_map { handler_classes(it) }]
+
+  def leaves(command) = command.group? ? command.subcommands.flat_map { leaves(it) } : [command]
+
+  def kinds_by_name(commands) = commands.to_h { [it.name, it.handler.kinds.map(&:plural)] }
 
   def write_config(env, text)
     path = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')

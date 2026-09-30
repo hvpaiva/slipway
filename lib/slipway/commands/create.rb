@@ -108,6 +108,8 @@ module Slipway
       end
       private_class_method :examples, :named_examples, :directory_examples
 
+      def kinds = Resources::KINDS
+
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         kind, names = scope.targets(args)

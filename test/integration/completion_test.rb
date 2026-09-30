@@ -18,6 +18,7 @@ class CompletionIntegrationTest < Minitest::Test
     sync\tFetch projects and fast-forward their branches
     rollout\tManage the rollout of a project
     config\tInspect the configuration in effect
+    api-resources\tPrint the supported resource types
     help\tHelp about any command
     version\tPrint the version of slipway
     completion\tOutput shell completion code for the specified shell (bash, zsh, fish)
@@ -90,6 +91,18 @@ class CompletionIntegrationTest < Minitest::Test
       assert_equal [0, "--color\tWhen to use color in the output; a bare --color means always.\n:4\n", ''],
                    slipway('__complete', '--col', env:)
       assert_equal [0, "bash\nzsh\nfish\n:4\n", ''], slipway('__complete', 'completion', '', env:)
+    end
+  end
+
+  def test_api_resources_completes_its_flags_and_only_the_formats_it_prints
+    with_home do |env|
+      assert_equal [0, "api-resources\tPrint the supported resource types\n:4\n", ''],
+                   slipway('__complete', 'api', env:)
+      assert_equal [0, "table\nwide\nname\n:4\n", ''], slipway('__complete', 'api-resources', '-o', '', env:)
+      assert_equal [0, "--no-headers\tWhen using the default output format, don't print headers.\n:4\n", ''],
+                   slipway('__complete', 'api-resources', '--no', env:)
+      assert_equal [0, ":4\n", ''], slipway('__complete', 'api-resources', '', env:)
+      assert_equal [0, "api-resources\n:4\n", ''], slipway('__complete', 'man', 'api', env:)
     end
   end
 

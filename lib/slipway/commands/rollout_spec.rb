@@ -8,6 +8,8 @@ module Slipway
       # Writes one spec field of each named project and prints what changed. No git command runs:
       # the next fetch or sync reads the field.
       class SpecChange < Base
+        def kinds = [Resources::PROJECTS]
+
         def run(runtime, context, args, opts)
           scope = scope(runtime, context, opts)
           names = scope.project_targets(args, verb: self.class::VERB)
