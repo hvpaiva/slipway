@@ -85,12 +85,17 @@ class EditorTest < Minitest::Test
     end
   end
 
+  # A private TMPDIR, because another slipway run sharing /tmp can create and remove its own
+  # slipway-edit-* directories while this test compares snapshots.
   def test_missing_editor_is_reported_and_leaves_nothing_behind
-    before = Dir.glob(File.join(Dir.tmpdir, 'slipway-edit-*'))
-    error = assert_raises(Slipway::Editor::Failed) { editor({ 'EDITOR' => 'slipway-no-such-editor' }).edit('text') }
+    Dir.mktmpdir('slipway-editor-test-') do |tmp|
+      error = with_env('TMPDIR' => tmp) do
+        assert_raises(Slipway::Editor::Failed) { editor({ 'EDITOR' => 'slipway-no-such-editor' }).edit('text') }
+      end
 
-    assert_equal 'editor "slipway-no-such-editor" not found', error.message
-    assert_equal before, Dir.glob(File.join(Dir.tmpdir, 'slipway-edit-*'))
+      assert_equal 'editor "slipway-no-such-editor" not found', error.message
+      assert_empty Dir.children(tmp)
+    end
   end
 
   def test_failed_is_a_slipway_error
