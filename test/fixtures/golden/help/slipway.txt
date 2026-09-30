@@ -34,6 +34,7 @@ Settings Commands:
   man             Show the manual page of a command
 
 Other Commands:
+  api-resources   Print the supported resource types
   help            Help about any command
   version         Print the version of slipway
 

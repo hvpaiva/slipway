@@ -136,14 +136,17 @@ OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
+| `api-resources` | List the resource types with their short names and kind, and whether they live in a group. |
 | `version` | Print the version, the Ruby it runs on and the platform, as `slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]`. |
 | `help [COMMAND]` | Print the same text as `--help`. |
 
 Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`), and
-type words are case-insensitive. A project is named bare (`hldr`) or as `project/hldr`, the form
-`get -o name` prints. `create`, `apply`, `delete`, `label`, `fetch`, `sync` and `rollout undo`
-accept `--dry-run`, which fetches and writes nothing and ends each result line with
-`(dry run)`. `slipway VERB --help` describes each verb, `-h` prints help and `-V` the version.
+type words are case-insensitive; `slipway api-resources` lists them
+([Discovering resources](#discovering-resources)). A project is named bare (`hldr`) or as
+`project/hldr`, the form `get -o name` prints. `create`, `apply`, `delete`, `label`, `fetch`,
+`sync` and `rollout undo` accept `--dry-run`, which fetches and writes nothing and ends each
+result line with `(dry run)`. `slipway VERB --help` describes each verb, `-h` prints help and
+`-V` the version.
 
 ### Groups
 
@@ -753,6 +756,23 @@ pin:
 | `Dirty` | The branch is behind and has staged or unstaged changes; untracked files do not block. |
 | `Diverged` | The branch is behind and has commits of its own. |
 | `InProgress` | The branch would be fast-forwarded, but a merge, rebase, cherry-pick, revert, bisect or `git am` is in progress. |
+
+## Discovering resources
+
+`slipway api-resources` lists the resource types, as `kubectl api-resources` lists the ones a
+cluster serves:
+
+```console
+$ slipway api-resources
+NAME       SHORTNAMES   KIND      GROUPED
+groups     <none>       Group     false
+projects   proj         Project   true
+```
+
+A command accepts a type by its NAME, its singular or one of its SHORTNAMES, and KIND is what a
+manifest of the type declares in `kind`. GROUPED plays the part of kubectl's NAMESPACED: it says
+whether the resources of a type live in a group, so that `-n` and `-A` scope them. `-o name`
+prints the names alone.
 
 ## Configuration
 

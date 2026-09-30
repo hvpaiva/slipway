@@ -1,0 +1,27 @@
+Print the supported resource types.
+
+Prints a table of the resource types slipway knows, sorted by name. A command accepts a type by its NAME, its singular or one of its SHORTNAMES. Type words are case-insensitive. Use -o name to print only the names.
+
+Columns:
+  A type without aliases reads <none> in SHORTNAMES.
+
+  NAME         The name of the type, in the plural.
+  SHORTNAMES   The aliases of the type, besides its singular.
+  KIND         The kind a manifest of the type declares.
+  GROUPED      Whether resources of the type live in a group, so that -n and -A scope them. kubectl's NAMESPACED column says the same about namespaces.
+
+Examples:
+  # Print the supported resource types
+  slipway api-resources
+
+  # Print the names of the supported resource types
+  slipway api-resources -o name
+
+Options:
+  -o, --output FORMAT   Output format. One of: table, name. (default "table")
+      --no-headers      When using the default output format, don't print headers.
+
+Usage:
+  slipway api-resources [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).
