@@ -107,6 +107,10 @@ bundle exec rake install
 | `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
 | `diff [NAME...]` | Show where projects differ from their manifests, without contacting a remote; exit status 3 when any does. |
 | `sync [NAME...]` | Fetch the selected projects and fast-forward each clean branch that is behind; prints `fast-forwarded`, `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
+| `rollout history NAME` | List the revisions slipway moved a project's branch to, read from the branch reflog. |
+| `rollout undo NAME` | Move the branch back to the previous revision, or to `--to-revision=N`, and hold it there with `spec.revision`. |
+| `rollout unpin NAME...` | Remove `spec.revision`, so `sync` follows the upstream again. |
+| `rollout pause NAME...`, `rollout resume NAME...` | Set or remove `spec.paused`, which keeps `fetch` and `sync` away from a project. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -314,9 +318,9 @@ field is optional, and one at its default is not written:
 | --- | --- | --- |
 | `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
 | `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
-| `spec.revision` | The commit the project is held at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. | none |
+| `spec.revision` | The commit the project is held at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. `rollout undo` writes it and `rollout unpin` removes it. | none |
 | `spec.syncPolicy` | `FastForward` allows `sync` to fast-forward the checked-out branch; `FetchOnly` allows fetching only. | `FastForward` |
-| `spec.paused` | `true` keeps `fetch` and `sync` away from the project, which prints `project/NAME paused` and runs no git command there. | `false` |
+| `spec.paused` | `true` keeps `fetch` and `sync` away from the project, which prints `project/NAME paused` and runs no git command there. `rollout pause` sets it and `rollout resume` removes it. | `false` |
 
 `fetch` and `sync` leave a project with `spec.paused: true` alone, and `sync` follows
 `spec.syncPolicy` and `spec.revision`. No command changes a remote or switches a branch to match
@@ -410,7 +414,7 @@ project/notes skipped (Diverged)
 project/augur skipped (NoRemote)
   no upstream, no origin and no single remote to fetch from
 project/hldr fast-forwarded
-  main e001395..4c5d6e7 (3 commits); undo with 'git -C ~/dev/hldr reset --keep e001395'
+  main e001395..4c5d6e7 (3 commits); undo with 'slipway rollout undo project/hldr -n personal'
 3 projects: 1 fast-forwarded, 2 skipped
 ```
 
@@ -450,6 +454,57 @@ when a fetch or a fast-forward was denied or failed, once every line has printed
 project never changes it, so a timer does not fail on a dirty tree. `--dry-run=client` fetches
 nothing and writes nothing: it plans from the last fetch, prints the same lines followed by
 `(dry run)`, and warns about the projects no fetch has reached.
+
+### Rolling back
+
+```console
+$ slipway rollout history hldr -n personal
+REVISION   COMMIT    DATE                   CHANGE-CAUSE                   PINNED
+1          e001395   2026-09-28T09:00:00Z   <none>                         false
+2          4c5d6e7   2026-09-29T11:00:00Z   sync: fast-forward 3 commits   false
+$ slipway rollout undo hldr -n personal
+project/hldr rolled back
+  main 4c5d6e7..e001395 (3 commits back to revision 1); held there by spec.revision
+  'slipway rollout unpin project/hldr -n personal' follows origin/main again
+```
+
+Slipway undoes its own moves. Each fast-forward of `sync` runs with `GIT_REFLOG_ACTION` set to
+`slipway sync` and each move of `rollout undo` with `slipway rollout undo`, so the branch's reflog
+records them and slipway keeps no history of its own. `slipway rollout history NAME` lists them as
+revisions, oldest first: every commit slipway moved the checked-out branch to, and the commit the
+branch stood at before such a move. CHANGE-CAUSE names the move, as `sync: fast-forward 3 commits`
+or `rollout undo to revision 1`, and PINNED marks the revision `spec.revision` holds. It fetches
+and writes nothing; a project without history prints `No rollout history found for project/NAME.`
+on stderr and exits with 0.
+
+`slipway rollout undo NAME` moves the checked-out branch to the revision before the current one,
+or to the one `--to-revision=N` names, and then writes that commit to `spec.revision`, so `sync`
+holds the project there. The manifest is written only after git moved the branch. A move back runs
+`git reset --keep`, the one form of reset slipway ever runs, and only when the upstream holds every
+commit the move drops; a move forward, which undoes an undo, runs `git merge --ff-only`. Untracked
+files and unstaged changes to files the move leaves alone are kept. A move back needs an index
+without staged changes, because `reset --keep` resets every index entry.
+
+| Result | Meaning |
+| --- | --- |
+| `rolled back` | The branch moved, or it already stood at the revision and only `spec.revision` changed. The detail names the commits it crossed and the command that lets `sync` follow the upstream again. |
+| `unchanged` | The branch already stood at the revision and `spec.revision` already held it. |
+| `skipped (Reason)` | Nothing moved and nothing was written. The branch cannot move (`Conflicted`, `Detached`, `Unborn`, `NoUpstream`, `Gone`, `InProgress`); the history has no such revision (`NoHistory`, `NoPrevious`, `UnknownRevision`) or the repository no such commit (`RevisionNotFound`); a move back would drop commits the upstream lacks (`LocalCommits`) or staged changes (`Dirty`), or the revision is off the branch's history (`Diverged`); a move forward needs a tree without staged or unstaged changes (`Dirty`) and a revision on the upstream (`OffUpstream`); or git refused the move (`WouldLoseChanges`, `WouldOverwrite` for untracked or ignored files in the way, `Busy`). |
+| `denied (AuthRequired)` | A partial clone had to fetch the files the move writes and the remote asked for a password, a passphrase or a host key, as in `fetch`. |
+| `failed (Reason)` | The move ran past `networkTimeout` (`Timeout`) or git failed for another reason (`Unknown`), and `spec.revision` was not written, though a move stopped at the deadline keeps the files git had already written, as in `sync`; or the branch moved but `spec.revision` could not be written (`NotPinned`), and the detail names the `--to-revision` command that writes it without moving the branch again. |
+
+The exit status is 1 when the project was skipped, denied or failed. `--dry-run=client` prints the same
+lines followed by `(dry run)` and moves and writes nothing.
+
+`slipway rollout unpin NAME...` removes `spec.revision` and prints `unpinned`, or `not pinned`
+when there was none; the next `sync` fast-forwards onto the upstream as usual.
+`slipway rollout pause NAME...` sets `spec.paused` and `slipway rollout resume NAME...` removes
+it, printing `paused` or `already paused` and `resumed` or `not paused`. None of the three runs
+git. A paused project can still be rolled back: pausing keeps only `fetch` and `sync` away.
+
+The history is the local reflog, so it lasts as long as git keeps it (`gc.reflogExpire`, 90 days
+by default; slipway never runs `git gc`) and is empty when `core.logAllRefUpdates` is off. The pin
+lives in the manifest and outlasts the reflog. Rollout moves commits only.
 
 ### Editing
 
@@ -598,7 +653,7 @@ man slipway-get
 | `130` | Interrupted by SIGINT. |
 
 `slipway diff` also exits with 3 when a project differs from its manifest. The man pages of
-`diff` and `sync` list their statuses.
+`diff`, `sync` and `rollout undo` list their statuses.
 
 ## Development
 

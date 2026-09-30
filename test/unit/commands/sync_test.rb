@@ -18,7 +18,7 @@ class SyncTest < Minitest::Test
       another git process holds index.lock, or one left it behind; sync never removes a lock
     project/dots paused
     project/hldr fast-forwarded
-      main a1b2c3d..e4f5a6b (3 commits); undo with 'git -C ~/dev/hldr reset --keep a1b2c3d'
+      main a1b2c3d..e4f5a6b (3 commits); undo with 'slipway rollout undo project/hldr'
     project/notes unchanged
       Remote: origin is https://github.com/hvpaiva/notes.git, manifest says #{NOTES}; sync never changes a remote
     project/old skipped (Missing)
@@ -56,7 +56,7 @@ class SyncTest < Minitest::Test
     with_runtime do |runtime|
       register(runtime, 'hldr', status: BEHIND, fast_forward: MOVE)
       moved = "project/hldr fast-forwarded\n  main a1b2c3d..e4f5a6b (3 commits); undo with " \
-              "'git -C ~/dev/hldr reset --keep a1b2c3d'\n"
+              "'slipway rollout undo project/hldr'\n"
 
       assert_equal [0, moved, ''], run_sync(runtime:)
       assert_equal [0, "project/hldr unchanged\n", ''], run_sync(runtime:)
@@ -87,8 +87,8 @@ class SyncTest < Minitest::Test
       words = out.lines.grep(/\Aproject/).map { it[/ (\e.*)$/, 1] }
 
       assert_equal [0, ["\e[32mfast-forwarded\e[0m", "\e[35munchanged\e[0m", "\e[32mfetched\e[0m"]], [status, words]
-      assert_includes out, "  \e[90;3mmain a1b2c3d..e4f5a6b (3 commits); undo with 'git -C ~/dev/hldr reset " \
-                           "--keep a1b2c3d'\e[0m\n"
+      assert_includes out, "  \e[90;3mmain a1b2c3d..e4f5a6b (3 commits); undo with 'slipway rollout undo " \
+                           "project/hldr'\e[0m\n"
       assert_equal "\e[90;3m3 projects: 1 fast-forwarded, 1 fetched, 1 unchanged\e[0m\n", err
     end
   end

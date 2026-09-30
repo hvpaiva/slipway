@@ -15,10 +15,22 @@ class SyncIntegrationTest < Minitest::Test
       pushed = head("#{dir}-other")
 
       assert_equal [0, "project/stale fast-forwarded\n  main #{old[0, 7]}..#{pushed[0, 7]} (1 commit); undo with " \
-                       "'git -C ~/dev/stale reset --keep #{old[0, 7]}'\n", ''], slipway('sync', env:)
+                       "'slipway rollout undo project/stale'\n", ''], slipway('sync', env:)
       assert_equal [pushed, 'slipway sync: Fast-forward'], [head(dir), reflog(dir).first]
       assert_equal [0, "project/stale unchanged\n", ''], slipway('sync', env:)
       assert_equal 2, reflog(dir).size
+    end
+  end
+
+  # The line is run later without -n, so a group typed on this one has to travel with it.
+  def test_the_undo_command_keeps_a_group_typed_with_n
+    with_network_home do |env|
+      seed(env, manifest('Group', 'work'), manifest('Project', 'api', group: 'work', path: repo(env, 'api', 'stale')))
+
+      assert_equal [0, <<~TEXT, ''], scrub(slipway('sync', 'api', '-n', 'work', env:))
+        project/api fast-forwarded
+          main <range> (1 commit); undo with 'slipway rollout undo project/api -n work'
+      TEXT
     end
   end
 
@@ -27,14 +39,14 @@ class SyncIntegrationTest < Minitest::Test
       dirty, scratch = %w[dirty scratch].map { project(env, it) }
       File.write(File.join(dirty, 'README.md'), "hello\nchanged\n")
       File.write(File.join(scratch, 'notes.txt'), "mine\n")
-      before, moved = [dirty, scratch].map { head(it) }
+      before = head(dirty)
 
       assert_equal [0, <<~TEXT, "2 projects: 1 fast-forwarded, 1 skipped\n"], scrub(slipway('sync', env:))
         project/dirty skipped (Dirty)
           1 unstaged; sync fast-forwards only a tree without staged or unstaged changes
           git -C ~/dev/dirty status
         project/scratch fast-forwarded
-          main <range> (1 commit); undo with 'git -C ~/dev/scratch reset --keep #{moved[0, 7]}'
+          main <range> (1 commit); undo with 'slipway rollout undo project/scratch'
       TEXT
       assert_equal [before, "mine\n"], [head(dirty), File.read(File.join(scratch, 'notes.txt'))]
     end

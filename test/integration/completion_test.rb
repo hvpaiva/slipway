@@ -16,6 +16,7 @@ class CompletionIntegrationTest < Minitest::Test
     fetch\tFetch from the remote of each project
     diff\tShow where projects differ from their manifests
     sync\tFetch projects and fast-forward their branches
+    rollout\tManage the rollout of a project
     config\tInspect the configuration in effect
     help\tHelp about any command
     version\tPrint the version of slipway

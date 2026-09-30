@@ -1,12 +1,15 @@
 # frozen_string_literal: true
 
 require_relative 'fast_forwarding'
+require_relative 'reflog'
+require_relative 'rolling_back'
 require_relative 'runner'
 
 module Slipway
   module Git
     class Repository
       include FastForwarding
+      include RollingBack
 
       STATUS_ARGS = %w[status --porcelain=v2 --branch --show-stash -z --untracked-files=normal --no-renames].freeze
       # Six NUL separated fields in the order Commit.parse expects; -z terminates the record.
@@ -66,6 +69,8 @@ module Slipway
       # stops that on every supported git; GIT_NO_LAZY_FETCH, which git honors from 2.44, and an
       # empty GIT_ALLOW_PROTOCOL, which refuses every transport before it connects, stand behind it.
       OFFLINE_REV_LIST = %w[rev-list --missing=allow-any].freeze
+      REFLOG_ARGS = ['reflog', 'show', '-z', *Reflog::FORMAT].freeze
+      BAD_REVISION = 'bad revision'
       OFFLINE_READ = { LAZY_FETCH_VARIABLE => '1', Runner::PROTOCOL_VARIABLE => '' }.freeze
 
       def initialize(runner: Runner.new, network_timeout: NETWORK_TIMEOUT, protocols: PROTOCOLS,
@@ -135,6 +140,23 @@ module Slipway
         counted = tracking && ahead.zero? && behind.positive?
         off_upstream = offline_count(path, "#{UPSTREAM}..#{revision}^{commit}").first if counted
         Distance.new(ahead:, behind:, off_upstream:)
+      end
+
+      # The moves git logged for +branch+, newest first. Git answers "bad revision" for a branch
+      # without commits, and logs nothing under core.logAllRefUpdates=false unless a log exists.
+      def reflog(path, branch)
+        result = run(path, *REFLOG_ARGS, "refs/heads/#{branch}", '--',
+                     accept: ->(failed) { failed.err.include?(BAD_REVISION) })
+        result.success? ? Reflog.parse(result.out) : []
+      end
+
+      # How many commits +to+ reaches that +from+ does not, both full object names, or nil when the
+      # repository lacks either.
+      def commits_between(path, from, to)
+        [from, to].each do |name|
+          raise ArgumentError, "expected a full object name, not #{name.inspect}" unless OBJECT_NAME.match?(name)
+        end
+        offline_count(path, "#{from}^{commit}..#{to}^{commit}").first
       end
 
       # nil for a repository that was never fetched or whose last fetch failed: git empties

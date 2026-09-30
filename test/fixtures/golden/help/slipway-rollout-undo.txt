@@ -1,0 +1,34 @@
+Roll back a project to a previous revision.
+
+Moves the checked-out branch to the revision before the current one, or to the one --to-revision names from slipway rollout history, and then writes that commit to spec.revision, so sync holds the project there until slipway rollout unpin. The branch moves back with git reset --keep, only when its upstream holds every commit the move drops, and forward, to undo an undo, with git merge --ff-only. Untracked files and unstaged changes to files the move leaves alone are kept; git refuses a move that would overwrite a local change or an untracked file, and slipway refuses one that would overwrite an ignored file. A move back skips a project with staged changes, and a move forward one with staged or unstaged changes.
+
+A project whose HEAD is detached, whose branch has no commits or no upstream that exists, that is in the middle of a merge, rebase or other operation, or whose branch has commits its upstream lacks, is skipped with the reason and nothing is moved or written. A paused project can be rolled back: pausing only keeps fetch and sync away.
+
+The project prints one line: rolled back, unchanged, skipped, denied or failed, with the reason in parentheses and the details below. failed (NotPinned) means the branch moved but spec.revision was not written, and the detail names the --to-revision command that writes it without moving the branch again.
+
+With --dry-run=client nothing is moved or written.
+
+Exit Status:
+  0     The project was rolled back, or already stood at the revision and was held there.
+  1     Runtime error, such as a missing resource or an unreadable manifest, or a project that was skipped or whose move was denied or failed.
+  2     Usage error: unknown command, unknown flag or invalid argument.
+  130   Interrupted by SIGINT.
+
+Examples:
+  # Roll back project hldr to the previous revision
+  slipway rollout undo hldr
+
+  # Roll back project hldr to revision 3
+  slipway rollout undo hldr --to-revision=3
+
+  # Show where undo would move project hldr, without moving or writing anything
+  slipway rollout undo hldr --dry-run=client
+
+Options:
+      --to-revision N      The revision to roll back to, as slipway rollout history numbers it. 0, the default, is the revision before the current one.
+      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+
+Usage:
+  slipway rollout undo (NAME | project/NAME) [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).
