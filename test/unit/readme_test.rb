@@ -48,9 +48,22 @@ class ReadmeTest < Minitest::Test
     unreadable = [Slipway::Git::MissingPath, Slipway::Git::NotARepository, Slipway::Git::UnsafeRepository,
                   Slipway::Git::Error].map { Slipway::State.for_error(it.allocate) }
     reasons = [*Slipway::Outcome::REASONS.values, Slipway::Fetcher::NO_REMOTE, *unreadable]
-    documented = rows(RESULTS, after: '### Fetching').flat_map { it.scan(/`([A-Z][A-Za-z]+)`|\(([A-Z][A-Za-z]+)\)`/) }
+    documented = rows(RESULTS, after: '### Fetching').flat_map { reasons_in(it) }
 
-    assert_equal reasons.uniq.sort, documented.flatten.compact.uniq.sort - ['Reason']
+    assert_equal reasons.uniq.sort, documented.uniq.sort
+  end
+
+  # Help names the reasons as plain words in parentheses, the README as code spans.
+  def test_rollout_undo_table_gives_each_result_the_reasons_its_help_gives
+    help = Slipway::Commands::Rollout::Undo::RESULTS.entries.to_h do |result, meaning|
+      named = meaning.scan(/\(([^()]+)\)/).flatten.flat_map { it.split(', ') }
+      [result_word(result), named.filter_map { it[/\A[A-Z][A-Za-z]+/] }.uniq.sort]
+    end
+    documented = rows(RESULTS, after: '### Rolling back').to_h do |row|
+      [result_word(row.split('|')[1]), reasons_in(row).uniq.sort]
+    end
+
+    assert_equal help, documented
   end
 
   def test_field_selector_sentence_lists_every_field
@@ -93,10 +106,14 @@ class ReadmeTest < Minitest::Test
     lines.drop(start + 2).take_while { it.start_with?('|') }
   end
 
+  def result_words(section) = rows(RESULTS, after: section).map { result_word(it.split('|')[1]) }
+
   # The word a result line starts with, without the reason a table row gives it in parentheses.
-  def result_words(section)
-    rows(RESULTS, after: section).map { it.split('|')[1].strip.delete('`').sub(/ \(.*\)\z/, '') }
-  end
+  def result_word(cell) = cell.strip.delete('`').sub(/ \(.*\)\z/, '')
+
+  # The capitalized code spans of a results row, and the reason its result cell names, such as
+  # `denied (AuthRequired)`; the placeholder `(Reason)` names none.
+  def reasons_in(row) = row.scan(/`([A-Z][A-Za-z]+)`|\(([A-Z][A-Za-z]+)\)`/).flatten.compact - ['Reason']
 
   def yaml_block(heading)
     start = lines.index(heading)
