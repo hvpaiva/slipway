@@ -18,6 +18,9 @@ module Slipway
     PROTOCOL = /\A[a-z][a-z0-9+.-]*\z/
     INTEGER = ->(text) { Integer(text, 10, exception: false) }
     PARALLEL = 1..16
+    # Capped at a day: Thread#join, which enforces the deadline, takes a timeout past about 1.8e10
+    # seconds as already passed.
+    NETWORK_TIMEOUT = 1..86_400
     # Colon-separated like GIT_ALLOW_PROTOCOL; an empty field is kept so the check refuses it.
     LIST = ->(text) { text.split(':', -1) }
     # Once GIT_ALLOW_PROTOCOL is set it is git's whole policy, and git's own refusal of ext no
@@ -63,13 +66,12 @@ module Slipway
                   description: 'Group used when -n is not given.',
                   valid: ->(value) { Names.valid?(value) },
                   expectation: "must be a valid group name: #{Names::RULE}"),
-      # Capped at a day: Thread#join, which enforces the deadline, takes a timeout past about 1.8e10
-      # seconds as already passed.
       Setting.new(key: 'networkTimeout', variable: 'SLIPWAY_NETWORK_TIMEOUT', default: 60,
-                  description: 'Seconds a git network command may run before it is killed with the processes it ' \
-                               'started.',
-                  valid: ->(value) { value.is_a?(Integer) && value.between?(1, 86_400) },
-                  expectation: 'must be an integer from 1 to 86400', parse: INTEGER),
+                  description: "Seconds, from #{NETWORK_TIMEOUT.min} to #{NETWORK_TIMEOUT.max}, a git network " \
+                               'command may run before it is killed with the processes it started.',
+                  valid: ->(value) { value.is_a?(Integer) && NETWORK_TIMEOUT.cover?(value) },
+                  expectation: "must be an integer from #{NETWORK_TIMEOUT.min} to #{NETWORK_TIMEOUT.max}",
+                  parse: INTEGER),
       Setting.new(key: 'parallel', variable: 'SLIPWAY_PARALLEL', default: 4,
                   description: "How many git network commands run at once, from #{PARALLEL.min} to #{PARALLEL.max}.",
                   valid: ->(value) { value.is_a?(Integer) && PARALLEL.cover?(value) },
