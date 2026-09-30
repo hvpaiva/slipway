@@ -44,13 +44,16 @@ module Slipway
       ).sort_by { |status, _| Integer(status) }.to_h.freeze
       INDENT = '  '
       COMMAND_INDENT = '    '
+      ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, compare every project across all groups with ' \
+                                                         'its manifest. The group in the current configuration is ' \
+                                                         'ignored even if specified with --group.')
 
       def self.command(factory)
         CLI::Command.new(
           name: 'diff', summary: 'Show where projects differ from their manifests', section: 'Repository Commands',
           description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES,
           positionals: [Options.project_positional(factory)],
-          options: [Options::SELECTOR, Options::ALL_GROUPS],
+          options: [Options::SELECTOR, ALL_GROUPS],
           handler: new(factory)
         )
       end
