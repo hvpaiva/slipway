@@ -97,22 +97,22 @@ namespaces (`-n personal`, `-A`), label selectors (`-l lang=rust`), manifests yo
 
 ## Installation
 
-Slipway is not published on RubyGems yet. Until it is, install it from a checkout:
-
 ```sh
-git clone https://github.com/hvpaiva/slipway.git
-cd slipway
-bundle install
-bundle exec rake install
+gem install slipway
 ```
 
-Once it is published, `gem install slipway` installs it, and so does `mise use -g gem:slipway`
-with [mise](https://mise.jdx.dev).
+With [mise](https://mise.jdx.dev), through its gem backend:
+
+```sh
+mise use -g gem:slipway
+```
 
 Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH`, and has no runtime gem
 dependencies. Git before 2.41 cannot tell `unchanged` from `fetched`, so every fetch that
 succeeds reads `fetched`, without the refs that moved. Fetching over ssh without a prompt needs
 OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
+
+To run slipway from a checkout instead, see [Development](#development).
 
 ## Usage
 
@@ -993,6 +993,7 @@ cd slipway
 bin/setup
 bundle exec rake         # tests and RuboCop
 bundle exec rake check   # what CI runs
+bundle exec rake install # build the gem and install it
 ```
 
 `bin/setup` installs the development dependencies and reports the tools it found.
