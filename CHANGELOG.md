@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-30
+
 ### Added
 
 - `get`, `describe`, `create`, `apply`, `delete`, `edit` and `label` verbs over two resource types, projects and groups, with kubectl's wording and result lines.
@@ -39,4 +41,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Exit statuses 0, 1, 2 and 130, `error:` lines on stderr with a help hint, "Did you mean this?" suggestions for unknown commands and flags, and `SLIPWAY_DEBUG`, which adds the class and backtrace of an unexpected error.
 - `-V`/`--version` and `slipway version`.
 
-[Unreleased]: https://github.com/hvpaiva/slipway/commits/main
+[Unreleased]: https://github.com/hvpaiva/slipway/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/hvpaiva/slipway/releases/tag/v0.1.0
