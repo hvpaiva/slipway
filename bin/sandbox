@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+usage() {
+  cat <<'EOF'
+usage: bin/sandbox [--home] [--keep] [COMMAND [ARGS...]]
+
+Open a subshell ($SHELL, else bash) whose slipway is this checkout's exe/slipway, with an empty
+registry and configuration file in a new temporary directory, exported as SLIPWAY_SANDBOX. With
+COMMAND, run only COMMAND there and exit with its status. HOME, git's configuration and ssh stay
+yours. The directory is removed at the end.
+
+With --home, git runs without your global configuration (identity, credential helpers, url
+rewrites), and version manager shims that look for their installs under HOME or XDG_DATA_HOME,
+such as mise's and asdf's, find none, so slipway can run on another Ruby or wait for one to be
+installed. ssh still reads your account's ~/.ssh and uses your agent, because OpenSSH takes the
+home directory from the user database, not from HOME.
+
+        --home                       Move HOME and the XDG directories into the sandbox too
+        --keep                       Keep the directory and print its path at the end
+EOF
+}
+
+home=false
+keep=false
+while [ $# -gt 0 ]; do
+  case $1 in
+    --home) home=true ;;
+    --keep) keep=true ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      printf 'bin/sandbox: invalid option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *) break ;;
+  esac
+  shift
+done
+
+# A cd that CDPATH resolves prints the directory, which would end up in root.
+root=$(CDPATH='' cd "$(dirname "$0")/.." && pwd) || exit 1
+tmp=${TMPDIR:-/tmp}
+sandbox=$(mktemp -d "${tmp%/}/slipway-sandbox.XXXXXX") || exit 1
+
+finish() {
+  if [ "$keep" = true ]; then
+    printf 'Sandbox kept: %s\n' "$sandbox" >&2
+  else
+    rm -rf -- "$sandbox"
+  fi
+}
+# An EXIT trap also runs when bash dies of SIGINT, SIGTERM or SIGHUP.
+trap finish EXIT
+
+: >"$sandbox/config.yaml" || exit 1
+export SLIPWAY_SANDBOX=$sandbox
+export SLIPWAY_DATA_HOME=$sandbox/data
+export SLIPWAY_CONFIG=$sandbox/config.yaml
+export PATH="$root/exe:$PATH"
+
+if [ "$home" = true ]; then
+  export HOME=$sandbox/home
+  export XDG_CONFIG_HOME=$HOME/.config
+  export XDG_DATA_HOME=$HOME/.local/share
+  export XDG_STATE_HOME=$HOME/.local/state
+  export XDG_CACHE_HOME=$HOME/.cache
+  mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME" || exit 1
+fi
+
+if [ $# -gt 0 ]; then
+  "$@"
+else
+  if [ "$keep" = true ]; then
+    afterwards='the directory is kept'
+  else
+    afterwards='the directory is removed then'
+  fi
+  {
+    printf 'Sandbox: %s, exported as SLIPWAY_SANDBOX\n' "$sandbox"
+    printf 'slipway runs this checkout, with an empty registry and configuration.\n'
+    printf 'Leave with exit or Ctrl-D; %s.\n' "$afterwards"
+  } >&2
+  "${SHELL:-bash}"
+fi

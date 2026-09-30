@@ -360,7 +360,8 @@ two layers must agree on), `test/unit/reset_rule_test.rb` (`reset --keep` as the
 and `rakelib/` define).
 Tests for the development code live under `test/unit/dev`. The commit tests run git in
 temporary repositories; the release and GitHub tests never run git or `gh` and hand the code a
-fake command runner.
+fake command runner; the sandbox test runs `bin/sandbox` itself, with `TMPDIR`, `HOME` and
+`XDG_DATA_HOME` in a temporary directory.
 
 ## Generated artifacts
 
@@ -385,4 +386,5 @@ holds the commit rules `bin/lint-commits` applies and the range `rake check` han
 `github.rb` wraps `gh api`, and `runner.rb` holds `CommandRunner`, the command runner
 `bin/release` and `rake github:setup` inject so their tests can pass a fake.
 `rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
-of it ships in the gem.
+of it ships in the gem. `bin/setup` and `bin/sandbox` are bash, checked by ShellCheck through
+`rake lint:shell`.

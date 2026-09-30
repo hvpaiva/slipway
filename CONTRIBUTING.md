@@ -31,20 +31,20 @@ bundle exec rake         # the fast loop: tests and RuboCop
 bundle exec rake check   # what CI runs
 ```
 
-`rake check` runs, in this order, RuboCop, ShellCheck over `bin/setup` and the bash completion
-script, `groff -ww` over the man pages, `bin/lint-commits` over the commits your branch adds to
-`origin/main` ([Commits](#commits); on `main`, or without `origin/main`, it says so and lints
-nothing), the unit and golden tests under SimpleCov with the coverage minimums, the integration
-tests, the generated-files comparison, the package smoke test (build, install into a temporary
-`GEM_HOME`, run the installed executable) and, last, bundler-audit. Set `CHECK_OFFLINE=1` to
-skip the audit when you have no network; the task says so when it does. CI runs the same
-tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3.4 and macOS
-entries of the test matrix, and the `completions` job, which fails when zsh or fish is missing
-(run it with `bundle exec rake test:shells`, see [Testing completions](#testing-completions)).
-CI also lints the commits of every pull request against its base branch, with its title and
-body, checks that a change under `lib/`, `exe/` or `man/` comes with a changelog line
-([Pull requests](#pull-requests)), and runs the spelling, workflow and link checks, which you
-can run before pushing:
+`rake check` runs, in this order, RuboCop, ShellCheck over `bin/setup`, `bin/sandbox` and the
+bash completion script, `groff -ww` over the man pages, `bin/lint-commits` over the commits your
+branch adds to `origin/main` ([Commits](#commits); on `main`, or without `origin/main`, it says
+so and lints nothing), the unit and golden tests under SimpleCov with the coverage minimums, the
+integration tests, the generated-files comparison, the package smoke test (build, install into a
+temporary `GEM_HOME`, run the installed executable) and, last, bundler-audit. Set
+`CHECK_OFFLINE=1` to skip the audit when you have no network; the task says so when it does. CI
+runs the same tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3.4
+and macOS entries of the test matrix, and the `completions` job, which fails when zsh or fish is
+missing (run it with `bundle exec rake test:shells`, see
+[Testing completions](#testing-completions)). CI also lints the commits of every pull request
+against its base branch, with its title and body, checks that a change under `lib/`, `exe/` or
+`man/` comes with a changelog line ([Pull requests](#pull-requests)), and runs the spelling,
+workflow and link checks, which you can run before pushing:
 
 ```sh
 typos
@@ -67,7 +67,7 @@ part of the gem.
 | `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help, completion and man page fixtures and removes the help and completion ones no command owns; `generate` runs the three and prints `git status` for `man`, `test/fixtures/golden` and `test/fixtures/man`. |
 | `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
 | `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
-| `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
+| `rake lint:shell` | ShellCheck over `bin/setup`, `bin/sandbox` and the bash completion script. |
 | `rake lint:commits` | `bin/lint-commits` over `origin/main..HEAD`; on `main`, or without `origin/main`, it says so and lints nothing. |
 | `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
 | `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
@@ -76,6 +76,41 @@ part of the gem.
 | `rake docs` | YARD documentation. |
 | `rake build`, `rake install` | The bundler gem tasks. |
 | `rake release` | The publish step `release.yml` runs through `rubygems/release-gem`; refused locally. Use `bin/release` instead. |
+
+## Trying a change by hand
+
+`bin/sandbox` opens a shell in which `slipway` is this checkout's `exe/slipway`, with an empty
+registry and an empty configuration file in a new temporary directory. Leaving the shell removes
+the directory.
+
+```sh
+bin/sandbox          # a subshell; exit or Ctrl-D leaves it
+bin/sandbox --keep   # the same, keeping the directory and printing where it is
+bin/sandbox --home   # HOME and the XDG directories in the sandbox too
+bin/sandbox slipway create project hldr --path '~/dev/hldr' --dry-run=client
+```
+
+Given a command, as in the last line, it runs only that command in the same environment and
+exits with its status. HOME, your git configuration and ssh stay your own, so you can register
+your repositories and `slipway fetch` reaches their real remotes, while your registry and
+configuration are neither read nor written. The other `SLIPWAY_*` variables you set yourself,
+such as `SLIPWAY_COLOR` or `SLIPWAY_GROUP`, still apply.
+
+The directory is exported as `SLIPWAY_SANDBOX` for a prompt to show; in bash,
+`PS1='${SLIPWAY_SANDBOX:+(sandbox) }'$PS1` in `~/.bashrc` does it. The subshell reads your
+shell's startup files, so one that puts an installed slipway ahead of `exe/` on `PATH`, or sets
+`SLIPWAY_DATA_HOME` or `SLIPWAY_CONFIG`, wins over the sandbox; `command -v slipway` shows
+which slipway runs.
+
+`--home` moves HOME and the XDG directories into the sandbox as well, and the subshell skips
+the startup files in your own HOME: a clean slate, like a new user's. The cost is that git runs
+without your global configuration, so without your identity, credential helpers and url
+rewrites, and a private https remote no longer fetches. Version manager shims that look for
+their installs under HOME or `XDG_DATA_HOME`, such as mise's and asdf's, find none, so slipway
+can run on another Ruby or wait for one to be installed. ssh is not isolated: OpenSSH takes the
+home directory from the user database, not from HOME, so it still reads your account's
+`~/.ssh`, uses your agent, and ssh remotes fetch as before. Use `--home` to see what a first
+run looks like, and the default to try a change against your own repositories.
 
 ## Conventions
 

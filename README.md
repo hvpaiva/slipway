@@ -901,6 +901,9 @@ bundle exec rake check   # what CI runs
 ```
 
 `bin/setup` installs the development dependencies and reports the tools it found.
+`bin/sandbox` opens a shell whose `slipway` is the checkout, against an empty registry and
+configuration in a temporary directory, to [try a change by
+hand](CONTRIBUTING.md#trying-a-change-by-hand).
 
 ## Other documents
 
