@@ -56,7 +56,7 @@ module Slipway
         scope = scope(runtime, context, opts)
         kind, name = scope.target(args)
         resource = runtime.store.find(kind, name, group: scope.group)
-        editor = Editor.new(env: context.env, preferred: runtime.config.editor)
+        editor = Editor.new(env: context.env, preferred: runtime.settings.editor)
         edited = Session.new(editor, kind, resource).edit
         return context.warn(UNCHANGED) if edited.nil?
 

@@ -102,7 +102,7 @@ module Slipway
         scope.select(Resources::PROJECTS, names) do |projects|
           next scope.report_none(Resources::PROJECTS) if projects.empty?
 
-          results.stream(projects, workers: runtime.config.parallel, work: fetcher.method(:attempt))
+          results.stream(projects, workers: runtime.settings.parallel, work: fetcher.method(:attempt))
           results.summarize
         end
         raise Failed if results.any?(Outcome::DENIED, Outcome::FAILED)

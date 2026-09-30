@@ -2,8 +2,8 @@
 
 require 'test_helper'
 
-class ConfigNetworkTest < Minitest::Test
-  include ConfigHelper
+class SettingsNetworkTest < Minitest::Test
+  include SettingsHelper
 
   PROTOCOLS = 'must be a list of lowercase git transport names, such as ssh, https or file'
   PROTOCOLS_VARIABLE = 'must be lowercase git transport names separated by colons, such as ssh:https'
@@ -14,10 +14,10 @@ class ConfigNetworkTest < Minitest::Test
   def test_network_keys_come_from_the_file
     with_sandbox do |env|
       write(env, "networkTimeout: 5\nprotocols: [ssh, https, file, git+ssh, persistent-https, x.y]\n")
-      config = load(env)
+      settings = load(env)
 
-      assert_equal 5, config.network_timeout
-      assert_equal %w[ssh https file git+ssh persistent-https x.y], config.protocols
+      assert_equal 5, settings.network_timeout
+      assert_equal %w[ssh https file git+ssh persistent-https x.y], settings.protocols
     end
   end
 
@@ -50,7 +50,7 @@ class ConfigNetworkTest < Minitest::Test
       write(env, '')
 
       ['0', '17', 'x', '4.0', ' '].each do |value|
-        assert_config_error "SLIPWAY_PARALLEL: #{PARALLEL}", env.merge('SLIPWAY_PARALLEL' => value)
+        assert_settings_error "SLIPWAY_PARALLEL: #{PARALLEL}", env.merge('SLIPWAY_PARALLEL' => value)
       end
     end
   end
@@ -76,15 +76,15 @@ class ConfigNetworkTest < Minitest::Test
 
   def test_protocols_refuses_ext_and_fd_even_when_listed
     with_sandbox do |env|
-      assert_config_error "SLIPWAY_PROTOCOLS: #{EXT}", env.merge('SLIPWAY_PROTOCOLS' => 'ext')
-      assert_config_error "SLIPWAY_PROTOCOLS: #{FD}", env.merge('SLIPWAY_PROTOCOLS' => 'https:fd')
+      assert_settings_error "SLIPWAY_PROTOCOLS: #{EXT}", env.merge('SLIPWAY_PROTOCOLS' => 'ext')
+      assert_settings_error "SLIPWAY_PROTOCOLS: #{FD}", env.merge('SLIPWAY_PROTOCOLS' => 'https:fd')
       assert_file_error "\"protocols\" #{EXT}", env, "protocols: [ssh, ext]\n"
       assert_file_error "\"protocols\" #{FD}", env, "protocols: [fd, https]\n"
       assert_file_error "\"protocols\" #{FD}", env, "protocols: [fd, ext]\n"
     end
   end
 
-  def test_config_names_the_variables_that_supplied_a_value
+  def test_settings_name_the_variables_that_supplied_a_value
     with_sandbox do |env|
       write(env, "protocols: [ssh]\ncolor: never\n")
       varied = env.merge('SLIPWAY_PROTOCOLS' => 'file', 'SLIPWAY_NETWORK_TIMEOUT' => '', 'SLIPWAY_COLOR' => 'always')
@@ -98,23 +98,23 @@ class ConfigNetworkTest < Minitest::Test
   def test_variables_are_validated_with_the_variable_as_prefix
     with_sandbox do |env|
       %w[x 0 -1 4.5 1m 86401 99999999999].each do |value|
-        assert_config_error 'SLIPWAY_NETWORK_TIMEOUT: must be an integer from 1 to 86400',
-                            env.merge('SLIPWAY_NETWORK_TIMEOUT' => value)
+        assert_settings_error 'SLIPWAY_NETWORK_TIMEOUT: must be an integer from 1 to 86400',
+                              env.merge('SLIPWAY_NETWORK_TIMEOUT' => value)
       end
       ['ssh::https', 'ssh:', ':ssh', 'ssh,https', 'SSH'].each do |value|
-        assert_config_error "SLIPWAY_PROTOCOLS: #{PROTOCOLS_VARIABLE}", env.merge('SLIPWAY_PROTOCOLS' => value)
+        assert_settings_error "SLIPWAY_PROTOCOLS: #{PROTOCOLS_VARIABLE}", env.merge('SLIPWAY_PROTOCOLS' => value)
       end
     end
   end
 
   def test_a_setting_member_is_its_key_in_snake_case
     assert_equal %i[color editor group network_timeout parallel protocols theme],
-                 Slipway::Config::SETTINGS.map(&:attribute)
+                 Slipway::Settings::ALL.map(&:attribute)
   end
 
   def test_the_man_page_shows_list_defaults_as_the_file_would_name_them
     assert_equal 'Transports git may use in network commands, as a list; any other transport is refused, and so ' \
                  'are ext and fd. Add file for local mirrors. Default: ssh, https.',
-                 Slipway::Config::DOCUMENTATION.fetch('protocols')
+                 Slipway::Settings::DOCUMENTATION.fetch('protocols')
   end
 end

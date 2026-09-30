@@ -30,9 +30,9 @@ module CommandsHelper
 
   def sandbox_runtime(env, git: Slipway::Git::Fake.new, now: NOW, flags: {})
     paths = Slipway::Paths.new(env)
-    config = Slipway::Config.load(paths, env:, flags:)
+    settings = Slipway::Settings.load(paths, env:, flags:)
     clock = -> { now }
-    Slipway::Runtime.new(config:, paths:, store: Slipway::Store.new(root: paths.data_home, clock: -> { CREATED }),
+    Slipway::Runtime.new(settings:, paths:, store: Slipway::Store.new(root: paths.data_home, clock: -> { CREATED }),
                          git:, inspector: Slipway::Inspector.new(git:, clock:, home: paths.home), clock:, env:)
   end
 

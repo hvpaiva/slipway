@@ -75,7 +75,7 @@ class ConventionsTest < Minitest::Test
   WARNING_WRITERS = ['output.rb'].freeze
 
   CLI = %w[cli.rb cli/].freeze
-  DOMAIN = %w[paths.rb config.rb editor.rb names.rb labels.rb selector.rb field_selector.rb resources.rb
+  DOMAIN = %w[paths.rb settings.rb editor.rb names.rb labels.rb selector.rb field_selector.rb resources.rb
               schema.rb manifest.rb store.rb scanner.rb yaml.rb error.rb git.rb git/ state.rb drift.rb plan.rb
               command_line.rb rollout_history.rb version.rb].freeze
   OUTPUT = %w[output.rb output/].freeze

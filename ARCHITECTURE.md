@@ -10,7 +10,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Layer | Files | What lives there |
 | --- | --- | --- |
 | Command layer | `cli.rb`, `cli/` | `Registry`, `Command`, `Glossary`, `Option`, `Positional` and `Example` (the data model), `Globals`, `Parser`, `Validator`, `Runner` (the front controller), `HelpRenderer`, `Manpage`, `Completer`, `CompletionScripts`, `Builtins`, `Context`, `Style`, `Theme` and `UsageError`. It knows nothing about projects or git. |
-| Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `schema.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Schema`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
+| Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `schema.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `settings.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Schema`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Settings`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
 | Git adapter | `git.rb`, `git/`, `state.rb` | `Git::Runner`, `Git::Repository` with its `FastForwarding` and `RollingBack` parts, the answers (`Status` and `Porcelain`, `Commit`, `FetchResult`, `Reflog`, `Distance`, `FastForward`, `MoveBack`), `Url`, `BranchName`, the errors in `git/errors.rb`, `Git::Fake`, and `State`. |
 | Reconciliation | `drift.rb`, `plan.rb`, `command_line.rb`, `rollout_history.rb` | `Drift`, `Plan`, `CommandLine` (the git command lines slipway prints and never runs) and `RolloutHistory`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
@@ -43,7 +43,7 @@ subject starts with `slipway `, and the commits the branch stood at before those
 Output renders plain data through a `Context` and never touches resources. Views turn a
 resource, or an `Inspection`, into table rows, describe entries and the object hash json and
 yaml print, and list in `FIELDS` the paths of that hash a field selector may name; they do no
-I/O. `Runtime` bundles the config, paths, store, git, inspector and clock of one run.
+I/O. `Runtime` bundles the settings, paths, store, git, inspector and clock of one run.
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values, the plan and output; output paints through the command layer's `Context`. The
@@ -52,9 +52,9 @@ neither requires commands, views, the runtime, the inspector, the fetcher, the s
 rollback, the `Outcome` they report or the pool. The command layer requires one domain file, the
 one allowed edge: `cli/errors.rb` requires `error.rb`, because `CLI::UsageError` is a
 `Slipway::Error`. The domain may use the command layer: `labels.rb`, `selector.rb` and
-`field_selector.rb` raise `CLI::UsageError`, and `config.rb` validates against `CLI::Theme` and
-`CLI::Style`. `test/unit/conventions_test.rb` reads every `require_relative` under `lib/`, fails
-on an edge that breaks these rules and on a file that belongs to no layer or to two, and
+`field_selector.rb` raise `CLI::UsageError`, and `settings.rb` validates against `CLI::Theme`
+and `CLI::Style`. `test/unit/conventions_test.rb` reads every `require_relative` under `lib/`,
+fails on an edge that breaks these rules and on a file that belongs to no layer or to two, and
 `test/unit/require_graph_test.rb` loads every file under `lib/` on its own.
 
 ## One invocation
@@ -142,7 +142,7 @@ fetch the objects they write. A new command that may contact a remote goes throu
   `GIT_ASKPASS` and `SSH_ASKPASS` at `false` and sets `SSH_ASKPASS_REQUIRE=force`, plus
   `GIT_ALLOW_PROTOCOL` joined from the `protocols` setting. Once that variable is set it is
   git's whole transport policy and git's own refusal of `ext` no longer applies, which is why
-  `Config` refuses `ext` and `fd` (`Config::UNSAFE_PROTOCOLS`) even when listed.
+  `Settings` refuses `ext` and `fd` (`Settings::UNSAFE_PROTOCOLS`) even when listed.
 - `Runner::NETWORK_CONFIG`: no gc, no automatic maintenance and no bundle URI download.
 - The `networkTimeout` deadline.
 
@@ -161,7 +161,7 @@ stderr is nothing but git's refusal of a transport, and `AuthRequired` when a li
 remote write to the same stream. Anything else becomes a `Git::Error` quoting the first line of
 stderr, redacted by `Git::Url.redact` before it is cut to `MESSAGE_LIMIT` characters.
 `test/unit/git/repository_fetch_test.rb`, `repository_fetch_answers_test.rb`,
-`repository_fetch_user_config_test.rb` and `test/unit/config_network_test.rb` cover the
+`repository_fetch_user_config_test.rb` and `test/unit/settings_network_test.rb` cover the
 profile.
 
 ## Concurrency and interrupts
@@ -243,7 +243,7 @@ Nothing about a verb is written twice. Help text, option descriptions and exampl
 verb's class (`DESCRIPTION`, `self.examples`, shared options in `Commands::Options`). What
 belongs to no verb, the ENVIRONMENT, FILES, CONFIGURATION and EXIT STATUS sections of
 slipway(1), lives in `Commands::Manual`, which `bin/generate-man` hands to `Manpage`; the
-CONFIGURATION entries are `Config::DOCUMENTATION`, built from `Config::SETTINGS`, and the
+CONFIGURATION entries are `Settings::DOCUMENTATION`, built from `Settings::ALL`, and the
 ENVIRONMENT line of each setting's variable points at its entry instead of describing the value
 again. `test/unit/seams_test.rb` derives the list of variables the code reads by scanning `lib/`
 and compares it with `Commands::Manual::ENVIRONMENT`, so a new `env['X']` fails the test until
@@ -321,13 +321,13 @@ it; it reads only the inspection it is given, so its tests need no repository. O
 glossary explains it. It keeps every promise in [SECURITY.md](SECURITY.md#safety-promises), or
 updates that list in the same pull request.
 
-**A setting.** Add a `Config::Setting` to `Config::SETTINGS` with its key, `SLIPWAY_*` variable,
+**A setting.** Add a `Settings::Setting` to `Settings::ALL` with its key, `SLIPWAY_*` variable,
 default, description, check and expectation, and `parse:` when the variable is not read as a
-plain string; add the member to the `Config` Data. The description becomes its CONFIGURATION
+plain string; add the member to the `Settings` Data. The description becomes its CONFIGURATION
 entry in slipway(1). Add the variable to `Commands::Manual::ENVIRONMENT` through its `setting`
 helper, which `seams_test.rb` requires, and the key to the README configuration example and the
 variable to the README table, which `readme_test.rb` requires. Read the value from
-`runtime.config`, and run `rake generate`.
+`runtime.settings`, and run `rake generate`.
 
 **A git question.** Add a public method to `Git::Repository`, or to `FastForwarding` or
 `RollingBack` for a move, that runs git through the private `run`, with the network profile

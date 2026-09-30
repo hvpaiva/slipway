@@ -104,7 +104,7 @@ module Slipway
           names = scope.project_targets(args, verb: 'roll back')
           number = revision(opts[:to_revision])
           dry_run = opts[:dry_run] == true
-          rollback = Rollback.new(runtime, dry_run:, group: opts[:group] ? nil : runtime.config.group)
+          rollback = Rollback.new(runtime, dry_run:, group: opts[:group] ? nil : runtime.settings.group)
           results = Results.new(context, ROLES, dry_run:)
           scope.select(Resources::PROJECTS, names) do |projects|
             projects.each { results.report(rollback.undo(it, number:)) }

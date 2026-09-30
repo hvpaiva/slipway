@@ -2,7 +2,7 @@
 
 require_relative 'version'
 require_relative 'cli'
-require_relative 'config'
+require_relative 'settings'
 require_relative 'paths'
 require_relative 'commands/manual'
 require_relative 'commands/options'

@@ -114,7 +114,7 @@ module Slipway
         scope.select(Resources::PROJECTS, names) do |projects|
           next scope.report_none(Resources::PROJECTS) if projects.empty?
 
-          results.stream(projects, workers: runtime.config.parallel, work: syncer.method(:observe)) do |step|
+          results.stream(projects, workers: runtime.settings.parallel, work: syncer.method(:observe)) do |step|
             syncer.settle(step)
           end
           unfetched(context, syncer.unfetched)
@@ -125,8 +125,8 @@ module Slipway
 
       private
 
-      # config.group already holds a typed -n, and the undo line is run later without it.
-      def configured_group(runtime, opts) = opts[:group] ? nil : runtime.config.group
+      # settings.group already holds a typed -n, and the undo line is run later without it.
+      def configured_group(runtime, opts) = opts[:group] ? nil : runtime.settings.group
 
       def unfetched(context, count)
         return if count.zero?

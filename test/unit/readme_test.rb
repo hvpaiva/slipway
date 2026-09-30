@@ -62,7 +62,7 @@ class ReadmeTest < Minitest::Test
   end
 
   def test_configuration_example_sets_exactly_the_config_keys
-    assert_equal Slipway::Config::KEYS.sort, yaml_block('## Configuration').keys.sort
+    assert_equal Slipway::Settings::KEYS.sort, yaml_block('## Configuration').keys.sort
   end
 
   private
