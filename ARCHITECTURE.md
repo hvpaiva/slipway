@@ -384,9 +384,9 @@ plain Ruby under `rakelib/support/` that the tasks and the scripts in `bin/` sha
 parses and cuts the changelog, `commits.rb` holds the commit rules `bin/lint-commits` applies and
 the range `rake check` hands it, `golden.rb` lists the fixtures `generate:golden` keeps,
 `release.rb` runs the release flow, `github.rb` wraps `gh api`, `tools.rb` reads the tools
-`mise.toml` pins and words the message `require_tool` gives for a missing one, and `runner.rb` holds
-`CommandRunner`, the command runner `bin/release` and `rake github:setup` inject so their tests can
-pass a fake.
+`mise.toml` pins, the list `bin/setup` installs, and words the message `require_tool` gives for a
+missing one, and `runner.rb` holds `CommandRunner`, the command runner `bin/release` and
+`rake github:setup` inject so their tests can pass a fake.
 `rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
 of it ships in the gem. `bin/setup` and `bin/sandbox` are bash, checked by ShellCheck through
 `rake lint:shell`.

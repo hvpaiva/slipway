@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 # The programs the rake tasks run besides Ruby and git. mise.toml pins some at the versions CI
-# runs, and mise installs those without root; the rest come from the system's package manager.
+# runs, and bin/setup installs those through mise; the rest come from the system's package
+# manager.
 module Tools
   MISE_TOML = File.expand_path('../../mise.toml', __dir__)
   TABLE = /\A\[(?<name>[^\]]+)\]\s*\z/

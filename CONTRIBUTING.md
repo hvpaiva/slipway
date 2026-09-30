@@ -8,11 +8,9 @@ explains where things live and how to add to them.
 You need Ruby 3.4 or newer (the repository pins 4.0.7 in `mise.toml`) and git 2.35 or newer.
 With a git older than 2.41 the fetch tests and the README examples that run `fetch` or `sync`
 are skipped, so run the whole suite with 2.41 or newer. `rake check` also needs `shellcheck`,
-`groff`, `typos`, `zizmor` and `lychee`. `mise.toml` pins all of them but `groff` at the
-versions CI runs, so with [mise](https://mise.jdx.dev)
-`mise install shellcheck typos zizmor lychee` installs them without root. The other tools are
-optional: `zsh` and `fish` for the completion tests (or `docker`, which `rake test:shells` uses
-in their place) and `gh` for the maintainer tasks.
+`groff`, `typos`, `zizmor` and `lychee`. The other tools are optional: `zsh` and `fish` for the
+completion tests (or `docker`, which `rake test:shells` uses in their place) and `gh` for the
+maintainer tasks.
 
 ```sh
 git clone https://github.com/hvpaiva/slipway.git
@@ -21,10 +19,14 @@ bin/setup
 bundle exec ruby -Ilib exe/slipway --help
 ```
 
-`bin/setup` runs `bundle install` and ends with a report: the Ruby it found against
-`mise.toml`, the git version (older than 2.35 is a hard failure, with the reason, and older
-than 2.41 names what skips), and one line per other tool saying which task skips or fails
-without it. `bin/console` opens IRB with the gem loaded.
+`bin/setup` runs `bundle install`. When [mise](https://mise.jdx.dev) is installed, it then
+installs `shellcheck`, `typos`, `zizmor` and `lychee` at the versions `mise.toml` pins, the ones
+CI runs, without root. It ends with a report: the Ruby it found against `mise.toml`, the git
+version (older than 2.35 is a hard failure, with the reason, and older than 2.41 names what
+skips), and one line per other tool saying which task skips or fails without it. A missing tool
+that `mise.toml` pins comes with the `mise install` command for it, and one that mise installed
+but your shell does not find says to activate mise, since the rake tasks look it up on `PATH`;
+the rest come from your package manager. `bin/console` opens IRB with the gem loaded.
 
 ## Tests and lint
 

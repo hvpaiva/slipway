@@ -19,6 +19,11 @@ class ToolsTest < Minitest::Test
     assert_includes required, 'groff'
   end
 
+  # bin/setup installs these through mise, and its report is where a missing one is named.
+  def test_bin_setup_reports_every_tool_mise_toml_pins_besides_ruby
+    assert_empty Tools.pinned.keys - ['ruby'] - reported_tools
+  end
+
   # mise install with a tool that mise.toml does not pin installs its latest release, so CI
   # would drift from rake check without failing. Ruby comes from ruby/setup-ruby in CI.
   def test_ci_installs_through_mise_exactly_the_tools_mise_toml_pins_besides_ruby
