@@ -7,17 +7,16 @@ class ReadmeTest < Minitest::Test
   README = File.join(ROOT, 'README.md')
   RESULTS = '| Result | Meaning |'
 
-  # The help of get and describe prints State::MEANINGS, so the table says the same.
   def test_status_table_lists_every_state_in_order_with_the_meaning_help_gives
-    table = rows('| STATUS | Meaning |').to_h { it.split('|')[1, 2].map { it.strip.delete('`') } }
-
-    assert_equal Slipway::State::ROLES.keys, table.keys
-    assert_equal Slipway::State::MEANINGS, table
+    assert_equal Slipway::State::ROLES.keys, first_cells('| STATUS | Meaning |')
+    assert_equal Slipway::State::MEANINGS, meanings('| STATUS | Meaning |')
   end
 
-  def test_drift_tables_list_every_type_and_blocker_in_order
+  def test_drift_tables_list_every_type_and_blocker_in_order_with_the_meaning_help_gives
     assert_equal Slipway::Drift::TYPES, first_cells('| Drift | Reported when |')
     assert_equal Slipway::Drift::BLOCKERS.keys, first_cells('| Blocker | Meaning |')
+    assert_equal Slipway::Drift::TYPE_MEANINGS, meanings('| Drift | Reported when |')
+    assert_equal Slipway::Drift::BLOCKER_MEANINGS, meanings('| Blocker | Meaning |')
   end
 
   def test_environment_table_lists_the_man_page_variables_in_order
@@ -62,6 +61,9 @@ class ReadmeTest < Minitest::Test
   def lines = @lines ||= File.readlines(README, chomp: true)
 
   def first_cells(header) = rows(header).map { it.split('|')[1].strip.delete('`') }
+
+  # Help prints the same meanings as plain text, so the code spans lose their backticks.
+  def meanings(header) = rows(header).to_h { it.split('|')[1, 2].map { it.strip.delete('`') } }
 
   # +after+ names the heading the table sits under, for a header several tables share.
   def rows(header, after: nil)

@@ -17,6 +17,11 @@ class DriftTest < Minitest::Test
     assert_equal 'git remote set-url origin ssh://git:***@forge.test/x.git', item.command
   end
 
+  def test_every_type_and_blocker_has_a_meaning_in_the_same_order
+    assert_equal Slipway::Drift::TYPES, Slipway::Drift::TYPE_MEANINGS.keys
+    assert_equal Slipway::Drift::BLOCKERS.keys, Slipway::Drift::BLOCKER_MEANINGS.keys
+  end
+
   def test_a_blocker_fills_its_fixed_sentence
     item = Slipway::Drift.blocker('Diverged', ahead: 2, behind: 5, upstream: 'origin/main', command: 'git log')
 

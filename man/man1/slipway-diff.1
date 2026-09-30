@@ -20,6 +20,66 @@ Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.
 .TP
 \fB\-A\fR, \fB\-\-all\-groups\fR
 If present, compare every project across all groups with its manifest. The group in the current configuration is ignored even if specified with \-\-group.
+.SH DRIFT
+.TP
+\fBMissing\fR
+The registered path is relative or is not a directory. For a path that is not a directory, a project with spec.remote shows the git clone command that recreates it.
+.TP
+\fBRemote\fR
+origin is absent or differs from spec.remote. Sync never changes a remote.
+.TP
+\fBBranch\fR
+HEAD is detached or on another branch than spec.branch. Sync never switches branches.
+.TP
+\fBRevision\fR
+HEAD is not the commit spec.revision pins. The pin replaces the upstream, so a pinned project is never Behind; under FastForward sync will fast\-forward a branch behind the pin to it unless a blocker stops it, and never moves a branch back.
+.TP
+\fBBehind\fR
+The checked\-out branch is behind its upstream. Under FastForward sync will fast\-forward it unless a blocker stops it; under FetchOnly, or while spec.paused is true, it is only reported.
+.SH BLOCKERS
+A blocker says why the checked\-out branch cannot be fast\-forwarded, onto its upstream or, for a project pinned by spec.revision, onto the pin. The first three mean git could not read the repository and apply to every project; the others apply only under FastForward to a project that is not paused, and RevisionNotFound, PastRevision and OffUpstream only to a pinned one.
+.TP
+\fBNotARepo\fR
+The directory exists but holds no repository.
+.TP
+\fBUnsafe\fR
+git refused the repository because another user owns it (safe.directory); the git command that trusts it follows.
+.TP
+\fBUnknown\fR
+git could not answer; the reason is also printed once on stderr.
+.TP
+\fBDetached\fR
+HEAD points at a commit rather than a branch.
+.TP
+\fBUnborn\fR
+The branch has no commits yet.
+.TP
+\fBGone\fR
+The upstream is configured but its ref no longer exists.
+.TP
+\fBNoUpstream\fR
+The branch tracks no upstream.
+.TP
+\fBRevisionNotFound\fR
+The repository has no commit by the name spec.revision pins.
+.TP
+\fBPastRevision\fR
+HEAD is past the pinned commit or on another line of history, so reaching the pin would move the branch back.
+.TP
+\fBOffUpstream\fR
+The upstream does not hold the pinned commit, which may be on another branch or a fork; sync moves a branch only along its upstream.
+.TP
+\fBConflicted\fR
+The branch is behind and the working tree has unmerged paths.
+.TP
+\fBDirty\fR
+The branch is behind and has staged or unstaged changes; untracked files do not block.
+.TP
+\fBDiverged\fR
+The branch is behind and has commits of its own.
+.TP
+\fBInProgress\fR
+The branch would be fast\-forwarded, but a merge, rebase, cherry\-pick, revert, bisect or git am is in progress.
 .SH "EXIT STATUS"
 .TP
 \fB0\fR

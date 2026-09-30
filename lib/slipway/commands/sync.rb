@@ -30,12 +30,10 @@ module Slipway
                     'true is left alone: no git command runs in it. A project pinned by spec.revision is ' \
                     'fast-forwarded up to that commit instead of its upstream, only when its upstream holds the ' \
                     "commit, never past it, and never moved back to it.\n\n" \
-                    'Each project prints one line: fast-forwarded, fetched when the fetch of a FetchOnly project ' \
-                    'brought references, unchanged, skipped, paused, denied or failed, with the reason in ' \
-                    'parentheses and the details below. A fast-forward onto the upstream names the commits the ' \
-                    'branch moved across and the command that undoes it. The parallel setting caps how many ' \
-                    'projects fetch at once, fast-forwards run one at a time, and the results print in the ' \
-                    "order the projects are listed.\n\n" \
+                    'Each project prints one line, one of the results listed below, with a reason in parentheses ' \
+                    'and the details under it. The parallel setting caps how many projects fetch at once, ' \
+                    'fast-forwards run one at a time, and the results print in the order the projects are ' \
+                    "listed.\n\n" \
                     'With --dry-run=client nothing is fetched or written: the plan is made from the last fetch.'
       USAGE = '[NAME... | project/NAME...]'
       EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
@@ -43,6 +41,37 @@ module Slipway
         '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project whose fetch or ' \
                'fast-forward was denied or failed.'
       ).freeze
+      RESULTS = CLI::Glossary.new(
+        title: 'Results',
+        intro: 'When more than one project ran, a count of the results closes the run on stderr. With ' \
+               '--dry-run=client every line and the count end in (dry run). Ctrl-C stops the git processes slipway ' \
+               'started and exits with status 130; a fast-forward it stops ends as one stopped at the deadline.',
+        entries: {
+          Sync::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits it ' \
+                                  'gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the ' \
+                                  "move; a move up to a spec.revision pin ends in #{Sync::Executor::TO_PIN}.",
+          Fetcher::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
+          Fetcher::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
+                                'moved remote-tracking refs.',
+          "#{Fetcher::SKIPPED} (Reason)" => 'The branch stayed where it was: a blocker stopped it, under the name ' \
+                                            'slipway diff gives it; git refused the fast-forward (WouldOverwrite ' \
+                                            'for untracked files in the way, WouldLoseChanges for local changes git ' \
+                                            'status does not show, Busy for a lock another git process holds on ' \
+                                            'the index, HEAD or the branch, NotFastForward for a branch that ' \
+                                            'gained a commit since the check); or the project was skipped before ' \
+                                            'its fetch, as in slipway fetch (Missing, NotARepo, Unsafe, Unknown, ' \
+                                            'NoRemote, LocalUpstream).',
+          Fetcher::PAUSED => 'spec.paused is true, so no git command ran in the project.',
+          "#{Fetcher::DENIED} (Reason)" => 'The fetch or the fast-forward needed a password, a passphrase or a ' \
+                                           'host key (AuthRequired), as in slipway fetch.',
+          "#{Fetcher::FAILED} (Reason)" => 'The fetch or the fast-forward ran past networkTimeout (Timeout), used ' \
+                                           'a transport protocols leaves out (ProtocolNotAllowed), or git failed ' \
+                                           'for another reason (Unknown). A fast-forward stopped at the deadline ' \
+                                           'leaves the branch where it was, but the files git had already written ' \
+                                           'stay in the working tree, and the detail names the command that lists ' \
+                                           'them.'
+        }
+      )
       # In the order the closing summary counts them.
       ROLES = { Sync::FAST_FORWARDED => :result_changed, Fetcher::FETCHED => :result_changed,
                 Fetcher::UNCHANGED => :result_unchanged, Fetcher::SKIPPED => :result_skipped,
@@ -55,7 +84,7 @@ module Slipway
       def self.command(factory)
         CLI::Command.new(
           name: 'sync', summary: 'Fetch projects and fast-forward their branches', section: 'Repository Commands',
-          description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES,
+          description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES, glossaries: [RESULTS],
           positionals: [Options.project_positional(factory)],
           options: [Options::SELECTOR, ALL_GROUPS, Fetch::PRUNE, Options::DRY_RUN],
           handler: new(factory)

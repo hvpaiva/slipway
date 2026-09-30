@@ -43,6 +43,17 @@ module Slipway
         '3' => 'At least one selected project differs from its manifest or is blocked, including a directory that ' \
                'holds no repository (NotARepo) and a repository git refuses (Unsafe).'
       ).sort_by { |status, _| Integer(status) }.to_h.freeze
+      GLOSSARIES = [
+        CLI::Glossary.new(title: 'Drift', entries: Drift::TYPE_MEANINGS),
+        CLI::Glossary.new(
+          title: 'Blockers',
+          intro: 'A blocker says why the checked-out branch cannot be fast-forwarded, onto its upstream or, for a ' \
+                 'project pinned by spec.revision, onto the pin. The first three mean git could not read the ' \
+                 'repository and apply to every project; the others apply only under FastForward to a project that ' \
+                 'is not paused, and RevisionNotFound, PastRevision and OffUpstream only to a pinned one.',
+          entries: Drift::BLOCKER_MEANINGS
+        )
+      ].freeze
       INDENT = '  '
       COMMAND_INDENT = '    '
       ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, compare every project across all groups with ' \
@@ -52,7 +63,7 @@ module Slipway
       def self.command(factory)
         CLI::Command.new(
           name: 'diff', summary: 'Show where projects differ from their manifests', section: 'Repository Commands',
-          description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES,
+          description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES, glossaries: GLOSSARIES,
           positionals: [Options.project_positional(factory)],
           options: [Options::SELECTOR, ALL_GROUPS],
           handler: new(factory)

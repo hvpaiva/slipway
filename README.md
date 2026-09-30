@@ -353,7 +353,7 @@ every promise slipway makes about the repositories it touches.
 | `fast-forwarded` | The branch moved. For a move onto the upstream, the detail names the commits it gained, as `main a1b2c3d..e4f5a6b (3 commits)`, and the command that undoes the move. |
 | `fetched` | The fetch of a `FetchOnly` project moved refs; the refs follow as in `fetch`. |
 | `unchanged` | The branch stayed where it was and nothing blocked it; the fetch may still have moved remote-tracking refs. |
-| `skipped (Reason)` | The branch stayed where it was: a [blocker](#drift) stopped it, git refused the fast-forward (`WouldOverwrite` for untracked files in the way, `WouldLoseChanges` for local changes `git status` does not show, `Busy` for a held `index.lock`, `NotFastForward`), or the project was skipped before its fetch as in `fetch`. |
+| `skipped (Reason)` | The branch stayed where it was: a [blocker](#drift) stopped it, git refused the fast-forward (`WouldOverwrite` for untracked files in the way, `WouldLoseChanges` for local changes `git status` does not show, `Busy` for a lock another git process holds on the index, `HEAD` or the branch, `NotFastForward` for a branch that gained a commit since the check), or the project was skipped before its fetch as in `fetch`. |
 | `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
 | `denied (AuthRequired)` | The fetch or the fast-forward needed a password, a passphrase or a host key, as in `fetch`. |
 | `failed (Reason)` | The fetch or the fast-forward ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). A fast-forward stopped at the deadline leaves the branch where it was, but the files git had already written stay in the working tree, and the detail names the command that lists them. |
@@ -420,7 +420,7 @@ without staged changes, because `reset --keep` resets every index entry.
 | --- | --- |
 | `rolled back` | The branch moved, or it already stood at the revision and only `spec.revision` changed. The detail names the commits it crossed and the command that lets `sync` follow the upstream again. |
 | `unchanged` | The branch already stood at the revision and `spec.revision` already held it. |
-| `skipped (Reason)` | Nothing moved and nothing was written. The branch cannot move (`Conflicted`, `Detached`, `Unborn`, `NoUpstream`, `Gone`, `InProgress`); the history has no such revision (`NoHistory`, `NoPrevious`, `UnknownRevision`) or the repository no such commit (`RevisionNotFound`); a move back would drop commits the upstream lacks (`LocalCommits`) or staged changes (`Dirty`), or the revision is off the branch's history (`Diverged`); a move forward needs a tree without staged or unstaged changes (`Dirty`) and a revision on the upstream (`OffUpstream`); or git refused the move (`WouldLoseChanges`, `WouldOverwrite` for untracked or ignored files in the way, `Busy`). |
+| `skipped (Reason)` | Nothing moved and nothing was written. The branch cannot move (`Conflicted`, `Detached`, `Unborn`, `NoUpstream`, `Gone`, `InProgress`); the history has no such revision (`NoHistory`, `NoPrevious`, `UnknownRevision`) or the repository no such commit (`RevisionNotFound`); a move back would drop commits the upstream lacks (`LocalCommits`) or staged changes (`Dirty`), or the revision is off the branch's history (`Diverged`); a move forward needs a tree without staged or unstaged changes (`Dirty`) and a revision on the upstream (`OffUpstream`); or git refused the move (`WouldLoseChanges`, `WouldOverwrite` for untracked or ignored files in the way, `Busy`, `NotFastForward` for a branch that moved since the check). |
 | `denied (AuthRequired)` | A partial clone had to fetch the files the move writes and the remote asked for a password, a passphrase or a host key, as in `fetch`. |
 | `failed (Reason)` | The move ran past `networkTimeout` (`Timeout`) or git failed for another reason (`Unknown`), and `spec.revision` was not written, though a move stopped at the deadline keeps the files git had already written, as in `sync`; or the branch moved but `spec.revision` could not be written (`NotPinned`), and the detail names the `--to-revision` command that writes it without moving the branch again. |
 
@@ -722,7 +722,7 @@ disk, so Behind is as of the last fetch (FETCHED), and `slipway fetch` refreshes
 
 | Drift | Reported when |
 | --- | --- |
-| `Missing` | The registered path is not a directory. With `spec.remote`, the `git clone` command that recreates it is shown. |
+| `Missing` | The registered path is relative or is not a directory. For a path that is not a directory, a project with `spec.remote` shows the `git clone` command that recreates it. |
 | `Remote` | origin is absent or differs from `spec.remote`. Sync never changes a remote. |
 | `Branch` | HEAD is detached or on another branch than `spec.branch`. Sync never switches branches. |
 | `Revision` | HEAD is not the commit `spec.revision` pins. The pin replaces the upstream, so a pinned project is never Behind; under `FastForward` sync will fast-forward a branch behind the pin to it unless a blocker stops it, and never moves a branch back. |
