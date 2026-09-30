@@ -118,6 +118,20 @@ class BaseTest < Minitest::Test
     end
   end
 
+  def test_project_positional_completes_project_names_whatever_was_typed_before
+    with_sandbox do |env|
+      runtime = sandbox_runtime(env)
+      register_group(runtime, 'work')
+      register(runtime, 'hldr')
+      register(runtime, 'job', group: 'work')
+      positional = Slipway::Commands::Options.project_positional(->(_context, _opts) { runtime })
+
+      assert_equal %w[hldr job], positional.candidates([])
+      assert_equal %w[hldr job], positional.candidates(%w[hldr])
+      assert_equal [true, false], [positional.variadic, positional.required]
+    end
+  end
+
   def test_name_positional_hides_a_failing_factory
     positional = Slipway::Commands::Options.name_positional(->(_context, _opts) { raise 'boom' })
 

@@ -32,7 +32,7 @@ that breaks these rules.
 
 `exe/slipway` calls `Slipway.run(ARGV)`. From there:
 
-1. `Commands.registry(factory)` builds the `CLI::Registry`: the nine verbs from
+1. `Commands.registry(factory)` builds the `CLI::Registry`: the ten verbs from
    `Commands::VERBS`, each built by its class's `self.command(factory)`, plus the builtins
    (`help`, `version`, `completion`, `man`, hidden `__complete`).
 2. `Runtime.color_defaults` peeks at `--config` in argv and reads the config file once, so the

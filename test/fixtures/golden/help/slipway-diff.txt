@@ -1,0 +1,34 @@
+Show where each selected project differs from its manifest.
+
+Compares every project of the current group, the projects named, the ones a label selector matches, or with --all-groups every project, with its manifest. Each project that differs prints its name and one line per difference: Missing, Remote, Branch, Revision or Behind, then the blocker that keeps sync from fast-forwarding the branch, if any. A line is followed by the git command that shows or resolves it when there is one; slipway never runs it. A project that matches its manifest prints nothing.
+
+The repositories are read as they are on disk: diff contacts no remote and writes nothing, so Behind is as of the last fetch, which slipway fetch refreshes. A project pinned by spec.revision is compared with that commit instead of its upstream. A pinned, paused or FetchOnly project shows a blocker only when git cannot read its repository.
+
+Exit Status:
+  0     Every selected project matches its manifest.
+  1     Runtime error, such as a missing resource or an unreadable manifest, or a project whose state is Unknown because git failed or did not finish.
+  2     Usage error: unknown command, unknown flag or invalid argument.
+  3     At least one selected project differs from its manifest or is blocked, including a directory that holds no repository (NotARepo) and a repository git refuses (Unsafe).
+  130   Interrupted by SIGINT.
+
+Examples:
+  # Show where the projects of the current group differ from their manifests
+  slipway diff
+
+  # Show every project that differs, in every group
+  slipway diff -A
+
+  # Compare two projects of the work group
+  slipway diff api web -n work
+
+  # Compare the projects labeled lang=rust
+  slipway diff -l lang=rust
+
+Options:
+  -l, --selector EXPR   Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
+  -A, --all-groups      If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
+
+Usage:
+  slipway diff [NAME... | project/NAME...] [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

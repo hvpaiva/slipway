@@ -104,6 +104,7 @@ bundle exec rake install
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
 | `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
+| `diff [NAME...]` | Show where projects differ from their manifests, without contacting a remote; exit status 3 when any does. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -198,7 +199,7 @@ STATUS is one word per project, chosen in this order of precedence:
 | `Clean` | Nothing to do. |
 | `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
 
-`get` and `describe` never contact a remote, so the words that compare a branch with its
+`get`, `describe` and `diff` never contact a remote, so the words that compare a branch with its
 upstream are as fresh as the last fetch. `slipway fetch` refreshes them.
 
 ### Fetching
@@ -340,6 +341,30 @@ only under `FastForward` to a project that is neither paused nor pinned by `spec
 | `Dirty` | The branch is behind and has staged or unstaged changes; untracked files do not block. |
 | `Diverged` | The branch is behind and has commits of its own. |
 | `InProgress` | The branch would be fast-forwarded, but a merge, rebase, cherry-pick, revert, bisect or `git am` is in progress. |
+
+### Diff
+
+`slipway diff` compares every project of the current group, the ones named, the ones a selector
+matches, or with `-A` every project, with its manifest. Each project that differs prints its
+name and one line per [drift](#drift) item, and an item that has a git command to show or
+resolve it is followed by that command. Slipway never runs these commands, never writes to a
+repository or to the registry, and contacts no remote.
+
+```console
+$ slipway diff -A
+project/notes
+  Behind: 1 commit behind origin/main
+  Diverged: 1 ahead, 1 behind origin/main; sync never merges or rebases
+    git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
+project/augur
+  NoUpstream: main tracks no upstream; sync fast-forwards only a tracking branch
+```
+
+A project that matches its manifest, as hldr does here, prints nothing. Names are given bare or
+in the `project/NAME` form that `get projects -o name` prints. The exit status is 0 when every
+project matches its manifest and 3 when any differs or is blocked, `NotARepo` and `Unsafe`
+included. It is 1 on an error, such as an unreadable manifest or a project whose state is
+`Unknown`, so a script or a timer can tell drift from failure.
 
 ### Editing
 
@@ -486,6 +511,9 @@ man slipway-get
 | `1` | Runtime error, such as a missing resource or an unreadable manifest. |
 | `2` | Usage error: unknown command, unknown flag or invalid argument. |
 | `130` | Interrupted by SIGINT. |
+
+`slipway diff` also exits with 3 when a project differs from its manifest; its man page lists
+its statuses.
 
 ## Development
 
