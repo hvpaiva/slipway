@@ -88,6 +88,16 @@ No tool checks these; a reviewer does.
   gets unit tests in `test/unit/commands` and, when it prints something, an exact-output
   assertion. The coverage minimums are the mechanical floor; review judges whether the tests
   say anything.
+- Every change updates the documentation a reader would consult for it. A user-visible change
+  edits `CHANGELOG.md`, the README section that covers it (or adds one), and the command's
+  summary, description, option text and examples, which its `--help` and man page are built
+  from. A change to how the code is laid out or how the project is built, tested or released
+  edits [ARCHITECTURE.md](ARCHITECTURE.md) or this page, and a change to what slipway reads,
+  writes, runs or contacts, or to which releases get fixes, edits [SECURITY.md](SECURITY.md).
+  The README's examples show the output of a real run. The `commits` job only checks that the
+  changelog was touched, the generated-files comparison that the man pages match the command
+  text, and `test/unit/readme_test.rb` that the README tables and configuration example match
+  the code; review judges whether the text is complete and still true.
 - User-visible text follows kubectl's wording: `project/hldr created`, `No resources found in
   work group.`, `error: projects "hldr" not found`. When kubectl has a phrase for the situation,
   use it. Everything is in English. The golden fixtures freeze that wording, so every change to
