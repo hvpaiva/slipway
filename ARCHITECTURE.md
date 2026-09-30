@@ -64,6 +64,21 @@ the first line of git's stderr, redacted and cut to 200 characters. `spec.remote
 from `--remote` or a manifest, whenever redact would change it, so json and yaml print it as
 stored.
 
+## Safety promises
+
+[SECURITY.md](SECURITY.md#safety-promises) lists what slipway promises about the git it runs,
+the writes to a working tree, the environment git gets and what reaches the terminal. A few
+places keep those promises: `Git::Runner` spawns every git process and sets its environment;
+`Git::Repository` holds every git argv, its `FastForwarding` part the fast-forward, which only
+`Sync::Executor` and `Rollback` call, and its `RollingBack` part the reset, which only
+`Rollback` calls; `Manifest`, through `Git::Url` and `Git::BranchName`, checks each field that
+can reach git before a manifest enters the store; `Output.plain`, `CLI::Style.plain` and
+`Git::Url.redact` treat what is printed; and `Plan` and the git errors quote each word they put
+into a command printed for the user to run. A change there keeps every promise or updates
+SECURITY.md in the same pull request. `test/unit/conventions_test.rb` keeps the spawn and the
+warning line in their one place, and `test/unit/reset_rule_test.rb` keeps the reset to its one
+form and its one caller.
+
 ## One definition, four outputs
 
 A `CLI::Command` is plain data: name, summary, description, section, examples, positionals,

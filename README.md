@@ -426,7 +426,8 @@ an upstream that still exists, is behind it and not ahead of it, and has no stag
 conflicted changes and no merge, rebase, cherry-pick, revert, bisect or `git am` in progress.
 Untracked files do not block it; git refuses a fast-forward that would overwrite one, and sync
 reports that. Sync never pulls, merges, rebases, stashes, resets, cleans, pushes, switches a
-branch, changes a remote or removes a lock.
+branch, changes a remote or removes a lock. [SECURITY.md](SECURITY.md#safety-promises) lists
+every promise slipway makes about the repositories it touches.
 
 | Result | Meaning |
 | --- | --- |
@@ -697,7 +698,7 @@ time and are not generated files.
 - [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, conventions and the release process.
 - [ARCHITECTURE.md](ARCHITECTURE.md) for a map of the code.
 - [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
-- [SECURITY.md](SECURITY.md) for how to report a vulnerability.
+- [SECURITY.md](SECURITY.md) for what slipway promises about the repositories it touches and how to report a vulnerability.
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the rules of the community.
 
 ## License
