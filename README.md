@@ -149,7 +149,7 @@ must hold.
 ```console
 $ slipway get projects -A --field-selector status.state!=Clean
 GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
-default    notes   main     Ahead    2h        0s
+default    notes   main     Ahead    2d        0s
 personal   augur   main     Dirty    <never>   1s
 ```
 
