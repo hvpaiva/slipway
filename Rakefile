@@ -7,6 +7,7 @@ require 'open3'
 require 'rubocop/rake_task'
 require 'tempfile'
 require 'yard'
+require_relative 'rakelib/support/tools'
 
 # Coverage gates for test:cov. Each sits at least two points under what test:cov measures, overall
 # or for the least covered file, and is raised when the measured figure rises.
@@ -67,9 +68,7 @@ namespace :generate do
 end
 
 def require_tool(tool)
-  return if system(tool, '--version', out: File::NULL, err: File::NULL)
-
-  abort "#{tool} is not installed; install it with your package manager (pacman, apt or brew)"
+  abort Tools.missing(tool) unless system(tool, '--version', out: File::NULL, err: File::NULL)
 end
 
 namespace :lint do
@@ -97,6 +96,27 @@ namespace :lint do
       file.flush
       sh 'shellcheck', '-s', 'bash', file.path
     end
+  end
+
+  desc 'Check spelling with typos, which reads _typos.toml'
+  task :spelling do
+    require_tool('typos')
+    sh 'typos'
+  end
+
+  desc 'Audit the workflows with zizmor; GH_TOKEN enables its online audits, CHECK_OFFLINE=1 turns them off'
+  task :workflows do
+    require_tool('zizmor')
+    offline = ENV.fetch('CHECK_OFFLINE', '').empty? ? [] : ['--offline']
+    sh 'zizmor', *offline, '.github/workflows'
+  end
+
+  # No shell runs here: lychee expands the globs itself. --offline repeats lychee.toml so a
+  # change there cannot make rake check depend on the network.
+  desc 'Check the relative links and heading anchors in the Markdown guides with lychee, offline'
+  task :links do
+    require_tool('lychee')
+    sh 'lychee', '--config', 'lychee.toml', '--offline', './*.md', './.github/**/*.md'
   end
 end
 

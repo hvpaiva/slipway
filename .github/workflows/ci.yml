@@ -3,10 +3,10 @@
 # steps that need the pull request or a tool outside the bundle: the commits job passes the
 # pull request's title and body to bin/lint-commits and reads its labels for the changelog
 # gate; the completions job runs the completion tests with zsh and fish installed, as
-# "bundle exec rake test:shells" does locally; typos and zizmor run in the lint job and lychee
-# in the links job, and CONTRIBUTING.md gives their local commands. The job names are the
-# required status checks of the main ruleset (GitHub::REQUIRED_CHECKS in
-# rakelib/support/github.rb).
+# "bundle exec rake test:shells" does locally; typos and zizmor run through their actions in
+# the lint job and lychee through its action in the links job, at the versions mise.toml pins
+# for lint:spelling, lint:workflows and lint:links. The job names are the required status
+# checks of the main ruleset (GitHub::REQUIRED_CHECKS in rakelib/support/github.rb).
 name: CI
 
 on:
