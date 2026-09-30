@@ -6,7 +6,7 @@ require_relative 'resources'
 module Slipway
   # The revisions of a branch, read from the moves slipway left in its reflog. Git keeps the
   # history, so slipway stores none of its own.
-  class Rollout
+  class RolloutHistory
     # Every move slipway makes runs with GIT_REFLOG_ACTION set to "slipway <action>", and git
     # writes "<action>: <what it did>".
     ACTION = /\Aslipway ([^:]+):/

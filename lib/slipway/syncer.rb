@@ -5,7 +5,7 @@ require_relative 'drift'
 require_relative 'git'
 require_relative 'outcome'
 require_relative 'plan'
-require_relative 'rollout'
+require_relative 'rollout_history'
 
 module Slipway
   # Brings projects to their manifests by the one move that cannot lose work: each is fetched,
@@ -92,7 +92,7 @@ module Slipway
       return "#{range} #{TO_PIN}" if step.plan.to_revision?
 
       gained = forward.count
-      undo = Rollout.command('undo', step.project, @group)
+      undo = RolloutHistory.command('undo', step.project, @group)
       "#{range} (#{gained} commit#{'s' unless gained == 1}); undo with '#{undo}'"
     end
 

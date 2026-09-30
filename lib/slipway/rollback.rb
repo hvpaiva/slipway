@@ -5,7 +5,7 @@ require_relative 'drift'
 require_relative 'git'
 require_relative 'outcome'
 require_relative 'paths'
-require_relative 'rollout'
+require_relative 'rollout_history'
 
 module Slipway
   # Moves a project's branch to a revision of its rollout history and holds the project there
@@ -108,7 +108,7 @@ module Slipway
       project = inspection.project
       status = inspection.status
       head = inspection.commit.sha
-      history = Rollout.new(@runtime.git.reflog(path(project), status.branch))
+      history = RolloutHistory.new(@runtime.git.reflog(path(project), status.branch))
       revision = target(history, head, number, status.branch)
       distance = @runtime.git.distance(path(project), revision.sha, tracking: true)
       refuse('RevisionNotFound', commit: short(revision.sha), number: revision.number) if distance.nil?
@@ -177,7 +177,7 @@ module Slipway
     end
 
     def unpinned(step, error)
-      retry_command = "#{Rollout.command('undo', step.project, @group)} --to-revision=#{step.revision.number}"
+      retry_command = "#{RolloutHistory.command('undo', step.project, @group)} --to-revision=#{step.revision.number}"
       "spec.revision was not written: #{error.message}; run '#{retry_command}' to hold it there"
     end
 
@@ -204,7 +204,9 @@ module Slipway
       "#{branch} #{short(from)}..#{target} (#{commits(count)} #{way} to revision #{revision.number})"
     end
 
-    def following(project, status) = "'#{Rollout.command('unpin', project, @group)}' follows #{status.upstream} again"
+    def following(project, status)
+      "'#{RolloutHistory.command('unpin', project, @group)}' follows #{status.upstream} again"
+    end
 
     def relayed(project, error)
       reason = error.reason
