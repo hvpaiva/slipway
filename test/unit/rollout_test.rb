@@ -66,7 +66,7 @@ class RolloutHistoryTest < Minitest::Test
     entries = moves.each_with_index.map do |(sha, subject), index|
       Slipway::Git::ReflogEntry.new(sha:, time: Time.at(1_727_000_000 + index).utc, subject:)
     end
-    Slipway::Rollout::History.new(entries.reverse)
+    Slipway::Rollout.new(entries.reverse)
   end
 
   def summary(history) = history.revisions.map { [it.number, it.sha, it.action, it.from] }

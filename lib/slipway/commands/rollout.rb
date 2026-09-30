@@ -70,7 +70,7 @@ module Slipway
         def show(runtime, context, project)
           name = "#{Resources::PROJECTS.singular}/#{project.name}"
           path = Paths.expand(project.path, home: runtime.paths.home)
-          history = Rollout::History.new(entries(runtime, project, name, path))
+          history = Rollout.new(entries(runtime, project, name, path))
           return context.warn(context.paint_err(:muted, format(EMPTY, name))) if history.empty?
 
           pinned = history.pinned(project.revision)

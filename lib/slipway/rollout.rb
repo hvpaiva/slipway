@@ -6,7 +6,7 @@ require_relative 'resources'
 module Slipway
   # The revisions of a branch, read from the moves slipway left in its reflog. Git keeps the
   # history, so slipway stores none of its own.
-  module Rollout
+  class Rollout
     # Every move slipway makes runs with GIT_REFLOG_ACTION set to "slipway <action>", and git
     # writes "<action>: <what it did>".
     ACTION = /\Aslipway ([^:]+):/
@@ -25,47 +25,45 @@ module Slipway
       project.group == group ? command : "#{command} -n #{project.group}"
     end
 
-    class History
-      attr_reader :revisions
+    attr_reader :revisions
 
-      # `entries` are Git::ReflogEntry values, newest first as git lists them. Revisions count from
-      # the oldest entry git still keeps.
-      def initialize(entries)
-        @revisions = []
-        [nil, *entries.reverse].each_cons(2) { |before, entry| record(entry, before) }
-        @revisions.freeze
-      end
+    # `entries` are Git::ReflogEntry values, newest first as git lists them. Revisions count from
+    # the oldest entry git still keeps.
+    def initialize(entries)
+      @revisions = []
+      [nil, *entries.reverse].each_cons(2) { |before, entry| record(entry, before) }
+      @revisions.freeze
+    end
 
-      def empty? = revisions.empty?
+    def empty? = revisions.empty?
 
-      def revision(number) = revisions.find { it.number == number }
+    def revision(number) = revisions.find { it.number == number }
 
-      # The revision before the current one. A HEAD at the newest revision makes that one the
-      # current; a HEAD that moved on without slipway makes the newest the one before.
-      def previous(head)
-        newest = revisions.last
-        newest&.sha == head ? revisions[-2] : newest
-      end
+    # The revision before the current one. A HEAD at the newest revision makes that one the
+    # current; a HEAD that moved on without slipway makes the newest the one before.
+    def previous(head)
+      newest = revisions.last
+      newest&.sha == head ? revisions[-2] : newest
+    end
 
-      # The revision an undo returned to: the newest earlier one at the same commit.
-      def undone_to(revision) = revisions.first(revision.number - 1).reverse.find { it.sha == revision.sha }
+    # The revision an undo returned to: the newest earlier one at the same commit.
+    def undone_to(revision) = revisions.first(revision.number - 1).reverse.find { it.sha == revision.sha }
 
-      # The newest revision at `sha`, the one spec.revision holds.
-      def pinned(sha) = revisions.reverse.find { it.sha == sha }
+    # The newest revision at `sha`, the one spec.revision holds.
+    def pinned(sha) = revisions.reverse.find { it.sha == sha }
 
-      private
+    private
 
-      def record(entry, before)
-        action = entry.subject[ACTION, 1]
-        return unless action
+    def record(entry, before)
+      action = entry.subject[ACTION, 1]
+      return unless action
 
-        add(before, nil, nil) if before && @revisions.last&.sha != before.sha
-        add(entry, action, before&.sha)
-      end
+      add(before, nil, nil) if before && @revisions.last&.sha != before.sha
+      add(entry, action, before&.sha)
+    end
 
-      def add(entry, action, from)
-        @revisions << Revision.new(number: @revisions.size + 1, sha: entry.sha, time: entry.time, action:, from:)
-      end
+    def add(entry, action, from)
+      @revisions << Revision.new(number: @revisions.size + 1, sha: entry.sha, time: entry.time, action:, from:)
     end
   end
 end

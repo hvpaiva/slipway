@@ -108,7 +108,7 @@ module Slipway
       project = inspection.project
       status = inspection.status
       head = inspection.commit.sha
-      history = Rollout::History.new(@runtime.git.reflog(path(project), status.branch))
+      history = Rollout.new(@runtime.git.reflog(path(project), status.branch))
       revision = target(history, head, number, status.branch)
       distance = @runtime.git.distance(path(project), revision.sha, tracking: true)
       refuse('RevisionNotFound', commit: short(revision.sha), number: revision.number) if distance.nil?

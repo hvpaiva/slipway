@@ -12,7 +12,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Command layer | `cli.rb`, `cli/` | `Registry`, `Command`, `Glossary`, `Option`, `Positional` and `Example` (the data model), `Globals`, `Parser`, `Validator`, `Runner` (the front controller), `HelpRenderer`, `Manpage`, `Completer`, `CompletionScripts`, `Builtins`, `Context`, `Style`, `Theme` and `UsageError`. It knows nothing about projects or git. |
 | Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `schema.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Schema`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
 | Git adapter | `git.rb`, `git/`, `state.rb` | `Git::Runner`, `Git::Repository` with its `FastForwarding` and `RollingBack` parts, the answers (`Status` and `Porcelain`, `Commit`, `FetchResult`, `Reflog`, `Distance`, `FastForward`, `MoveBack`), `Url`, `BranchName`, the errors in `git/errors.rb`, `Git::Fake`, and `State`. |
-| Reconciliation | `drift.rb`, `plan.rb`, `command_line.rb`, `rollout.rb` | `Drift`, `Plan`, `CommandLine` (the git command lines slipway prints and never runs) and `Rollout::History`. |
+| Reconciliation | `drift.rb`, `plan.rb`, `command_line.rb`, `rollout.rb` | `Drift`, `Plan`, `CommandLine` (the git command lines slipway prints and never runs) and `Rollout`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
 | Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
 | Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `syncer.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Syncer`, `Rollback` and `Pool`. |
@@ -37,7 +37,7 @@ defaults, which `test/unit/readme_test.rb` compares in both directions.
 and the blockers that stop it. It runs no git and reads no file, so `get -o wide`, `describe`,
 `diff` and `sync` read the same answer, and its tests need no repository. A `spec.revision` pin
 replaces the upstream as where the branch should be, reached only forward and only along the
-upstream. `Rollout::History` numbers the revisions of a branch from the reflog entries whose
+upstream. `Rollout` numbers the revisions of a branch from the reflog entries whose
 subject starts with `slipway `, and the commits the branch stood at before those moves.
 
 Output renders plain data through a `Context` and never touches resources. Views turn a
