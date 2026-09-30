@@ -49,9 +49,11 @@ module Slipway
       PROTOCOL_REFUSED = /\Afatal: transport '(?<protocol>[a-z][a-z0-9+.-]*)' not allowed\n\z/
       DIE_STATUS = 128
       # The paths git keeps in the git directory of a worktree while an operation waits for the
-      # user; the applying marker tells git am from a rebase.
-      IN_PROGRESS = { 'MERGE_HEAD' => 'merge', 'rebase-apply/applying' => 'am', 'rebase-apply' => 'rebase',
-                      'rebase-merge' => 'rebase', 'BISECT_LOG' => 'bisect' }.freeze
+      # user, in the order they are checked; the applying marker tells git am from a rebase. A
+      # rebase that stops on a merge also leaves MERGE_HEAD, and it is the rebase that must be
+      # continued or aborted.
+      IN_PROGRESS = { 'rebase-apply/applying' => 'git am session', 'rebase-apply' => 'rebase',
+                      'rebase-merge' => 'rebase', 'MERGE_HEAD' => 'merge', 'BISECT_LOG' => 'bisect' }.freeze
       # The reftable backend keeps these in its ref store, where no path names them.
       IN_PROGRESS_REFS = { 'CHERRY_PICK_HEAD' => 'cherry-pick', 'REVERT_HEAD' => 'revert' }.freeze
       # A cherry-pick or revert of several commits is still under way after `git reset` drops its

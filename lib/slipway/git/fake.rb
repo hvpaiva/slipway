@@ -9,7 +9,7 @@ module Slipway
     # [name, path, options], so a test can tell which repositories a command reached and what it
     # changed.
     class Fake
-      Entry = Data.define(:status, :commit, :remote, :remotes, :fetch, :fetched_at, :fast_forward)
+      Entry = Data.define(:status, :commit, :remote, :remotes, :operation, :fetch, :fetched_at, :fast_forward)
 
       NOTHING_FETCHED = FetchResult.new(updates: [].freeze)
 
@@ -23,13 +23,13 @@ module Slipway
       # +fetch+ is the FetchResult a fetch returns, and +fast_forward+ the FastForward the next
       # move returns (nil moves nothing and names +commit+); either may instead be an error, raised
       # the way fail raises it. +remotes+ names the configured remotes, origin alone when +remote+
-      # is its URL.
-      def add(path, status:, commit: nil, remote: nil, remotes: nil, fetch: NOTHING_FETCHED, fetched_at: nil,
-              fast_forward: nil)
+      # is its URL. +operation+ is what in_progress answers.
+      def add(path, status:, commit: nil, remote: nil, remotes: nil, operation: nil, fetch: NOTHING_FETCHED,
+              fetched_at: nil, fast_forward: nil)
         key = File.expand_path(path)
         @failures.delete(key)
         remotes ||= remote ? ['origin'] : []
-        @entries[key] = Entry.new(status:, commit:, remote:, remotes:, fetch:, fetched_at:, fast_forward:)
+        @entries[key] = Entry.new(status:, commit:, remote:, remotes:, operation:, fetch:, fetched_at:, fast_forward:)
         self
       end
 
@@ -49,6 +49,8 @@ module Slipway
       def last_commit(path) = entry(:last_commit, path).commit
 
       def remote_url(path) = entry(:remote_url, path).remote
+
+      def in_progress(path) = entry(:in_progress, path).operation
 
       def fetch(path, prune:)
         outcome = entry(:fetch, path, prune:).fetch
