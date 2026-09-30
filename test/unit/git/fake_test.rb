@@ -14,6 +14,17 @@ class GitFakeTest < Minitest::Test
     @fake = Slipway::Git::Fake.new
   end
 
+  # The commands tests run against the fake, so it must take every question the repository
+  # answers, with the same parameters.
+  def test_answers_every_question_the_repository_answers_with_the_same_parameters
+    questions = Slipway::Git::Repository.public_instance_methods - Object.public_instance_methods
+
+    questions.each do |name|
+      assert_equal Slipway::Git::Repository.instance_method(name).parameters,
+                   Slipway::Git::Fake.instance_method(name).parameters, name
+    end
+  end
+
   def test_add_registers_the_three_answers_for_a_path
     @fake.add('/srv/hldr', status: STATUS, commit: COMMIT, remote: 'git@github.com:hvpaiva/hldr.git')
 

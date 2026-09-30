@@ -13,7 +13,7 @@ module Slipway
       INDENT = '  '
       DRY_RUN = '(dry run)'
 
-      # +roles+ maps each result word to its theme role, in the order the count lists them.
+      # `roles` maps each result word to its theme role, in the order the count lists them.
       def initialize(context, roles, dry_run:)
         @context = context
         @roles = roles
@@ -21,7 +21,7 @@ module Slipway
         @tally = Hash.new(0)
       end
 
-      # Runs +work+ for each project on a pool of +workers+ and prints each outcome, or what the
+      # Runs `work` for each project on a pool of `workers` and prints each outcome, or what the
       # block turns it into on the calling thread, in the order the projects are listed.
       # Ruby buffers a stdout that is not a terminal: a pipe would see the lines only at exit,
       # after the count on stderr, and since Ruby flushes stdout before it spawns, a line a

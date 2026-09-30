@@ -3,7 +3,7 @@
 require_relative 'cli/errors'
 
 module Slipway
-  # A kubectl field selector, matched against the object json and yaml print. +fields+ maps
+  # A kubectl field selector, matched against the object json and yaml print. `fields` maps
   # each path a resource supports to the value the path compares as when the object leaves
   # it out.
   class FieldSelector

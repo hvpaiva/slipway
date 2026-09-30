@@ -1,7 +1,12 @@
 # ruby/setup-ruby reads the Ruby version from mise.toml unless a job passes ruby-version.
-# Jobs call the rake tasks a contributor runs through "bundle exec rake check", so this file
-# holds no logic the Rakefile lacks. The job names are the required status checks of the
-# main ruleset (GitHub::REQUIRED_CHECKS in rakelib/support/github.rb).
+# Jobs call the rake tasks a contributor runs through "bundle exec rake check", except the
+# steps that need the pull request or a tool outside the bundle: the commits job passes the
+# pull request's title and body to bin/lint-commits and reads its labels for the changelog
+# gate; the completions job runs the completion tests with zsh and fish installed, as
+# "bundle exec rake test:shells" does locally; typos and zizmor run in the lint job and lychee
+# in the links job, and CONTRIBUTING.md gives their local commands. The job names are the
+# required status checks of the main ruleset (GitHub::REQUIRED_CHECKS in
+# rakelib/support/github.rb).
 name: CI
 
 on:

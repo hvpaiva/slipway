@@ -1,102 +1,59 @@
 # frozen_string_literal: true
 
-require 'prism'
-require 'rake'
 require 'test_helper'
-require 'tmpdir'
 
 class ReadmeTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
   README = File.join(ROOT, 'README.md')
-  TASK = /\A(?:rake )?([a-z][a-z0-9_]*(?::[a-z][a-z0-9_]*)*)\z/
-  # The name a task library gives its task when the call names none. bundler-audit's tasks
-  # stay out of the README because `rake audit` wraps them.
-  LIBRARY_DEFAULTS = { 'RuboCop::RakeTask' => 'rubocop', 'Bundler::Audit::Task' => nil }.freeze
+  RESULTS = '| Result | Meaning |'
 
-  # Loaded once: the Rakefile defines top-level constants that must not be redefined.
-  def self.rake
-    @rake ||= load_rakefile
-  end
-
-  # raw_load_rakefile raises a load error where load_rakefile would print it and exit, which
-  # would end the whole test run without a report.
-  def self.load_rakefile(root = ROOT)
-    previous = [Rake.application, Rake::TaskManager.record_task_metadata, Dir.pwd]
-    Rake::TaskManager.record_task_metadata = true
-    Dir.chdir(root)
-    Rake.application = Rake::Application.new
-    Rake.application.init('rake', [])
-    Rake.application.raw_load_rakefile
-    Rake.application
-  ensure
-    Rake.application, Rake::TaskManager.record_task_metadata, directory = previous
-    Dir.chdir(directory)
-  end
-
-  def test_status_table_lists_every_state_in_order
+  def test_status_table_lists_every_state_in_order_with_the_meaning_help_gives
     assert_equal Slipway::State::ROLES.keys, first_cells('| STATUS | Meaning |')
+    assert_equal Slipway::State::MEANINGS, meanings('| STATUS | Meaning |')
   end
 
-  def test_drift_tables_list_every_type_and_blocker_in_order
+  def test_drift_tables_list_every_type_and_blocker_in_order_with_the_meaning_help_gives
     assert_equal Slipway::Drift::TYPES, first_cells('| Drift | Reported when |')
     assert_equal Slipway::Drift::BLOCKERS.keys, first_cells('| Blocker | Meaning |')
+    assert_equal Slipway::Drift::TYPE_MEANINGS, meanings('| Drift | Reported when |')
+    assert_equal Slipway::Drift::BLOCKER_MEANINGS, meanings('| Blocker | Meaning |')
   end
 
   def test_environment_table_lists_the_man_page_variables_in_order
-    assert_equal Slipway::CLI::Manpage::DEFAULT_ENVIRONMENT.keys, first_cells('| Variable | Effect |')
+    assert_equal Slipway::Commands::Manual::ENVIRONMENT.keys, first_cells('| Variable | Effect |')
   end
 
   def test_exit_status_table_lists_every_status_in_order
-    assert_equal Slipway::CLI::Manpage::EXIT_STATUSES.keys, first_cells('| Status | Meaning |')
+    assert_equal Slipway::Commands::Manual::EXIT_STATUSES.keys, first_cells('| Status | Meaning |')
+  end
+
+  def test_result_tables_list_every_result_word_in_order
+    assert_equal Slipway::Commands::Fetch::ROLES.keys, result_words('### Fetching')
+    assert_equal Slipway::Commands::SyncCommand::ROLES.keys, result_words('### Syncing')
+    assert_equal Slipway::Commands::RolloutCommand::Undo::ROLES.keys, result_words('### Rolling back')
+  end
+
+  # The words a fetch puts in parentheses: its own reasons and the states in which git could not
+  # read the repository.
+  def test_fetch_table_names_every_reason_a_fetch_gives
+    unreadable = [Slipway::Git::MissingPath, Slipway::Git::NotARepository, Slipway::Git::UnsafeRepository,
+                  Slipway::Git::Error].map { Slipway::State.for_error(it.allocate) }
+    reasons = [*Slipway::Fetcher::REASONS.values, Slipway::Fetcher::NO_REMOTE, *unreadable]
+    documented = rows(RESULTS, after: '### Fetching').flat_map { it.scan(/`([A-Z][A-Za-z]+)`|\(([A-Z][A-Za-z]+)\)`/) }
+
+    assert_equal reasons.uniq.sort, documented.flatten.compact.uniq.sort - ['Reason']
+  end
+
+  def test_field_selector_sentence_lists_every_field
+    sentence = /Projects support (?<projects>.*?); groups support (?<groups>.*?)\.(?: |\z)/.match(lines.join(' '))
+    fields = ->(part) { sentence[part].scan(/`([^`]+)`/).flatten }
+
+    assert_equal Slipway::Views::Project::FIELDS.keys, fields.call(:projects)
+    assert_equal Slipway::Views::Group::FIELDS.keys, fields.call(:groups)
   end
 
   def test_configuration_example_sets_exactly_the_config_keys
     assert_equal Slipway::Config::KEYS.sort, yaml_block('## Configuration').keys.sort
-  end
-
-  def test_every_documented_task_exists
-    defined = self.class.rake.tasks.map(&:name)
-
-    assert_empty documented_tasks - defined
-  end
-
-  def test_every_task_the_project_defines_is_documented
-    assert_empty project_tasks - documented_tasks
-    assert_includes project_tasks, 'audit'
-  end
-
-  def test_every_task_a_task_library_creates_is_documented
-    assert_empty library_tasks - documented_tasks
-    assert_empty library_tasks - self.class.rake.tasks.map(&:name)
-    assert_includes library_tasks, 'rubocop'
-  end
-
-  def test_the_library_scan_reads_calls_not_text
-    Dir.mktmpdir('slipway-readme-') do |root|
-      FileUtils.mkdir(File.join(root, 'rakelib'))
-      File.write(File.join(root, 'Rakefile'), <<~RUBY)
-        Minitest::TestTask.create('test:golden') { |t| t.test_globs = ['test/golden/**/*_test.rb'] }
-        RuboCop::RakeTask.new
-        Bundler::Audit::Task.new
-        NOTE = 'YARD::Rake::YardocTask.new(:quoted)'
-        HELP = <<~TEXT
-          Minitest::TestTask.create(:heredoc)
-        TEXT
-      RUBY
-      File.write(File.join(root, 'rakelib', 'api.rake'), "YARD::Rake::YardocTask.new(:api)\n")
-
-      assert_equal %w[test:golden rubocop api], library_tasks(root)
-    end
-  end
-
-  def test_a_rakefile_that_fails_to_load_raises_inside_the_test
-    Dir.mktmpdir('slipway-readme-') do |root|
-      File.write(File.join(root, 'Rakefile'), "raise 'boom'\n")
-
-      error = assert_raises(RuntimeError) { self.class.load_rakefile(root) }
-
-      assert_equal 'boom', error.message
-    end
   end
 
   private
@@ -105,11 +62,23 @@ class ReadmeTest < Minitest::Test
 
   def first_cells(header) = rows(header).map { it.split('|')[1].strip.delete('`') }
 
-  def rows(header)
-    start = lines.index(header)
-    raise "README.md has no table headed #{header}" unless start
+  # Help prints the same meanings as plain text, so the code spans lose their backticks.
+  def meanings(header) = rows(header).to_h { it.split('|')[1, 2].map { it.strip.delete('`') } }
+
+  # +after+ names the heading the table sits under, for a header several tables share.
+  def rows(header, after: nil)
+    from = after ? lines.index(after) : 0
+    raise "README.md has no #{after} section" unless from
+
+    start = lines.each_index.find { it > from && lines[it] == header }
+    raise "README.md has no table headed #{header}#{" under #{after}" if after}" unless start
 
     lines.drop(start + 2).take_while { it.start_with?('|') }
+  end
+
+  # The word a result line starts with, without the reason a table row gives it in parentheses.
+  def result_words(section)
+    rows(RESULTS, after: section).map { it.split('|')[1].strip.delete('`').sub(/ \(.*\)\z/, '') }
   end
 
   def yaml_block(heading)
@@ -118,47 +87,5 @@ class ReadmeTest < Minitest::Test
 
     block = lines.drop(start).drop_while { it != '```yaml' }.drop(1).take_while { it != '```' }
     Psych.safe_load(block.join("\n"))
-  end
-
-  def documented_tasks
-    rows('| Task | Runs |').flat_map { it.split('|')[1].scan(/`([^`]+)`/).flatten }.filter_map { TASK.match(it)&.[](1) }
-  end
-
-  # A gem's task library adds described tasks of its own; the README lists only ours.
-  def project_tasks
-    sources = [File.join(ROOT, 'Rakefile:'), File.join(ROOT, 'rakelib', '')]
-    self.class.rake.tasks.select { it.comment && it.locations.any? { |location| location.start_with?(*sources) } }
-        .map(&:name)
-  end
-
-  # A task library records its own gem as the location of the tasks it defines, so the calls
-  # that create them are read from the Rakefile and rakelib instead.
-  def library_tasks(root = ROOT)
-    files = [File.join(root, 'Rakefile'), *Dir.glob(File.join(root, 'rakelib', '**', '*.rake'))]
-    files.select { File.file?(it) }.flat_map { calls(Prism.parse_file(it).value) }.filter_map do |call|
-      library_task(call)
-    end
-  end
-
-  def calls(node)
-    found = node.compact_child_nodes.flat_map { calls(it) }
-    node.is_a?(Prism::CallNode) ? [node, *found] : found
-  end
-
-  def library_task(call)
-    library = library_constant(call)
-    return unless library
-
-    name = call.arguments&.arguments&.first
-    return name.unescaped if name.is_a?(Prism::SymbolNode) || name.is_a?(Prism::StringNode)
-
-    LIBRARY_DEFAULTS.fetch(library) { raise KeyError, "add the default task name of #{library} to LIBRARY_DEFAULTS" }
-  end
-
-  def library_constant(call)
-    receiver = call.receiver
-    return unless %i[new create].include?(call.name) && receiver.respond_to?(:full_name)
-
-    receiver.full_name if receiver.full_name.end_with?('Task')
   end
 end

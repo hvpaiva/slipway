@@ -10,7 +10,7 @@ slipway\-get \- Display one or many resources
 .SH DESCRIPTION
 Display one or many resources.
 .PP
-Prints a table of the most important information about the specified resources. You can filter the list using a label selector and the \-\-selector flag. Projects are listed in the current group unless you pass \-\-all\-groups.
+Prints a table of the most important information about the specified resources. You can filter the list using a label selector and the \-\-selector flag, or a field selector and the \-\-field\-selector flag. Projects are listed in the current group unless you pass \-\-all\-groups.
 .PP
 Use \-o wide to add the path, the head commit, the age of the last commit and the drift of each project: the ways its repository differs from its manifest and what keeps sync from converging it. Use \-o json or \-o yaml for the full object with its status.
 .PP
@@ -24,7 +24,7 @@ Output format. One of: table, wide, json, yaml, name. (default "table")
 Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. \-l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
 .TP
 \fB\-\-field\-selector\fR \fIEXPR\fR
-Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. \-\-field\-selector key1=value1,key2=value2). Projects support metadata.name, metadata.group, spec.path, status.state, status.branch, status.lastFetch; groups support metadata.name. status.lastFetch is never for a project with no fetch on record.
+Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. \-\-field\-selector key1=value1,key2=value2). Projects support metadata.name, metadata.group, spec.path, status.state, status.branch, status.lastFetch; groups support metadata.name. Values compare exactly, case included, with the object \-o json prints: spec.path as registered, status.lastFetch as an RFC 3339 time. A field the object leaves out compares as the empty value, except status.lastFetch, which compares as never. A backslash escapes a backslash, a comma or an equals sign in a value.
 .TP
 \fB\-A\fR, \fB\-\-all\-groups\fR
 If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with \-\-group.
@@ -34,6 +34,88 @@ When using the default output format, don't print headers.
 .TP
 \fB\-\-show\-labels\fR
 When printing, show all labels as the last column.
+.SH COLUMNS
+Projects show NAME, BRANCH, STATUS, FETCHED and AGE; \-\-all\-groups adds GROUP in front, \-o wide adds PATH, HEAD, LAST\-COMMIT and DRIFT, and \-\-show\-labels adds LABELS. Groups show NAME, PROJECTS and AGE, and \-o wide adds DESCRIPTION. A cell slipway has no value for reads <none>, as every cell from git does when git cannot read the repository.
+.TP
+\fBGROUP\fR
+The group of the project.
+.TP
+\fBNAME\fR
+The name of the resource.
+.TP
+\fBBRANCH\fR
+The checked\-out branch, or (detached) when HEAD points at a commit.
+.TP
+\fBSTATUS\fR
+One word for the state of the repository, from the list below.
+.TP
+\fBFETCHED\fR
+Time since the repository was last fetched, by slipway or by git itself and from any of its worktrees. <never> means git answered and no fetch is on record, which includes a last fetch that failed.
+.TP
+\fBAGE\fR
+Time since the resource was registered, in kubectl's units (3s, 4m12s, 11h, 2y319d).
+.TP
+\fBPATH\fR
+The registered path, as the manifest writes it.
+.TP
+\fBHEAD\fR
+The abbreviated id of the checked\-out commit.
+.TP
+\fBLAST\-COMMIT\fR
+The age of the checked\-out commit.
+.TP
+\fBDRIFT\fR
+The ways the repository differs from its manifest and the blocker that keeps sync from fast\-forwarding it, as slipway diff names them.
+.TP
+\fBPROJECTS\fR
+The number of projects in the group.
+.TP
+\fBDESCRIPTION\fR
+The description of the group.
+.TP
+\fBLABELS\fR
+The labels, as key=value pairs.
+.SH "STATUS WORDS"
+STATUS is the first of these words that holds, in this order.
+.TP
+\fBMissing\fR
+The registered path is relative, or is not a directory on this machine.
+.TP
+\fBNotARepo\fR
+The directory exists but no repository contains it.
+.TP
+\fBUnsafe\fR
+git refused the repository because another user owns it (safe.directory); describe, diff and fetch print the git command that trusts it.
+.TP
+\fBConflicted\fR
+The working tree has unmerged paths.
+.TP
+\fBDetached\fR
+HEAD points at a commit rather than a branch.
+.TP
+\fBUnborn\fR
+The branch has no commits yet.
+.TP
+\fBDirty\fR
+Staged, modified or untracked files are present.
+.TP
+\fBGone\fR
+An upstream is configured but its remote\-tracking ref is gone, as of the last fetch \-\-prune (or a fetch with fetch.prune set).
+.TP
+\fBDiverged\fR
+The branch is both ahead of and behind its upstream, as of the last fetch (FETCHED).
+.TP
+\fBAhead\fR
+Commits not yet pushed to the upstream, as of the last fetch (FETCHED).
+.TP
+\fBBehind\fR
+Commits on the upstream not yet pulled, as of the last fetch (FETCHED).
+.TP
+\fBClean\fR
+Nothing to do.
+.TP
+\fBUnknown\fR
+git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run.
 .SH EXAMPLES
 .EX
 # List all projects in the current group

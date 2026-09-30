@@ -2,9 +2,19 @@ Fetch from the remote of each selected project.
 
 Runs git fetch in every project of the current group, in the projects named, in the ones a label selector matches, or with --all-groups in every project. Git fetches from the remote of the checked-out branch, else from the only remote, else from origin, as a git fetch typed in the repository would, and updates the references that remote's fetch refspecs name (remote-tracking references by default) and its tags, never the checked-out branch or the working tree. The parallel setting caps how many projects fetch at once, and the results print in the order the projects are listed.
 
-Each project prints one line: fetched, unchanged when the remote had nothing new, skipped, paused, denied or failed, with the reason in parentheses and the details below. A project whose repository cannot be read, or in which git finds no remote to fetch from, is skipped before git fetch runs. A project whose spec.paused is true is paused: no git command runs in it.
+Each project prints one line, one of the results listed below, with a reason in parentheses and the details under it. A project whose repository cannot be read, or in which git finds no remote to fetch from, is skipped before git fetch runs. A project whose spec.paused is true is paused: no git command runs in it.
 
 Git never prompts: a fetch that needs a password, a passphrase or a host key is denied, one that runs past the networkTimeout setting is killed, and only the transports in the protocols setting are allowed. The exit status is 1 when any project was denied or failed.
+
+Results:
+  When more than one project ran, a count of the results closes the run on stderr. With --dry-run=client no remote is contacted: a project that would be fetched reads fetched, and every line and the count end in (dry run). Ctrl-C stops the git processes slipway started and exits with status 130.
+
+  fetched            The remote moved refs, and up to 5 follow: origin/main a1b2c3d..e4f5a6b for a ref that moved, origin/feature d09a085 (new) for a new one and origin/feature deleted (was d09a085) for one --prune removed. A last line, and N more, counts the rest. Tags appear under their bare name. With git before 2.41, every fetch that succeeds reads fetched, without the refs.
+  unchanged          The remote answered and had nothing new.
+  skipped (Reason)   No fetch ran: git could not read the repository (Missing, NotARepo, Unsafe, Unknown), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (NoRemote), or the branch tracks a local branch (LocalUpstream).
+  paused             spec.paused is true, so no git command ran in the project.
+  denied (Reason)    Git needed a password, a passphrase or a host key (AuthRequired). Run the git -C PATH fetch printed below it once in a terminal to see what git needs.
+  failed (Reason)    The fetch ran past networkTimeout (Timeout), used a transport protocols leaves out (ProtocolNotAllowed), or git failed for another reason (Unknown).
 
 Examples:
   # Fetch every project in the current group

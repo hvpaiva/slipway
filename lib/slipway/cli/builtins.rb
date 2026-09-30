@@ -64,8 +64,8 @@ module Slipway
         ]
       end
 
-      # +paths+ is called with the environment and answers man_install_dir and man_db_dir for
-      # a bare --install. +exec+ and +paths+ are injectable so tests can observe the calls.
+      # `paths` is called with the environment and answers man_install_dir and man_db_dir for
+      # a bare --install. `exec` and `paths` are injectable so tests can observe the calls.
       def self.man(program:, resolve:, man_dir: MAN_DIR, exec: Kernel.method(:exec), paths: nil)
         Command.new(
           name: 'man', section: 'Settings Commands', summary: 'Show the manual page of a command',
@@ -109,7 +109,7 @@ module Slipway
         registry.resolve(given).first.visible_subcommands.map(&:name)
       end
 
-      # +resolve+ returns the registry when called, since the builtin is built before the
+      # `resolve` returns the registry when called, since the builtin is built before the
       # registry that holds it exists.
       class HelpCommand
         def initialize(resolve)

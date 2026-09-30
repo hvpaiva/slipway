@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'base'
+require_relative 'manual'
 require_relative '../inspector'
 require_relative '../plan'
 
@@ -35,13 +36,24 @@ module Slipway
                     'repository lacks the commit, HEAD is past it or its upstream does not hold it. A paused or ' \
                     'FetchOnly project shows a blocker only when git cannot read its repository.'
       USAGE = '[NAME... | project/NAME...]'
-      EXIT_STATUSES = CLI::Manpage::EXIT_STATUSES.merge(
+      EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
         '0' => 'Every selected project matches its manifest.',
         '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project whose state is ' \
                'Unknown because git failed or did not finish.',
         '3' => 'At least one selected project differs from its manifest or is blocked, including a directory that ' \
                'holds no repository (NotARepo) and a repository git refuses (Unsafe).'
       ).sort_by { |status, _| Integer(status) }.to_h.freeze
+      GLOSSARIES = [
+        CLI::Glossary.new(title: 'Drift', entries: Drift::TYPE_MEANINGS),
+        CLI::Glossary.new(
+          title: 'Blockers',
+          intro: 'A blocker says why the checked-out branch cannot be fast-forwarded, onto its upstream or, for a ' \
+                 'project pinned by spec.revision, onto the pin. The first three mean git could not read the ' \
+                 'repository and apply to every project; the others apply only under FastForward to a project that ' \
+                 'is not paused, and RevisionNotFound, PastRevision and OffUpstream only to a pinned one.',
+          entries: Drift::BLOCKER_MEANINGS
+        )
+      ].freeze
       INDENT = '  '
       COMMAND_INDENT = '    '
       ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, compare every project across all groups with ' \
@@ -51,7 +63,7 @@ module Slipway
       def self.command(factory)
         CLI::Command.new(
           name: 'diff', summary: 'Show where projects differ from their manifests', section: 'Repository Commands',
-          description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES,
+          description: DESCRIPTION, examples:, usage: USAGE, exit_statuses: EXIT_STATUSES, glossaries: GLOSSARIES,
           positionals: [Options.project_positional(factory)],
           options: [Options::SELECTOR, ALL_GROUPS],
           handler: new(factory)

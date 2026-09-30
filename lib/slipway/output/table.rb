@@ -7,8 +7,8 @@ module Slipway
       NONE = '<none>'
       GAP = '   '
 
-      # +roles+ is called with the header and the plain cell text and may return a theme role
-      # that replaces the column color. +color_offset+ leading columns stay out of the color cycle.
+      # `roles` is called with the header and the plain cell text and may return a theme role
+      # that replaces the column color. `color_offset` leading columns stay out of the color cycle.
       def initialize(context, headers:, show_headers: true, roles: nil, color_offset: 0)
         @context = context
         @headers = headers

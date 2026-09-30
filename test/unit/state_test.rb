@@ -9,6 +9,7 @@ class StateTest < Minitest::Test
 
   def test_words_are_listed_in_precedence_order
     assert_equal WORDS, Slipway::State::ROLES.keys
+    assert_equal WORDS, Slipway::State::MEANINGS.keys
   end
 
   def test_clean_repository

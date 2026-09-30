@@ -11,7 +11,7 @@ module Slipway
   # one Inspection. It runs no git and reads no file, so every verb that shows drift reads the
   # same answer.
   module Plan
-    # +actions+ is the drift sync resolves, +reports+ the drift it leaves as it is, and +skips+
+    # `actions` is the drift sync resolves, `reports` the drift it leaves as it is, and `skips`
     # the blockers that stop it. A Behind action moves the branch onto its upstream and a
     # Revision action onto the pinned revision.
     Result = Data.define(:actions, :skips, :reports) do
@@ -26,7 +26,7 @@ module Slipway
 
     def self.for(inspection) = Planner.new(inspection).result
 
-    # The git command line that runs +words+ in +project+'s repository. Slipway prints it and
+    # The git command line that runs `words` in `project`'s repository. Slipway prints it and
     # never runs it.
     def self.git(project, *words) = ['git', '-C', shell_path(project.path), *words].join(' ')
 

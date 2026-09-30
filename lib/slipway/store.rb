@@ -7,6 +7,11 @@ require_relative 'resources'
 require_relative 'manifest'
 
 module Slipway
+  # The registry on disk: one manifest per resource, `groups/NAME.yaml` and
+  # `projects/GROUP/NAME.yaml` under `root`. A write goes to a temporary file renamed over the
+  # target, so a reader sees the old manifest or the new one and never part of one. Nothing is
+  # locked: two processes that write the same resource at once leave the one that renamed last.
+  # A file is trusted only when its kind, name and group match where it was found.
   class Store
     class NotFound < Error
       # kubectl's form for every kind: `projects "hldr" not found`, `groups "work" not found`.
@@ -32,7 +37,7 @@ module Slipway
       kind.namespaced? ? resources.sort_by { [it.group, it.name] } : resources.sort_by(&:name)
     end
 
-    # A nil +group+ means the default group for projects.
+    # A nil `group` means the default group for projects.
     def find(kind, name, group: nil)
       file = path_for(kind, name, group)
       raise NotFound.of(kind, name) unless File.file?(file)
@@ -40,7 +45,7 @@ module Slipway
       read(kind, file)
     end
 
-    # A nil +group+ means the default group for projects.
+    # A nil `group` means the default group for projects.
     def exist?(kind, name, group: nil) = File.file?(path_for(kind, name, group))
 
     # Unique because project names repeat across groups; completion wants each once.

@@ -25,7 +25,12 @@ elif [ "$git_major" -lt 2 ] || { [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 35
   printf '  git         %s is too old: slipway and its tests need git 2.35 or later\n' "$git_version"
   exit 1
 fi
-printf '  git         %s\n' "$git_version"
+if [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 41 ]; then
+  printf '  git         %s: the fetch tests and the README fetch and sync examples skip before 2.41\n' \
+    "$git_version"
+else
+  printf '  git         %s\n' "$git_version"
+fi
 
 report() {
   local tool=$1 without=$2
@@ -43,6 +48,8 @@ report fish 'the fish completion tests skip; rake test:shells falls back to dock
 report docker 'rake test:shells fails unless zsh and fish are installed'
 report gh 'bin/release and rake github:setup fail'
 report typos 'spelling is checked only by CI (lint job)'
+report zizmor 'the workflows are checked only by CI (lint job)'
+report lychee 'the links in the guides are checked only by CI (links job)'
 
 printf '\nReady. Run "bundle exec rake" for the tests and RuboCop, "bundle exec rake check" for what CI runs,\n'
 printf 'or "bundle exec rake -T" to list every task.\n'

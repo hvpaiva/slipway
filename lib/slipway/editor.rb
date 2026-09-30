@@ -12,7 +12,7 @@ module Slipway
     DEFAULT = 'vi'
     TMPDIR_PREFIX = 'slipway-edit-'
 
-    # +preferred+ is the config file's editor.
+    # `preferred` is the config file's editor.
     def initialize(env:, preferred: nil)
       @env = env
       @preferred = preferred

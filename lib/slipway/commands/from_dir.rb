@@ -15,7 +15,7 @@ module Slipway
     # Registers the repositories Scanner finds for create project --from-dir. Each is keyed by
     # its path within the group, so a second run over the same directory adds only new clones.
     class FromDir
-      # +created+ is false for a path the group already held; +project+ is then the stored one.
+      # `created` is false for a path the group already held; `project` is then the stored one.
       Entry = Data.define(:project, :created)
 
       NONE_FOUND = 'no git repositories found under %s to depth %d'

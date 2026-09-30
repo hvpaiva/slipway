@@ -22,6 +22,10 @@ module Slipway
       end
     end
 
+    # Turns one parsed document into a Project or a Group, or raises Invalid with the source and
+    # the first field that breaks its rule. Unknown fields are refused, and every field that can
+    # reach git or a command slipway prints is checked here, so a resource read from the store or
+    # applied from a file can be handed to Git::Repository as it is.
     class Reader
       FIELDS = {
         'Project' => { root: %w[kind metadata spec], metadata: %w[name group labels creationTimestamp],
@@ -192,7 +196,7 @@ module Slipway
     LIST_KIND = 'List'
     LIST_FIELDS = %w[kind items].freeze
 
-    # +hash+ must have string keys.
+    # `hash` must have string keys.
     def self.parse(hash, source:, default_group: 'default') = Reader.new(hash, source, default_group).resource
 
     def self.load_documents(text, source:)

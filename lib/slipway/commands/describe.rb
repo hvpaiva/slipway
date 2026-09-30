@@ -9,13 +9,18 @@ module Slipway
       DESCRIPTION = "Show details of one or many resources.\n\n" \
                     'Print a detailed description of the selected resources, including the state of the ' \
                     'repository at the registered path and where it differs from the manifest. You may select ' \
-                    "a single object by name, all objects of that type, or use a label selector.\n\n" \
+                    "a single object by name, all objects of that type, or use a label or field selector.\n\n" \
+                    'Status is one of the words listed below. Last Fetch reads ' \
+                    "#{Views::Project::NEVER} when git answered and no fetch is on record, and a field with no " \
+                    "value reads #{Output::Describe::NONE}. When git cannot read the repository, the Repository " \
+                    "block holds git's reason instead of the fields.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
 
       def self.command(factory)
         CLI::Command.new(
           name: 'describe', summary: 'Show details of one or many resources',
           section: 'Basic Commands', description: DESCRIPTION, examples:, usage: Get::USAGE,
+          glossaries: [Get::STATUS_WORDS],
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: false)],
           options: [Options::SELECTOR, Options::FIELD_SELECTOR, Options::ALL_GROUPS],
           handler: new(factory)

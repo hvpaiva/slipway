@@ -6,7 +6,7 @@ require_relative 'move_back'
 
 module Slipway
   module Git
-    # +calls+ lists every question asked and every move made, as [name, path] or
+    # `calls` lists every question asked and every move made, as [name, path] or
     # [name, path, options], so a test can tell which repositories a command reached and what it
     # changed.
     class Fake
@@ -22,12 +22,12 @@ module Slipway
         @lock = Mutex.new
       end
 
-      # +fetch+ is the FetchResult a fetch returns, and +fast_forward+ the FastForward the next
-      # move returns (nil moves nothing and names +commit+); either may instead be an error, raised
-      # the way fail raises it. +remotes+ names the configured remotes, origin alone when +remote+
-      # is its URL. +operation+ is what in_progress answers, and +distance+ what distance answers
-      # for any revision (nil: no such commit). +reflog+ is what reflog answers for any branch,
-      # +between+ what commits_between answers for any two commits, and +roll_back+ the MoveBack
+      # `fetch` is the FetchResult a fetch returns, and `fast_forward` the FastForward the next
+      # move returns (nil moves nothing and names `commit`); either may instead be an error, raised
+      # the way fail raises it. `remotes` names the configured remotes, origin alone when `remote`
+      # is its URL. `operation` is what in_progress answers, and `distance` what distance answers
+      # for any revision (nil: no such commit). `reflog` is what reflog answers for any branch,
+      # `between` what commits_between answers for any two commits, and `roll_back` the MoveBack
       # the next roll back returns, or the error it raises.
       def add(path, status:, commit: nil, remote: nil, remotes: nil, operation: nil, fetch: NOTHING_FETCHED,
               fetched_at: nil, fast_forward: nil, distance: nil, reflog: [], between: nil, roll_back: nil)
@@ -39,7 +39,7 @@ module Slipway
         self
       end
 
-      # +error+ is an exception instance or a Git error class that takes the path as its only
+      # `error` is an exception instance or a Git error class that takes the path as its only
       # argument.
       def fail(path, error)
         key = File.expand_path(path)

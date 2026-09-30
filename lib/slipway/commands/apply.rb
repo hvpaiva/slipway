@@ -64,7 +64,7 @@ module Slipway
         raise Failed.new(problems: session.problems) unless session.problems.empty?
       end
 
-      # A failed document is remembered in +problems+ so the rest still run.
+      # A failed document is remembered in `problems` so the rest still run.
       class Session
         STDIN_SOURCE = 'STDIN'
         EXTENSIONS = %w[.yaml .yml].freeze

@@ -60,25 +60,25 @@ Path of the configuration file; overridden by \-\-config.
 Directory holding the registry: group and project manifests.
 .TP
 \fBSLIPWAY_COLOR\fR
-When to use color (auto, always or never); overridden by \-\-color.
+Outranks the color key (see CONFIGURATION); \-\-color outranks both.
 .TP
 \fBSLIPWAY_THEME\fR
-Color theme (dark or light).
+Outranks the theme key (see CONFIGURATION).
 .TP
 \fBSLIPWAY_EDITOR\fR
-Editor used by edit; takes precedence over VISUAL and EDITOR.
+Outranks the editor key (see CONFIGURATION), VISUAL and EDITOR.
 .TP
 \fBSLIPWAY_GROUP\fR
-Default group scope; overridden by \-\-group.
+Outranks the group key (see CONFIGURATION); \-\-group outranks both.
 .TP
 \fBSLIPWAY_NETWORK_TIMEOUT\fR
-Seconds a git network command may run before it is killed.
+Outranks the networkTimeout key (see CONFIGURATION).
 .TP
 \fBSLIPWAY_PARALLEL\fR
-How many git network commands run at once, from 1 to 16.
+Outranks the parallel key (see CONFIGURATION).
 .TP
 \fBSLIPWAY_PROTOCOLS\fR
-Transports git may use in network commands, separated by colons (ssh:https).
+Outranks the protocols key (see CONFIGURATION); the names are separated by colons, as in ssh:https.
 .TP
 \fBSLIPWAY_DEBUG\fR
 When non\-empty, unexpected errors also print their class and backtrace.
@@ -118,6 +118,9 @@ Same as MANPAGER.
 .TP
 \fBGROFF_NO_SGR\fR
 Same as MANPAGER.
+.TP
+\fBGIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, GIT_NAMESPACE, GIT_OBJECT_DIRECTORY, GIT_ALTERNATE_OBJECT_DIRECTORIES\fR
+Ignored: every git command slipway runs starts without them, so an inherited value cannot point git at another repository.
 .SH FILES
 .TP
 \fI$XDG_CONFIG_HOME/slipway/config.yaml\fR
@@ -126,6 +129,27 @@ Configuration file; see CONFIGURATION. Also set by \-\-config or SLIPWAY_CONFIG.
 \fI$XDG_DATA_HOME/slipway/\fR
 Registry data: groups/NAME.yaml and projects/GROUP/NAME.yaml. Also set by SLIPWAY_DATA_HOME.
 .SH CONFIGURATION
+.TP
+\fBcolor\fR
+When to color output: auto, always or never. Default: auto.
+.TP
+\fBeditor\fR
+Command line of the editor that slipway edit opens.
+.TP
+\fBgroup\fR
+Group used when \-n is not given. Default: default.
+.TP
+\fBnetworkTimeout\fR
+Seconds, from 1 to 86400, a git network command may run before it is killed with the processes it started. Default: 60.
+.TP
+\fBparallel\fR
+How many git network commands run at once, from 1 to 16. Default: 4.
+.TP
+\fBprotocols\fR
+Transports git may use in network commands, as a list; any other transport is refused, and so are ext and fd. Add file for local mirrors. Default: ssh, https.
+.TP
+\fBtheme\fR
+Color theme: dark or light. Default: dark.
 .SH "EXIT STATUS"
 .TP
 \fB0\fR

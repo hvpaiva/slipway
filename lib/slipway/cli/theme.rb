@@ -56,7 +56,7 @@ module Slipway
 
       attr_reader :name
 
-      # Callers check +name+ against NAMES first, so an unknown name here is a bug.
+      # Callers check `name` against NAMES first, so an unknown name here is a bug.
       def self.fetch(name)
         new(name, PRESETS.fetch(name))
       end

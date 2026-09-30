@@ -18,8 +18,13 @@ module Slipway
                                        description: "Selector (field query) to filter on, supports '=', '==', and " \
                                                     "'!=' (e.g. --field-selector key1=value1,key2=value2). Projects " \
                                                     "support #{Views::Project::FIELDS.keys.join(', ')}; groups " \
-                                                    "support #{Views::Group::FIELDS.keys.join(', ')}. " \
-                                                    'status.lastFetch is never for a project with no fetch on record.')
+                                                    "support #{Views::Group::FIELDS.keys.join(', ')}. Values " \
+                                                    'compare exactly, case included, with the object -o json ' \
+                                                    'prints: spec.path as registered, status.lastFetch as an RFC ' \
+                                                    '3339 time. A field the object leaves out compares as the ' \
+                                                    'empty value, except status.lastFetch, which compares as never. ' \
+                                                    'A backslash escapes a backslash, a comma or an equals sign in ' \
+                                                    'a value.')
       ALL_GROUPS = CLI::Option.new(long: 'all-groups', short: 'A',
                                    description: 'If present, list the requested object(s) across all groups. ' \
                                                 'The group in the current configuration is ignored even if ' \

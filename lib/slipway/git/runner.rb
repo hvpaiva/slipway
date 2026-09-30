@@ -67,7 +67,7 @@ module Slipway
       end
 
       # Returns a Result whatever git's exit status is. Raises NotInstalled when the binary
-      # cannot be started and Timeout when +timeout+ seconds pass. +env+ adds variables to the
+      # cannot be started and Timeout when `timeout` seconds pass. `env` adds variables to the
       # child; it cannot change the ones ENVIRONMENT pins.
       # A git still running when the block unwinds for any other reason, such as an
       # interrupt, is killed with its process group instead of outliving the command.

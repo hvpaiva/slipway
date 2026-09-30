@@ -8,18 +8,51 @@ module Slipway
     class Get < Base
       DESCRIPTION = "Display one or many resources.\n\n" \
                     'Prints a table of the most important information about the specified resources. ' \
-                    'You can filter the list using a label selector and the --selector flag. Projects are ' \
-                    "listed in the current group unless you pass --all-groups.\n\n" \
+                    'You can filter the list using a label selector and the --selector flag, or a field ' \
+                    'selector and the --field-selector flag. Projects are listed in the current group unless ' \
+                    "you pass --all-groups.\n\n" \
                     'Use -o wide to add the path, the head commit, the age of the last commit and the drift of ' \
                     'each project: the ways its repository differs from its manifest and what keeps sync from ' \
                     "converging it. Use -o json or -o yaml for the full object with its status.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
       USAGE = '(TYPE [NAME...] | TYPE/NAME...)'
+      COLUMNS = {
+        'GROUP' => 'The group of the project.',
+        'NAME' => 'The name of the resource.',
+        'BRANCH' => "The checked-out branch, or #{Views::Project::DETACHED} when HEAD points at a commit.",
+        'STATUS' => 'One word for the state of the repository, from the list below.',
+        'FETCHED' => 'Time since the repository was last fetched, by slipway or by git itself and from any of its ' \
+                     "worktrees. #{Views::Project::NEVER} means git answered and no fetch is on record, which " \
+                     'includes a last fetch that failed.',
+        'AGE' => 'Time since the resource was registered, in kubectl\'s units (3s, 4m12s, 11h, 2y319d).',
+        'PATH' => 'The registered path, as the manifest writes it.',
+        'HEAD' => 'The abbreviated id of the checked-out commit.',
+        'LAST-COMMIT' => 'The age of the checked-out commit.',
+        'DRIFT' => 'The ways the repository differs from its manifest and the blocker that keeps sync from ' \
+                   'fast-forwarding it, as slipway diff names them.',
+        'PROJECTS' => 'The number of projects in the group.',
+        'DESCRIPTION' => 'The description of the group.',
+        'LABELS' => 'The labels, as key=value pairs.'
+      }.freeze
+      STATUS_WORDS = CLI::Glossary.new(title: 'Status Words',
+                                       intro: 'STATUS is the first of these words that holds, in this order.',
+                                       entries: State::MEANINGS)
+      GLOSSARIES = [
+        CLI::Glossary.new(
+          title: 'Columns',
+          intro: 'Projects show NAME, BRANCH, STATUS, FETCHED and AGE; --all-groups adds GROUP in front, -o wide ' \
+                 'adds PATH, HEAD, LAST-COMMIT and DRIFT, and --show-labels adds LABELS. Groups show NAME, ' \
+                 'PROJECTS and AGE, and -o wide adds DESCRIPTION. A cell slipway has no value for reads ' \
+                 "#{Output::Table::NONE}, as every cell from git does when git cannot read the repository.",
+          entries: COLUMNS
+        ),
+        STATUS_WORDS
+      ].freeze
 
       def self.command(factory)
         CLI::Command.new(
           name: 'get', summary: 'Display one or many resources', section: 'Basic Commands',
-          description: DESCRIPTION, examples:, usage: USAGE,
+          description: DESCRIPTION, examples:, usage: USAGE, glossaries: GLOSSARIES,
           positionals: [Options::TYPE, Options.name_positional(factory, variadic: true, required: false)],
           options: [Options::OUTPUT, Options::SELECTOR, Options::FIELD_SELECTOR, Options::ALL_GROUPS,
                     Options::NO_HEADERS, Options::SHOW_LABELS],

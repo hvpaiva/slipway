@@ -52,7 +52,8 @@ class ConventionsTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
   LIB = File.join(ROOT, 'lib')
   SHIPPED_DIRECTORIES = %w[lib/ exe/ man/].freeze
-  SHIPPED_DOCUMENTS = %w[README.md CHANGELOG.md LICENSE.txt].freeze
+  # .yardopts ships because rubydoc.info renders the API documentation from the gem.
+  SHIPPED_DOCUMENTS = %w[README.md CHANGELOG.md LICENSE.txt .yardopts].freeze
   ASCII_TREES = %w[lib exe bin rakelib test/fixtures/golden test/fixtures/man].freeze
   TEST_TREES = %w[test/unit test/integration test/golden].freeze
 
@@ -86,7 +87,7 @@ class ConventionsTest < Minitest::Test
     assert_empty spec.runtime_dependencies
   end
 
-  def test_the_gem_ships_only_code_man_pages_and_the_three_documents
+  def test_the_gem_ships_only_code_man_pages_the_three_documents_and_yardopts
     stray = spec.files.reject { it.start_with?(*SHIPPED_DIRECTORIES) || SHIPPED_DOCUMENTS.include?(it) }
 
     assert_empty stray, 'add these to the denylist in slipway.gemspec or to this allowlist'

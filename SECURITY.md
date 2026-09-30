@@ -184,7 +184,8 @@ fast-forward does, and `spec.revision` is written only after git moved the branc
 - A fetch or a move of the branch, which may fetch objects into a partial clone, also runs with
   `GIT_ASKPASS` and `SSH_ASKPASS` pointing at `false` and `SSH_ASKPASS_REQUIRE=force`, so a
   question about a password, a passphrase or a host key fails at once instead of waiting for an
-  answer; with `GIT_ALLOW_PROTOCOL` built from `protocols` (ssh and https by default), so git
+  answer (ssh honors `SSH_ASKPASS_REQUIRE` from OpenSSH 8.4 on; an older ssh may still ask on the
+  terminal); with `GIT_ALLOW_PROTOCOL` built from `protocols` (ssh and https by default), so git
   itself refuses any other transport; and with `gc.auto=0`, `maintenance.auto=false` and
   `transfer.bundleURI=false`. `protocols` refuses `ext` and `fd` even when listed.
 - At most `parallel` fetches run at once, 4 by default and 16 at most.
@@ -200,6 +201,10 @@ fast-forward does, and `spec.revision` is written only after git moved the branc
   override and isolate controls as U+FFFD. This holds in tables, `describe`, the `status` of
   json and yaml output, result details, warnings and `error:` lines, so that text can neither
   move the cursor, color a line nor reorder one.
+- A known limit: json and yaml output prints the fields of a manifest as stored, and
+  `spec.path` and `spec.description` have no rule against control characters. json escapes the
+  C0 ones and yaml quotes them, but a bidirectional control stays raw, and a tool such as
+  `jq -r` writes all of them to the terminal. Tables and `describe` make them visible as above.
 - A git failure is reported by a single line of git's stderr, cut to 200 characters. Beyond the
   refs a fetch moved, what git and your hooks print when a command succeeds is not shown.
 - Credentials in a URL are masked as `***` wherever slipway prints one: the whole user part over

@@ -56,7 +56,7 @@ class SeamsTest < Minitest::Test
   def test_manpage_environment_lists_every_variable_the_code_reads
     expected = (variables_read_by_lib + Slipway::Config::SETTINGS.map(&:variable)).uniq - UNDOCUMENTED - CHILD_ONLY
 
-    assert_equal expected.sort, Slipway::CLI::Manpage::DEFAULT_ENVIRONMENT.keys.sort
+    assert_equal expected.sort, Slipway::Commands::Manual::ENVIRONMENT.keys.sort
     assert_operator expected.size, :>, 15
   end
 

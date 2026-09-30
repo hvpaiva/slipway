@@ -1,18 +1,19 @@
 # slipway
 
-A kubectl-style registry for the git repositories on your machine.
+A kubectl-style registry of the git repositories on your machine: it shows where each one stands
+against its upstream and its manifest, and fast-forwards the ones that can move safely.
 
 [![CI](https://github.com/hvpaiva/slipway/actions/workflows/ci.yml/badge.svg)](https://github.com/hvpaiva/slipway/actions/workflows/ci.yml)
 
-Slipway keeps a registry of the development projects on your machine and shows their git
-state the way kubectl shows a cluster. You register a repository once, and from then on
-`slipway get projects` tells you which ones are clean, dirty, ahead of their upstream or
-gone from disk. The shape is borrowed on purpose: verbs and resource types (`get projects`,
-`describe group work`), labels and selectors (`-l lang=rust`), groups as namespaces (`-n work`,
-`-A`), manifests you can `apply -f`, and table, json or yaml output. If you already know
-kubectl, you already know slipway. Slipway is deliberately small and complete in what a CLI
-ships with: help, man pages, shell completion, a config file, and colors that respect
-`NO_COLOR` and the terminal.
+`slipway get projects` shows in one table which of the git repositories you registered are clean,
+dirty, behind their upstream or missing from disk, and `slipway fetch` fetches them all without
+ever stopping at a password prompt. Each registration is a manifest that can also declare where
+its repository should be, such as the remote, the branch or a commit to hold it at: `slipway diff`
+shows how each repository differs from that, `slipway sync` fast-forwards the branches that can
+move without losing anything, and `slipway rollout undo` takes such a move back.
+
+Three repositories are cloned under `~/dev`. Register them, two in a `personal` group and one in
+the `default` group:
 
 ```console
 $ slipway create group personal --description "Personal projects"
@@ -32,65 +33,86 @@ GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
 default    notes   main     Ahead    2d        0s
 personal   augur   main     Dirty    <never>   1s
 personal   hldr    main     Clean    5h        1s
-
-$ slipway get projects -n personal -o wide
-NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT   DRIFT
-augur   main     Dirty    <never>   1s    ~/dev/augur   8f9cdbb   11h           NoUpstream
-hldr    main     Clean    5h        1s    ~/dev/hldr    e001395   32h           <none>
-
-$ slipway describe project augur -n personal
-Name:         augur
-Group:        personal
-Labels:       lang=bash
-Created:      2026-09-29T07:15:35Z
-Age:          1s
-Path:         ~/dev/augur
-Description:  <none>
-Remote:       <none>
-Branch:       <none>
-Revision:     <none>
-Sync Policy:  FastForward
-Paused:       false
-Status:       Dirty
-Repository:
-  Branch:      main
-  Head:        8f9cdbb
-  Upstream:    <none>
-  Ahead:       <none>
-  Behind:      <none>
-  Staged:      0
-  Unstaged:    1
-  Untracked:   1
-  Conflicted:  0
-  Stashes:     0
-  Remote:      <none>
-  Last Fetch:  <never>
-Last Commit:
-  Hash:     8f9cdbbc5ff8982322347d8e6a76ea3ab8821b51
-  Author:   Highlander <contact@hvpaiva.dev>
-  Date:     2026-09-28T20:15:35Z
-  Subject:  refactor: split history reader
-Drift:
-  NoUpstream:  main tracks no upstream; sync fast-forwards only a tracking branch
 ```
 
-The paths are quoted so the shell leaves the `~` alone: slipway expands it itself, which keeps
-the stored manifest portable between machines.
+STATUS is read from the repository on disk, so it is as fresh as the last fetch, whose age
+FETCHED shows. Fetching every project brings in what was pushed from other machines since:
+
+```console
+$ slipway fetch -A
+project/notes fetched
+  origin/main 1c2d3e4..5f6a7b8
+project/augur skipped (NoRemote)
+  no upstream, no origin and no single remote to fetch from
+project/hldr fetched
+  origin/main e001395..4c5d6e7
+3 projects: 2 fetched, 1 skipped
+
+$ slipway get projects -A
+GROUP      NAME    BRANCH   STATUS     FETCHED   AGE
+default    notes   main     Diverged   0s        1s
+personal   augur   main     Dirty      <never>   1s
+personal   hldr    main     Behind     0s        1s
+```
+
+hldr is now behind `origin/main`, and notes, which had a commit of its own, has diverged from
+it. `diff` compares each repository with its manifest and says what `sync` would do, and `sync`
+does it:
+
+```console
+$ slipway diff -A
+project/notes
+  Behind: 1 commit behind origin/main
+  Diverged: 1 ahead, 1 behind origin/main; sync never merges or rebases
+    git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
+project/augur
+  NoUpstream: main tracks no upstream; sync fast-forwards only a tracking branch
+project/hldr
+  Behind: 3 commits behind origin/main; sync will fast-forward
+
+$ slipway sync -A
+project/notes skipped (Diverged)
+  1 ahead, 1 behind origin/main; sync never merges or rebases
+  git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
+project/augur skipped (NoRemote)
+  no upstream, no origin and no single remote to fetch from
+project/hldr fast-forwarded
+  main e001395..4c5d6e7 (3 commits); undo with 'slipway rollout undo project/hldr -n personal'
+3 projects: 1 fast-forwarded, 2 skipped
+```
+
+A move you did not want is undone with the command printed under it:
+
+```console
+$ slipway rollout undo project/hldr -n personal
+project/hldr rolled back
+  main 4c5d6e7..e001395 (3 commits back to revision 1); held there by spec.revision
+  'slipway rollout unpin project/hldr -n personal' follows origin/main again
+```
+
+The command line follows kubectl: verbs over resource types, groups used the way kubectl uses
+namespaces (`-n personal`, `-A`), label selectors (`-l lang=rust`), manifests you can
+`apply -f`, and table, json or yaml output. STATUS words, drift and the result lines of
+`fetch`, `sync` and `rollout` are slipway's own, and the sections below define each of them.
 
 ## Installation
 
-```sh
-gem install slipway
-```
-
-Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH` (older git runs but always
-reports `Stashes: 0`, and git before 2.41 fetches without listing the refs that moved). It has no
-runtime gem dependencies. To install from a checkout:
+Slipway is not published on RubyGems yet. Until it is, install it from a checkout:
 
 ```sh
+git clone https://github.com/hvpaiva/slipway.git
+cd slipway
 bundle install
 bundle exec rake install
 ```
+
+Once it is published, `gem install slipway` installs it, and so does `mise use -g gem:slipway`
+with [mise](https://mise.jdx.dev).
+
+Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH`, and has no runtime gem
+dependencies. Git before 2.41 cannot tell `unchanged` from `fetched`, so every fetch that
+succeeds reads `fetched`, without the refs that moved. Fetching over ssh without a prompt needs
+OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
 
 ## Usage
 
@@ -101,7 +123,7 @@ bundle exec rake install
 | `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group; `-o yaml` prints the manifest. |
 | `create project --from-dir DIR` | Register every git repository at or under a directory, with its origin URL. |
 | `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
-| `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
+| `delete TYPE NAME...` | Remove registrations and print `project "hldr" deleted from personal group`; the repository on disk is not touched. Deleting a group removes the registrations of its projects. `--ignore-not-found` turns a name that does not exist into a success. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
 | `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
@@ -117,8 +139,11 @@ bundle exec rake install
 | `version` | Print the version, the Ruby it runs on and the platform, as `slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]`. |
 | `help [COMMAND]` | Print the same text as `--help`. |
 
-Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`).
-`slipway VERB --help` describes each verb.
+Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`), and
+type words are case-insensitive. A project is named bare (`hldr`) or as `project/hldr`, the form
+`get -o name` prints. `create`, `apply`, `delete`, `label`, `fetch`, `sync` and `rollout undo`
+accept `--dry-run=client`, which fetches and writes nothing and ends each result line with
+`(dry run)`. `slipway VERB --help` describes each verb, `-h` prints help and `-V` the version.
 
 ### Groups
 
@@ -127,6 +152,24 @@ Projects live in groups the way pods live in namespaces. `-n NAME` (`--group`) s
 `default` group is used, or the one set by `SLIPWAY_GROUP` or the `group` config key. The
 default group is created the first time a write needs it; every other group has to be created
 first, and `slipway delete group default` is refused.
+
+```console
+$ slipway get groups
+NAME       PROJECTS   AGE
+default    1          1s
+personal   2          1s
+
+$ slipway describe group personal
+Name:         personal
+Labels:       <none>
+Created:      2026-09-29T07:15:35Z
+Age:          1s
+Description:  Personal projects
+Projects:     2
+```
+
+PROJECTS counts the projects registered in the group. `-o wide` adds DESCRIPTION, and
+`--show-labels` adds LABELS for groups as it does for projects.
 
 ### Registering existing clones
 
@@ -148,114 +191,111 @@ is reported after the other lines, as `error: ~/dev/foo: project "foo" already e
 ~/dev/Foo`, with exit status 1. `--dry-run=client -o yaml` prints the projects as one
 `kind: List` without writing anything, ready for `slipway apply -f` on another machine.
 
-### Selectors
+### Describing
 
-`-l EXPR` (`--selector`) filters by labels with kubectl's grammar. Equality:
-
-```console
-$ slipway get projects -A -l lang=rust
-GROUP      NAME   BRANCH   STATUS   FETCHED   AGE
-personal   hldr   main     Clean    5h        1s
-```
-
-Set-based:
+`describe` prints the manifest, the repository as git reports it, the last commit and the
+[drift](#drift). hldr, after the rollback above, is held at a commit its upstream has moved past:
 
 ```console
-$ slipway get projects -A -l 'lang in (rust,bash)'
-GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
-personal   augur   main     Dirty    <never>   1s
-personal   hldr    main     Clean    5h        1s
+$ slipway describe project hldr -n personal
+Name:         hldr
+Group:        personal
+Labels:       lang=rust
+Created:      2026-09-29T07:15:35Z
+Age:          1s
+Path:         ~/dev/hldr
+Description:  Site and CLI for hvpaiva.dev
+Remote:       git@github.com:hvpaiva/hldr.git
+Branch:       main
+Revision:     e001395 (pinned)
+Sync Policy:  FastForward
+Paused:       false
+Status:       Behind
+Repository:
+  Branch:      main
+  Head:        e001395
+  Upstream:    origin/main
+  Ahead:       0
+  Behind:      3
+  Staged:      0
+  Unstaged:    0
+  Untracked:   0
+  Conflicted:  0
+  Stashes:     0
+  Remote:      git@github.com:hvpaiva/hldr.git
+  Last Fetch:  2026-09-29T07:15:35Z
+Last Commit:
+  Hash:     e001395f1c8d1b0e8a7c0c56f7b0e1a4b3c2d1e0
+  Author:   Highlander <contact@hvpaiva.dev>
+  Date:     2026-09-27T23:15:35Z
+  Subject:  feat: list posts by year
+Drift:        <none>
 ```
 
-`key!=value`, `key notin (a,b)`, `key` (exists) and `!key` (does not exist) work as well, and
-comma-separated terms must all hold. Neither a selector nor `-A` can be combined with explicit
-names.
+STATUS compares the branch with its upstream and ignores the pin, while drift compares the
+repository with the manifest, so hldr is Behind with no drift. When git cannot read the
+repository, the Repository block holds git's reason instead of the fields.
 
-`--field-selector EXPR` filters on the fields of the object `-o json` prints, with kubectl's
-field grammar: `path=value` (or `path==value`) and `path!=value`, comma-separated, all of which
-must hold.
+### Labels
 
 ```console
-$ slipway get projects -A --field-selector status.state!=Clean
-GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
-default    notes   main     Ahead    2d        0s
-personal   augur   main     Dirty    <never>   1s
+$ slipway label project hldr tier=web -n personal
+project/hldr labeled
+
+$ slipway label project hldr tier=web -n personal
+project/hldr not labeled
+
+$ slipway label project hldr tier=api -n personal
+error: 'tier' already has a value (web), and --overwrite is false
+
+$ slipway label project hldr --list -n personal
+lang=rust
+tier=web
+
+$ slipway label project hldr tier- -n personal
+project/hldr unlabeled
 ```
 
-Projects support `metadata.name`, `metadata.group`, `spec.path`, `status.state`,
-`status.branch` and `status.lastFetch`; groups support `metadata.name`. Values compare exactly,
-case included, and `spec.path` is the path as registered (`~/dev/hldr`), not the expanded one.
-`status.lastFetch` compares as the RFC 3339 time `-o json` prints. A field the object leaves out
-compares as the empty value, so `status.branch=` selects the projects on a detached HEAD and
-those git could not read; `status.lastFetch` compares as `never` instead, so
-`status.lastFetch=never` selects the projects no fetch has reached, those whose last fetch
-failed and those git could not read. A backslash escapes `\`, `,` and `=` inside a value. Like a
-label selector, a field selector cannot be combined with explicit names.
+`KEY=VALUE` sets a label and `KEY-` removes one. A key that already has a different value is
+changed only with `--overwrite`. `not labeled` means nothing changed: the label already had
+that value, or the label to remove was not set.
 
-### Output formats
+### Editing
 
-`-o table` is the default. `-o wide` adds PATH, HEAD, LAST-COMMIT (the age of the last
-commit) and DRIFT (see [Drift](#drift)) to projects and DESCRIPTION to groups. `-o json` and
-`-o yaml` print the manifest plus a `status` section, as one object when a single name is given
-and as a `kind: List` otherwise. `-o name` prints `project/hldr` lines. `--no-headers` drops the
-header row and `--show-labels` appends a LABELS column with `lang=rust` style pairs. AGE is the
-time since the resource was registered, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`).
-FETCHED is the time since the repository was last fetched, by slipway or by git itself and from
-any of its worktrees, and reads `<never>` when no fetch has run there or the last one failed: git
-empties `FETCH_HEAD` as a fetch starts, so a failed fetch leaves no time behind. `describe` shows
-the same time as `Last Fetch` and json and yaml as `status.lastFetch`.
-
-### Status words
-
-STATUS is one word per project, chosen in this order of precedence:
-
-| STATUS | Meaning |
-| --- | --- |
-| `Missing` | The registered path is not a directory on this machine. |
-| `NotARepo` | The directory exists but no repository contains it. |
-| `Unsafe` | git refused the repository because another user owns it (`safe.directory`). |
-| `Conflicted` | The working tree has unmerged paths. |
-| `Detached` | HEAD points at a commit rather than a branch. |
-| `Unborn` | The branch has no commits yet. |
-| `Dirty` | Staged, modified or untracked files are present. |
-| `Gone` | An upstream is configured but its ref no longer exists, as of the last fetch (FETCHED). |
-| `Diverged` | The branch is both ahead of and behind its upstream, as of the last fetch (FETCHED). |
-| `Ahead` | Commits not yet pushed to the upstream. |
-| `Behind` | Commits on the upstream not yet pulled, as of the last fetch (FETCHED). |
-| `Clean` | Nothing to do. |
-| `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
-
-`get`, `describe` and `diff` never contact a remote, so the words that compare a branch with its
-upstream are as fresh as the last fetch. `slipway fetch` refreshes them.
+`slipway edit project hldr -n personal` writes the manifest to a temporary file, opens it in
+`SLIPWAY_EDITOR`, then the `editor` config key, then `VISUAL`, then `EDITOR`, or `vi`, and
+saves what comes back as `project/hldr edited`. Text that changes without changing the object
+prints `project/hldr skipped`. An unchanged file prints `Edit cancelled, no changes made.` on
+stderr; an invalid one is reopened with the failure as a comment block at the top, and saving
+that reopened file unchanged aborts with `error: Edit cancelled, no valid changes were saved.`;
+an empty file aborts with `error: Edit cancelled, saved file was empty.`. Both aborts exit
+with status 1.
 
 ### Fetching
 
-```console
-$ slipway fetch -A
-project/notes fetched
-  origin/main 1c2d3e4..5f6a7b8
-project/augur skipped (NoRemote)
-  no upstream, no origin and no single remote to fetch from
-project/hldr fetched
-  origin/main e001395..4c5d6e7
-3 projects: 2 fetched, 1 skipped
-```
-
-`slipway fetch` runs `git fetch` in the projects of the current group, in the projects named
-(`hldr` or `project/hldr`, so `slipway get projects -o name | xargs slipway fetch` works), in
-the ones `-l` selects, or with `-A` in every project. Git fetches from the remote of the
+`slipway fetch` runs `git fetch` in the projects of the current group, in the projects named,
+in the ones `-l` selects, or with `-A` in every project. Git fetches from the remote of the
 checked-out branch, else from the only remote, else from origin, as a `git fetch` typed in the
 repository would: slipway passes no remote, and nothing from a manifest reaches git's arguments.
 Git updates the refs the remote's fetch refspecs name (remote-tracking refs by default), tags and
-`FETCH_HEAD`, never the checked-out branch or the working tree.
-`slipway fetch -A && slipway get projects -A` shows every STATUS as of now.
+`FETCH_HEAD`, never the checked-out branch or the working tree. A second fetch right after the
+one above finds nothing new:
+
+```console
+$ slipway fetch -A
+project/notes unchanged
+project/augur skipped (NoRemote)
+  no upstream, no origin and no single remote to fetch from
+project/hldr unchanged
+3 projects: 2 unchanged, 1 skipped
+```
 
 Up to `parallel` projects (4 by default) fetch at once. Each prints one result, in the order the
 projects are listed, as soon as it and every project before it are done:
 
 | Result | Meaning |
 | --- | --- |
-| `fetched` | The remote moved refs. Up to five follow, as `origin/main a1b2c3d..e4f5a6b`, then `and N more`. |
+| `fetched` | The remote moved refs. Up to five follow, then `and N more`: `origin/main a1b2c3d..e4f5a6b` for a ref that moved, `origin/feature d09a085 (new)` for a new one and `origin/feature deleted (was d09a085)` for one `--prune` removed. Tags appear under their bare name. |
 | `unchanged` | The remote answered and had nothing new. |
 | `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (`NoRemote`), or its branch tracks a local branch (`LocalUpstream`). |
 | `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
@@ -263,160 +303,41 @@ projects are listed, as soon as it and every project before it are done:
 | `failed (Reason)` | The fetch ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). |
 
 When more than one project ran, a count of the results closes the run on stderr. The exit
-status is 1 when any project was denied or failed, once every line has printed. `--prune` also
-removes the remote-tracking refs of branches deleted on the remote. `--dry-run=client` reads the
-repositories as `get` does and prints `fetched (dry run)` for each project a fetch would reach,
-without running `git fetch`.
+status is 1 when any project was denied or failed, once every line has printed.
+
+`--prune` also removes the remote-tracking refs of branches deleted on the remote, and it is
+what makes a branch whose upstream was deleted read `Gone`: a plain fetch leaves the old ref in
+place, unless git's `fetch.prune` is set. To bring every STATUS up to date, whatever the fetch
+reports:
+
+```sh
+slipway fetch -A --prune; slipway get projects -A
+```
 
 Git never prompts during a fetch: slipway sets `GIT_TERMINAL_PROMPT=0`, points `GIT_ASKPASS` and
-`SSH_ASKPASS` at `false`, and sets `SSH_ASKPASS_REQUIRE=force` so ssh never reads the terminal.
-Your ssh configuration, `SSH_AUTH_SOCK` and credential helpers are used as they are. Only the
-transports in `protocols` are allowed, a fetch that runs past `networkTimeout` is killed with
-every process it started, submodules are not fetched, and gc, automatic maintenance and bundle
-URIs are off. On Ctrl-C slipway stops the git processes it started and exits with status 130.
+`SSH_ASKPASS` at `false`, and sets `SSH_ASKPASS_REQUIRE=force`, so an ssh from OpenSSH 8.4 on
+never reads the terminal.
+Your ssh configuration, `SSH_AUTH_SOCK` and credential helpers are used as they are. Only ssh
+and https remotes are fetched unless the `protocols` setting adds more, so an `http://`,
+`git://` or local path remote fails with `ProtocolNotAllowed` until it does. A fetch that runs
+past `networkTimeout` is killed with every process it started, submodules are not fetched, and
+gc, automatic maintenance and bundle URIs are off. On Ctrl-C slipway stops the git processes it
+started and exits with status 130.
 
-### Manifests
-
-`slipway get project hldr -n personal -o yaml` prints the stored manifest followed by
-`status`. Without the status, a Project and a Group look like this:
-
-```yaml
-kind: Project
-metadata:
-  name: hldr
-  group: personal
-  labels:
-    lang: rust
-  creationTimestamp: '2026-09-29T07:15:35Z'
-spec:
-  path: "~/dev/hldr"
-  description: Site and CLI for hvpaiva.dev
-  remote: git@github.com:hvpaiva/hldr.git
-  branch: main
-```
-
-```yaml
-kind: Group
-metadata:
-  name: personal
-  labels: {}
-  creationTimestamp: '2026-09-29T07:15:35Z'
-spec:
-  description: Personal projects
-```
-
-Names follow the RFC 1123 label rule (lowercase letters, digits and dashes, at most 63
-characters) and labels follow the Kubernetes rules. `spec.path` is stored as written and
-expanded against `HOME` when used, so `~/dev/hldr` means the same thing on every machine that
-syncs the registry; quote it on the command line so the shell does not expand it first.
-`metadata.group` defaults to the current group and `creationTimestamp` is set on creation.
-
-The rest of a project's spec declares the state its repository is expected to be in. Every
-field is optional, and one at its default is not written:
-
-| Field | Meaning | Default |
-| --- | --- | --- |
-| `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
-| `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
-| `spec.revision` | The commit the project is held at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. `rollout undo` writes it and `rollout unpin` removes it. | none |
-| `spec.syncPolicy` | `FastForward` allows `sync` to fast-forward the checked-out branch; `FetchOnly` allows fetching only. | `FastForward` |
-| `spec.paused` | `true` keeps `fetch` and `sync` away from the project, which prints `project/NAME paused` and runs no git command there. `rollout pause` sets it and `rollout resume` removes it. | `false` |
-
-`fetch` and `sync` leave a project with `spec.paused: true` alone, and `sync` follows
-`spec.syncPolicy` and `spec.revision`. No command changes a remote or switches a branch to match
-`spec.remote` or `spec.branch`, and STATUS does not take any of the fields into account; the
-repository is compared with them as [Drift](#drift). The fields are checked whenever a manifest
-is read, and a value that breaks its rule is refused with that rule, so nothing that could reach
-git as an option or carry a control character is accepted. `describe`, `-o json` and `-o yaml`
-show them.
-
-`slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
-and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
-`-f` may be repeated. A document of kind `List` stands for each manifest under its `items`, in
-order, and one that fails is named by its position (`FILE:3`). Each document prints
-`project/hldr created`, `configured` or `unchanged`; problems are collected and printed as
-`error: FILE[:N]: ...` after the successes, with exit status 1. `--dry-run=client` reports what
-would change without writing.
-
-### Drift
-
-Drift is where a project's repository differs from its manifest, and what keeps sync from
-fast-forwarding it. `-o wide` lists the words in the DRIFT column, `-o json` and `-o yaml` list
-the items in `status.drift` (each with `type`, `message` and `blocker`), and `describe` ends
-with a Drift block of one line per item. Nothing is fetched: the repository is read as it is on
-disk, so Behind is as of the last fetch (FETCHED), and `slipway fetch` refreshes it.
-
-| Drift | Reported when |
-| --- | --- |
-| `Missing` | The registered path is not a directory. With `spec.remote`, the `git clone` command that recreates it is shown. |
-| `Remote` | origin is absent or differs from `spec.remote`. Sync never changes a remote. |
-| `Branch` | HEAD is detached or on another branch than `spec.branch`. Sync never switches branches. |
-| `Revision` | HEAD is not the commit `spec.revision` pins. The pin replaces the upstream, so a pinned project is never Behind; under `FastForward` sync will fast-forward a branch behind the pin to it unless a blocker stops it, and never moves a branch back. |
-| `Behind` | The checked-out branch is behind its upstream. Under `FastForward` sync will fast-forward it unless a blocker stops it; under `FetchOnly`, or while `spec.paused` is true, it is only reported. |
-
-A blocker comes after the drift and says why the checked-out branch cannot be fast-forwarded,
-onto its upstream or, for a project pinned by `spec.revision`, onto the pin. The first three mean
-git could not read the repository and apply to every project; the others apply only under
-`FastForward` to a project that is not paused, and `RevisionNotFound`, `PastRevision` and
-`OffUpstream` only to a pinned one. Behind means behind the upstream or, when pinned, behind the
-pin:
-
-| Blocker | Meaning |
-| --- | --- |
-| `NotARepo` | The directory exists but holds no repository. |
-| `Unsafe` | git refused the repository because another user owns it (`safe.directory`). |
-| `Unknown` | git could not answer; the reason is also printed once on stderr. |
-| `Detached` | HEAD points at a commit rather than a branch. |
-| `Unborn` | The branch has no commits yet. |
-| `Gone` | The upstream is configured but its ref no longer exists. |
-| `NoUpstream` | The branch tracks no upstream. |
-| `RevisionNotFound` | The repository has no commit by the name `spec.revision` pins. |
-| `PastRevision` | HEAD is past the pinned commit or on another line of history, so reaching the pin would move the branch back. |
-| `OffUpstream` | The upstream does not hold the pinned commit, which may be on another branch or a fork; sync moves a branch only along its upstream. |
-| `Conflicted` | The branch is behind and the working tree has unmerged paths. |
-| `Dirty` | The branch is behind and has staged or unstaged changes; untracked files do not block. |
-| `Diverged` | The branch is behind and has commits of its own. |
-| `InProgress` | The branch would be fast-forwarded, but a merge, rebase, cherry-pick, revert, bisect or `git am` is in progress. |
-
-### Diff
+### Diffing
 
 `slipway diff` compares every project of the current group, the ones named, the ones a selector
 matches, or with `-A` every project, with its manifest. Each project that differs prints its
 name and one line per [drift](#drift) item, and an item that has a git command to show or
-resolve it is followed by that command. Slipway never runs these commands, never writes to a
+resolve it is followed by that command, as in the example at the top of this page. A project
+that matches its manifest prints nothing. Slipway never runs these commands, never writes to a
 repository or to the registry, and contacts no remote.
 
-```console
-$ slipway diff -A
-project/notes
-  Behind: 1 commit behind origin/main
-  Diverged: 1 ahead, 1 behind origin/main; sync never merges or rebases
-    git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
-project/augur
-  NoUpstream: main tracks no upstream; sync fast-forwards only a tracking branch
-project/hldr
-  Behind: 3 commits behind origin/main; sync will fast-forward
-```
-
-A project that matches its manifest prints nothing. Names are given bare or in the
-`project/NAME` form that `get projects -o name` prints. The exit status is 0 when every
-project matches its manifest and 3 when any differs or is blocked, `NotARepo` and `Unsafe`
-included. It is 1 on an error, such as an unreadable manifest or a project whose state is
-`Unknown`, so a script or a timer can tell drift from failure.
+The exit status is 0 when every project matches its manifest and 3 when any differs or is
+blocked, `NotARepo` and `Unsafe` included. It is 1 on an error, such as an unreadable manifest
+or a project whose state is `Unknown`, so a script or a timer can tell drift from failure.
 
 ### Syncing
-
-```console
-$ slipway sync -A
-project/notes skipped (Diverged)
-  1 ahead, 1 behind origin/main; sync never merges or rebases
-  git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
-project/augur skipped (NoRemote)
-  no upstream, no origin and no single remote to fetch from
-project/hldr fast-forwarded
-  main e001395..4c5d6e7 (3 commits); undo with 'slipway rollout undo project/hldr -n personal'
-3 projects: 1 fast-forwarded, 2 skipped
-```
 
 `slipway sync` fetches the projects of the current group, the ones named, the ones `-l` selects,
 or with `-A` every project, as `slipway fetch` does. It then compares each one with its manifest
@@ -434,7 +355,7 @@ every promise slipway makes about the repositories it touches.
 | `fast-forwarded` | The branch moved. For a move onto the upstream, the detail names the commits it gained, as `main a1b2c3d..e4f5a6b (3 commits)`, and the command that undoes the move. |
 | `fetched` | The fetch of a `FetchOnly` project moved refs; the refs follow as in `fetch`. |
 | `unchanged` | The branch stayed where it was and nothing blocked it; the fetch may still have moved remote-tracking refs. |
-| `skipped (Reason)` | The branch stayed where it was: a [blocker](#drift) stopped it, git refused the fast-forward (`WouldOverwrite` for untracked files in the way, `WouldLoseChanges` for local changes `git status` does not show, `Busy` for a held `index.lock`, `NotFastForward`), or the project was skipped before its fetch as in `fetch`. |
+| `skipped (Reason)` | The branch stayed where it was: a [blocker](#drift) stopped it, git refused the fast-forward (`WouldOverwrite` for untracked files in the way, `WouldLoseChanges` for local changes `git status` does not show, `Busy` for a lock another git process holds on the index, `HEAD` or the branch, `NotFastForward` for a branch that gained a commit since the check), or the project was skipped before its fetch as in `fetch`. |
 | `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
 | `denied (AuthRequired)` | The fetch or the fast-forward needed a password, a passphrase or a host key, as in `fetch`. |
 | `failed (Reason)` | The fetch or the fast-forward ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). A fast-forward stopped at the deadline leaves the branch where it was, but the files git had already written stay in the working tree, and the detail names the command that lists them. |
@@ -442,41 +363,52 @@ every promise slipway makes about the repositories it touches.
 A difference sync leaves alone, such as a `Remote` or a `Branch` [drift](#drift), and a branch
 that `FetchOnly` keeps behind follow as detail lines. A project pinned by `spec.revision` is
 fast-forwarded up to that commit, `main a1b2c3d..b2c3d4e (to the pinned revision)`, and then
-stays there whatever its upstream brings, with `held at b2c3d4e by spec.revision` under its
-result. A pin the repository lacks is skipped as `RevisionNotFound`, a HEAD past the pin as
-`PastRevision`, and a pin its upstream does not hold, such as a commit on another branch or a fork,
-as `OffUpstream`: a manifest can hold a project back but never send it where its upstream has not
-been.
+stays there whatever its upstream brings. hldr, held by the rollback above, stays put:
+
+```console
+$ slipway sync hldr -n personal
+project/hldr unchanged
+  held at e001395 by spec.revision
+```
+
+A pin the repository lacks is skipped as `RevisionNotFound`, a HEAD past the pin as
+`PastRevision`, and a pin its upstream does not hold, such as a commit on another branch or a
+fork, as `OffUpstream`: a manifest can hold a project back but never send it where its upstream
+has not been.
 
 Up to `parallel` projects fetch at once, while fast-forwards run one at a time; each result prints
 in the order the projects are listed, and a count of the results closes the run on stderr. Each
 fast-forward leaves `slipway sync: Fast-forward` in the branch's reflog. The exit status is 1
 when a fetch or a fast-forward was denied or failed, once every line has printed; a skipped
-project never changes it, so a dirty tree does not fail the run. `--dry-run=client` fetches
-nothing and writes nothing: it plans from the last fetch, prints the same lines followed by
-`(dry run)`, and warns about the projects no fetch has reached.
+project never changes it, so a dirty tree does not fail the run. With `--dry-run=client`, sync
+plans from the last fetch and warns about the projects no fetch has reached.
 
 ### Rolling back
-
-```console
-$ slipway rollout history hldr -n personal
-REVISION   COMMIT    DATE                   CHANGE-CAUSE                   PINNED
-1          e001395   2026-09-28T09:00:00Z   <none>                         false
-2          4c5d6e7   2026-09-29T11:00:00Z   sync: fast-forward 3 commits   false
-$ slipway rollout undo hldr -n personal
-project/hldr rolled back
-  main 4c5d6e7..e001395 (3 commits back to revision 1); held there by spec.revision
-  'slipway rollout unpin project/hldr -n personal' follows origin/main again
-```
 
 Slipway undoes its own moves. Each fast-forward of `sync` runs with `GIT_REFLOG_ACTION` set to
 `slipway sync` and each move of `rollout undo` with `slipway rollout undo`, so the branch's reflog
 records them and slipway keeps no history of its own. `slipway rollout history NAME` lists them as
 revisions, oldest first: every commit slipway moved the checked-out branch to, and the commit the
-branch stood at before such a move. CHANGE-CAUSE names the move, as `sync: fast-forward 3 commits`
-or `rollout undo to revision 1`, and PINNED marks the revision `spec.revision` holds. It fetches
-and writes nothing; a project without history prints `No rollout history found for project/NAME.`
-on stderr and exits with 0.
+branch stood at before such a move.
+
+```console
+$ slipway rollout history hldr -n personal
+REVISION   COMMIT    DATE                   CHANGE-CAUSE                   PINNED
+1          e001395   2026-09-27T23:15:35Z   <none>                         false
+2          4c5d6e7   2026-09-29T07:15:35Z   sync: fast-forward 3 commits   false
+3          e001395   2026-09-29T07:15:35Z   rollout undo to revision 1     true
+
+$ slipway rollout unpin hldr -n personal
+project/hldr unpinned
+
+$ slipway sync hldr -n personal
+project/hldr fast-forwarded
+  main e001395..4c5d6e7 (3 commits); undo with 'slipway rollout undo project/hldr -n personal'
+```
+
+CHANGE-CAUSE names the move and PINNED marks the revision `spec.revision` holds. `history`
+fetches and writes nothing; a project without history prints
+`No rollout history found for project/NAME.` on stderr and exits with 0.
 
 `slipway rollout undo NAME` moves the checked-out branch to the revision before the current one,
 or to the one `--to-revision=N` names, and then writes that commit to `spec.revision`, so `sync`
@@ -490,12 +422,11 @@ without staged changes, because `reset --keep` resets every index entry.
 | --- | --- |
 | `rolled back` | The branch moved, or it already stood at the revision and only `spec.revision` changed. The detail names the commits it crossed and the command that lets `sync` follow the upstream again. |
 | `unchanged` | The branch already stood at the revision and `spec.revision` already held it. |
-| `skipped (Reason)` | Nothing moved and nothing was written. The branch cannot move (`Conflicted`, `Detached`, `Unborn`, `NoUpstream`, `Gone`, `InProgress`); the history has no such revision (`NoHistory`, `NoPrevious`, `UnknownRevision`) or the repository no such commit (`RevisionNotFound`); a move back would drop commits the upstream lacks (`LocalCommits`) or staged changes (`Dirty`), or the revision is off the branch's history (`Diverged`); a move forward needs a tree without staged or unstaged changes (`Dirty`) and a revision on the upstream (`OffUpstream`); or git refused the move (`WouldLoseChanges`, `WouldOverwrite` for untracked or ignored files in the way, `Busy`). |
+| `skipped (Reason)` | Nothing moved and nothing was written. The branch cannot move (`Conflicted`, `Detached`, `Unborn`, `NoUpstream`, `Gone`, `InProgress`); the history has no such revision (`NoHistory`, `NoPrevious`, `UnknownRevision`) or the repository no such commit (`RevisionNotFound`); a move back would drop commits the upstream lacks (`LocalCommits`) or staged changes (`Dirty`), or the revision is off the branch's history (`Diverged`); a move forward needs a tree without staged or unstaged changes (`Dirty`) and a revision on the upstream (`OffUpstream`); or git refused the move (`WouldLoseChanges`, `WouldOverwrite` for untracked or ignored files in the way, `Busy`, `NotFastForward` for a branch that moved since the check). |
 | `denied (AuthRequired)` | A partial clone had to fetch the files the move writes and the remote asked for a password, a passphrase or a host key, as in `fetch`. |
 | `failed (Reason)` | The move ran past `networkTimeout` (`Timeout`) or git failed for another reason (`Unknown`), and `spec.revision` was not written, though a move stopped at the deadline keeps the files git had already written, as in `sync`; or the branch moved but `spec.revision` could not be written (`NotPinned`), and the detail names the `--to-revision` command that writes it without moving the branch again. |
 
-The exit status is 1 when the project was skipped, denied or failed. `--dry-run=client` prints the same
-lines followed by `(dry run)` and moves and writes nothing.
+The exit status is 1 when the project was skipped, denied or failed.
 
 `slipway rollout unpin NAME...` removes `spec.revision` and prints `unpinned`, or `not pinned`
 when there was none; the next `sync` fast-forwards onto the upstream as usual.
@@ -589,32 +520,247 @@ the projects no fetch has reached, including those whose last fetch was denied o
 A fast-forward you did not want is undone with the `slipway rollout undo` command sync prints
 under it, as [Rolling back](#rolling-back) describes.
 
-### Editing
+## Output formats
 
-`slipway edit project hldr -n personal` writes the manifest to a temporary file, opens it in
-`SLIPWAY_EDITOR`, then the `editor` config key, then `VISUAL`, then `EDITOR`, or `vi`, and
-saves what comes back as `project/hldr edited`. Text that changes without changing the object
-prints `project/hldr skipped`. An unchanged file prints `Edit cancelled, no changes made.` on
-stderr; an invalid one is reopened with the failure as a comment block at the top, and saving
-that reopened file unchanged aborts with `error: Edit cancelled, no valid changes were saved.`;
-an empty file aborts with `error: Edit cancelled, saved file was empty.`. Both aborts exit
-with status 1.
+`-o table` is the default. `-o wide` adds PATH, HEAD, LAST-COMMIT and DRIFT to projects and
+DESCRIPTION to groups. `-o json` and `-o yaml` print the manifest plus a `status` section, as
+one object when a single name is given and as a `kind: List` otherwise. `-o name` prints
+`project/hldr` lines. `--no-headers` drops the header row and `--show-labels` appends a LABELS
+column with `lang=rust` style pairs.
 
-### Labels
+```console
+$ slipway get projects -n personal -o wide
+NAME    BRANCH   STATUS   FETCHED   AGE   PATH          HEAD      LAST-COMMIT   DRIFT
+augur   main     Dirty    <never>   1s    ~/dev/augur   8f9cdbb   11h           NoUpstream
+hldr    main     Clean    0s        1s    ~/dev/hldr    4c5d6e7   120m          <none>
+```
 
-`slipway label project hldr tier=web -n personal` sets a label and prints
-`project/hldr labeled`; `tier-` removes one (`unlabeled`). Setting a key that already has a
-different value fails unless `--overwrite` is given: with `tier=web` set,
-`slipway label project hldr tier=api -n personal` prints
-`error: 'tier' already has a value (web), and --overwrite is false`. `--list` prints the labels
-one `key=value` per line instead of writing.
+AGE is the time since the resource was registered and LAST-COMMIT the age of the checked-out
+commit, in kubectl's units (`3s`, `4m12s`, `11h`, `2y319d`). FETCHED is the time since the
+repository was last fetched, by slipway or by git itself and from any of its worktrees. It reads
+`<never>` when git answered and no fetch is on record, which includes a last fetch that failed,
+and `<none>` when git could not read the repository at all (`Missing`, `NotARepo`, `Unsafe`,
+`Unknown`), like every other cell that comes from git. BRANCH reads `(detached)` on a detached HEAD.
+DRIFT lists the [drift](#drift) words.
+
+`-o json` prints the same object as `-o yaml`. A project's `status` holds `branch`, `head`,
+`upstream`, `ahead`, `behind`, the counts `staged`, `unstaged`, `untracked`, `conflicted` and
+`stashes`, the STATUS word as `state`, `lastFetch`, the [drift](#drift) items as `drift` and the
+checked-out commit as `lastCommit`:
+
+```console
+$ slipway get project augur -n personal -o yaml
+kind: Project
+metadata:
+  name: augur
+  group: personal
+  labels:
+    lang: bash
+  creationTimestamp: '2026-09-29T07:15:35Z'
+spec:
+  path: "~/dev/augur"
+status:
+  branch: main
+  head: 8f9cdbb
+  staged: 0
+  unstaged: 1
+  untracked: 1
+  conflicted: 0
+  stashes: 0
+  state: Dirty
+  drift:
+  - type: NoUpstream
+    message: main tracks no upstream; sync fast-forwards only a tracking branch
+    blocker: true
+  lastCommit:
+    hash: 8f9cdbbc5ff8982322347d8e6a76ea3ab8821b51
+    author: Highlander
+    email: contact@hvpaiva.dev
+    date: '2026-09-28T20:15:35Z'
+    subject: 'refactor: split history reader'
+```
+
+A field git could not answer is left out: augur has no `upstream`, `ahead`, `behind` or
+`lastFetch`, and a project git could not read, such as a Missing one, keeps only `state` and
+`drift`. A group's status holds `projects`, its project count.
+
+## Status words
+
+STATUS is one word per project, chosen in this order of precedence:
+
+| STATUS | Meaning |
+| --- | --- |
+| `Missing` | The registered path is relative, or is not a directory on this machine. |
+| `NotARepo` | The directory exists but no repository contains it. |
+| `Unsafe` | git refused the repository because another user owns it (`safe.directory`); `describe`, `diff` and `fetch` print the git command that trusts it. |
+| `Conflicted` | The working tree has unmerged paths. |
+| `Detached` | HEAD points at a commit rather than a branch. |
+| `Unborn` | The branch has no commits yet. |
+| `Dirty` | Staged, modified or untracked files are present. |
+| `Gone` | An upstream is configured but its remote-tracking ref is gone, as of the last `fetch --prune` (or a fetch with `fetch.prune` set). |
+| `Diverged` | The branch is both ahead of and behind its upstream, as of the last fetch (FETCHED). |
+| `Ahead` | Commits not yet pushed to the upstream, as of the last fetch (FETCHED). |
+| `Behind` | Commits on the upstream not yet pulled, as of the last fetch (FETCHED). |
+| `Clean` | Nothing to do. |
+| `Unknown` | git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run. |
+
+`get`, `describe` and `diff` never contact a remote, so the words that compare a branch with its
+upstream are as fresh as the last fetch. [Fetching](#fetching) refreshes them.
+
+## Selectors
+
+`-l EXPR` (`--selector`) filters by labels with kubectl's grammar. Equality:
+
+```console
+$ slipway get projects -A -l lang=rust
+GROUP      NAME   BRANCH   STATUS   FETCHED   AGE
+personal   hldr   main     Clean    0s        1s
+```
+
+Set-based:
+
+```console
+$ slipway get projects -A -l 'lang in (rust,bash)'
+GROUP      NAME    BRANCH   STATUS   FETCHED   AGE
+personal   augur   main     Dirty    <never>   1s
+personal   hldr    main     Clean    0s        1s
+```
+
+`key!=value`, `key notin (a,b)`, `key` (exists) and `!key` (does not exist) work as well, and
+comma-separated terms must all hold.
+
+`--field-selector EXPR` filters `get` and `describe` on the fields of the object `-o json`
+prints, with kubectl's field grammar: `path=value` (or `path==value`) and `path!=value`,
+comma-separated, all of which must hold. Projects support `metadata.name`, `metadata.group`,
+`spec.path`, `status.state`, `status.branch` and `status.lastFetch`; groups support
+`metadata.name`.
+
+```console
+$ slipway get projects -A --field-selector status.state!=Clean
+GROUP      NAME    BRANCH   STATUS     FETCHED   AGE
+default    notes   main     Diverged   0s        1s
+personal   augur   main     Dirty      <never>   1s
+```
+
+`status.lastFetch=never` selects the projects no fetch has reached. The `--field-selector` help
+and slipway-get(1) give the matching rules. Neither kind of selector, nor `-A`, can be combined
+with explicit names.
+
+## Manifests
+
+Every registration is a manifest. `slipway get project hldr -n personal -o yaml` prints it
+followed by `status`; without the status, a Project and a Group look like this:
+
+```yaml
+kind: Project
+metadata:
+  name: hldr
+  group: personal
+  labels:
+    lang: rust
+  creationTimestamp: '2026-09-29T07:15:35Z'
+spec:
+  path: "~/dev/hldr"
+  description: Site and CLI for hvpaiva.dev
+  remote: git@github.com:hvpaiva/hldr.git
+  branch: main
+```
+
+```yaml
+kind: Group
+metadata:
+  name: personal
+  labels: {}
+  creationTimestamp: '2026-09-29T07:15:35Z'
+spec:
+  description: Personal projects
+```
+
+Names follow the RFC 1123 label rule (lowercase letters, digits and dashes, at most 63
+characters) and labels follow the Kubernetes rules. `metadata.group` defaults to the current
+group and `creationTimestamp` is set on creation; written by hand, it must be a quoted string.
+Unknown fields are errors.
+
+`spec.path` must be absolute or start with `~/`. A `~` path is stored as written and expanded
+against `HOME` when used, so `~/dev/hldr` means the same thing on every machine that shares the
+registry. `create` resolves any other relative `--path`, `.` included, against the current
+directory and stores it absolute. The shell expands an unquoted `~` before slipway sees it, so
+quote it, as the examples here do, to keep the manifest portable. A manifest that holds a
+relative path is reported as `Missing`.
+
+The rest of a project's spec declares the state its repository is expected to be in. Every
+field is optional, and one at its default is not written:
+
+| Field | Meaning | Default |
+| --- | --- | --- |
+| `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
+| `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
+| `spec.revision` | The commit the project is held at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. `rollout undo` writes it and `rollout unpin` removes it. | none |
+| `spec.syncPolicy` | `FastForward` allows `sync` to fast-forward the checked-out branch; `FetchOnly` allows fetching only. | `FastForward` |
+| `spec.paused` | `true` keeps `fetch` and `sync` away from the project, which prints `project/NAME paused` and runs no git command there. `rollout pause` sets it and `rollout resume` removes it. | `false` |
+
+`fetch` and `sync` leave a project with `spec.paused: true` alone, and `sync` follows
+`spec.syncPolicy` and `spec.revision`. No command changes a remote or switches a branch to match
+`spec.remote` or `spec.branch`, and STATUS does not take any of the fields into account; the
+repository is compared with them as [drift](#drift). The fields are checked whenever a manifest
+is read, and a value that breaks its rule is refused with that rule, so nothing that could reach
+git as an option or carry a control character is accepted. A file in the registry that cannot
+be read is reported with a `warning:` line and left out of listings.
+
+`slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
+and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
+`-f` may be repeated. A document of kind `List` stands for each manifest under its `items`, in
+order, and one that fails is named by its position (`FILE:3`). Each document prints
+`project/hldr created`, `configured` or `unchanged`; problems are collected and printed as
+`error: FILE[:N]: ...` after the successes, with exit status 1.
+
+### Drift
+
+Drift is where a project's repository differs from its manifest, and what keeps sync from
+fast-forwarding it. `-o wide` lists the words in the DRIFT column, `-o json` and `-o yaml` list
+the items in `status.drift` (each with `type`, `message` and `blocker`), and `describe` ends
+with a Drift block of one line per item. Nothing is fetched: the repository is read as it is on
+disk, so Behind is as of the last fetch (FETCHED), and `slipway fetch` refreshes it.
+
+| Drift | Reported when |
+| --- | --- |
+| `Missing` | The registered path is relative or is not a directory. For a path that is not a directory, a project with `spec.remote` shows the `git clone` command that recreates it. |
+| `Remote` | origin is absent or differs from `spec.remote`. Sync never changes a remote. |
+| `Branch` | HEAD is detached or on another branch than `spec.branch`. Sync never switches branches. |
+| `Revision` | HEAD is not the commit `spec.revision` pins. The pin replaces the upstream, so a pinned project is never Behind; under `FastForward` sync will fast-forward a branch behind the pin to it unless a blocker stops it, and never moves a branch back. |
+| `Behind` | The checked-out branch is behind its upstream. Under `FastForward` sync will fast-forward it unless a blocker stops it; under `FetchOnly`, or while `spec.paused` is true, it is only reported. |
+
+A blocker comes after the drift and says why the checked-out branch cannot be fast-forwarded,
+onto its upstream or, for a project pinned by `spec.revision`, onto the pin. The first three mean
+git could not read the repository and apply to every project; the others apply only under
+`FastForward` to a project that is not paused, and `RevisionNotFound`, `PastRevision` and
+`OffUpstream` only to a pinned one. Behind means behind the upstream or, when pinned, behind the
+pin:
+
+| Blocker | Meaning |
+| --- | --- |
+| `NotARepo` | The directory exists but holds no repository. |
+| `Unsafe` | git refused the repository because another user owns it (`safe.directory`); the git command that trusts it follows. |
+| `Unknown` | git could not answer; the reason is also printed once on stderr. |
+| `Detached` | HEAD points at a commit rather than a branch. |
+| `Unborn` | The branch has no commits yet. |
+| `Gone` | The upstream is configured but its ref no longer exists. |
+| `NoUpstream` | The branch tracks no upstream. |
+| `RevisionNotFound` | The repository has no commit by the name `spec.revision` pins. |
+| `PastRevision` | HEAD is past the pinned commit or on another line of history, so reaching the pin would move the branch back. |
+| `OffUpstream` | The upstream does not hold the pinned commit, which may be on another branch or a fork; sync moves a branch only along its upstream. |
+| `Conflicted` | The branch is behind and the working tree has unmerged paths. |
+| `Dirty` | The branch is behind and has staged or unstaged changes; untracked files do not block. |
+| `Diverged` | The branch is behind and has commits of its own. |
+| `InProgress` | The branch would be fast-forwarded, but a merge, rebase, cherry-pick, revert, bisect or `git am` is in progress. |
 
 ## Configuration
 
 Settings are resolved in this order: command-line flags, then `SLIPWAY_*` environment
 variables, then the config file, then the built-in defaults. The file lives at
 `$XDG_CONFIG_HOME/slipway/config.yaml` (`~/.config/slipway/config.yaml`) unless `--config PATH`
-or `SLIPWAY_CONFIG` names another one. It is optional, and every key in it is optional:
+or `SLIPWAY_CONFIG` names another one. The default file is optional, and so is every key in it;
+a file named by `--config` or `SLIPWAY_CONFIG` must exist.
 
 ```yaml
 # ~/.config/slipway/config.yaml
@@ -622,15 +768,17 @@ color: auto              # auto, always or never
 theme: light             # dark or light
 editor: code --wait
 group: personal          # used when -n is not given
-networkTimeout: 60       # seconds before a git network command is killed
+networkTimeout: 60       # seconds before a git network command is killed, from 1 to 86400
 parallel: 4              # git network commands at once, from 1 to 16
 protocols: [ssh, https]  # transports git may use; add file for local mirrors
 ```
 
-`slipway config view` prints the values in effect with the file path as a comment on the
-first line; `slipway config path` prints the path alone. An unknown key or a wrong value is an
-error naming the file. `protocols` refuses `ext` and `fd` even when listed: `ext` runs a command
-named in the URL, and `fd` reads from file descriptors.
+The defaults are `color: auto`, `theme: dark`, `group: default`, `networkTimeout: 60`,
+`parallel: 4` and `protocols: [ssh, https]`; `editor` has none, so `edit` falls back to
+`VISUAL`, `EDITOR` and `vi`. `slipway config view` prints the values in effect with the file
+path as a comment on the first line, and `slipway config path` prints the path alone. An unknown
+key or a wrong value is an error naming the file. `protocols` refuses `ext` and `fd` even when
+listed: `ext` runs a command named in the URL, and `fd` reads from file descriptors.
 
 | Variable | Effect |
 | --- | --- |
@@ -640,7 +788,7 @@ named in the URL, and `fd` reads from file descriptors.
 | `SLIPWAY_THEME` | `dark` or `light`. |
 | `SLIPWAY_EDITOR` | Editor for `edit`; outranks the config key, `VISUAL` and `EDITOR`. |
 | `SLIPWAY_GROUP` | Group used when `-n` is not given. |
-| `SLIPWAY_NETWORK_TIMEOUT` | Seconds a git network command may run before it is killed. |
+| `SLIPWAY_NETWORK_TIMEOUT` | Seconds a git network command may run before it is killed, from 1 to 86400. |
 | `SLIPWAY_PARALLEL` | How many git network commands run at once, from 1 to 16. |
 | `SLIPWAY_PROTOCOLS` | Transports git may use in network commands, separated by colons: `ssh:https`. |
 | `SLIPWAY_DEBUG` | When non-empty, unexpected errors also print their class and backtrace. |
@@ -678,8 +826,9 @@ mode (the default) a non-empty `NO_COLOR` turns color off, then a non-empty `FOR
 are colored only when they are terminals. `SLIPWAY_COLOR` or the `color` key set the mode
 without a flag. Two themes exist, `dark` (default) and `light`, selected with `SLIPWAY_THEME`
 or the `theme` key. The palette follows kubecolor's defaults: bold headers, cycling column
-colors, green for `Clean`, yellow for the states that need a push or a commit, red for the
-ones that need attention.
+colors, green for `Clean`, yellow for the states that ask for a git action (`Detached` through
+`Behind` in the [STATUS table](#status-words)), red for `Missing`, `NotARepo`, `Unsafe` and
+`Conflicted`, and grey for `Unknown`.
 
 ## Shell completion
 
@@ -689,13 +838,16 @@ ones that need attention.
 # bash: load it in the current session, or add the line to ~/.bashrc
 eval "$(slipway completion bash)"
 # bash: install it for bash-completion to load on demand
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
 slipway completion bash > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/slipway"
 
 # zsh: put _slipway in a directory on your fpath (fpath+=~/.zfunc before compinit), or source it directly
+mkdir -p ~/.zfunc
 slipway completion zsh > ~/.zfunc/_slipway
 source <(slipway completion zsh)
 
 # fish
+mkdir -p ~/.config/fish/completions
 slipway completion fish > ~/.config/fish/completions/slipway.fish
 ```
 
@@ -704,8 +856,8 @@ the names of your projects and groups, asked from the program itself each time y
 
 ## Manual pages
 
-The pages ship with the gem. `slipway man` opens `slipway(1)` and `slipway man get` opens
-`slipway-get(1)` with `man(1)`, colored like the help page when color is on; if any of
+The pages are installed with slipway. `slipway man` opens `slipway(1)` and `slipway man get`
+opens `slipway-get(1)` with `man(1)`, colored like the help page when color is on; if any of
 `MANPAGER`, `MANROFFOPT`, `LESS_TERMCAP_md` or `GROFF_NO_SGR` is non-empty, your pager
 settings win and slipway passes nothing of its own.
 
@@ -740,44 +892,19 @@ man slipway-get
 
 ## Development
 
+```sh
+git clone https://github.com/hvpaiva/slipway.git
+cd slipway
+bin/setup
+bundle exec rake         # tests and RuboCop
+bundle exec rake check   # what CI runs
+```
+
 `bin/setup` installs the development dependencies and reports the tools it found.
-`bundle exec rake` runs the tests and RuboCop, the fast loop; `bundle exec rake check` runs
-what CI runs. CI (`.github/workflows/ci.yml`) runs the tasks of `rake check` as separate jobs,
-plus what a single machine cannot: the Ruby 3.4 and macOS entries of the test matrix and the
-completion scripts in real zsh and fish. It also lints the commits of every pull request and
-checks spelling, the workflows and the links in the guides. The tasks defined under `rakelib/`
-are development tasks and are not part of the gem.
-
-| Task | Runs |
-| --- | --- |
-| `rake test`, `test:unit`, `test:integration` | Minitest with Ruby warnings on: everything under `test/`, or one of `test/unit` and `test/integration`. |
-| `rake test:cov` | The unit and golden tests under SimpleCov, failing below the line and branch minimums set in the Rakefile. |
-| `rake test:shells` | The completion script tests with zsh and fish required, locally when both are installed, otherwise with docker in an image built from `ruby:4.0`. |
-| `rake rubocop` | RuboCop with the minitest, performance and rake plugins. |
-| `rake audit` | Updates the advisory database and checks `Gemfile.lock` with bundler-audit. |
-| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `lint:commits`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
-| `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help, completion and man page fixtures and removes the help and completion ones no command owns; `generate` runs the three and prints `git status` for `man`, `test/fixtures/golden` and `test/fixtures/man`. |
-| `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
-| `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
-| `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
-| `rake lint:commits` | `bin/lint-commits` over `origin/main..HEAD`; on `main`, or without `origin/main`, it says so and lints nothing. |
-| `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
-| `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
-| `rake release:guard_ci` | Aborts unless running inside GitHub Actions; `rake release`, `rake release:source_control_push` and `rake release:rubygem_push` run it before they tag or push. |
-| `rake github:setup` | Configures the GitHub repository (merge commits only, release environment, rulesets, security alerts, immutable releases, the `skip-changelog` label) through `gh api`, idempotently. |
-| `rake docs` | YARD documentation. |
-| `rake build`, `rake install` | The bundler gem tasks. |
-| `rake release` | The publish step `release.yml` runs through `rubygems/release-gem`; refused locally. Use `bin/release` instead. |
-
-`man/man1`, `test/fixtures/golden` and `test/fixtures/man` are generated: `rake generate`
-rewrites the pages from the command definitions, dating them from the newest release heading in
-`CHANGELOG.md` (no date while there is none), and refreshes the fixtures. CI regenerates the
-pages and fails when the committed ones are stale. The completion scripts are printed at run
-time and are not generated files.
 
 ## Other documents
 
-- [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, conventions and the release process.
+- [CONTRIBUTING.md](CONTRIBUTING.md) for the rake tasks, the conventions, the generated files and the release process.
 - [ARCHITECTURE.md](ARCHITECTURE.md) for a map of the code.
 - [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 - [SECURITY.md](SECURITY.md) for what slipway promises about the repositories it touches and how to report a vulnerability.

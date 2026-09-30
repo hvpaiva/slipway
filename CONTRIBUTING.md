@@ -1,12 +1,16 @@
 # Contributing
 
 Thanks for taking the time. This page covers the workflow; [ARCHITECTURE.md](ARCHITECTURE.md)
-explains where things live and how to add a verb, an option, a completer or a theme role.
+explains where things live and how to add to them.
 
 ## Setup
 
 You need Ruby 3.4 or newer (the repository pins 4.0.7 in `mise.toml`) and git 2.35 or newer.
-The optional checks use `shellcheck`, `groff`, `zsh`, `fish`, `docker`, `gh` and `typos`.
+With a git older than 2.41 the fetch tests and the README examples that run `fetch` or `sync`
+are skipped, so run the whole suite with 2.41 or newer. `rake check` also needs `shellcheck`
+and `groff`. The other tools are optional: `zsh` and `fish` for the completion tests (or
+`docker`, which `rake test:shells` uses in their place), `gh` for the maintainer tasks, and
+`typos`, `zizmor` and `lychee`, which CI runs outside `rake check`.
 
 ```sh
 git clone https://github.com/hvpaiva/slipway.git
@@ -16,9 +20,9 @@ bundle exec ruby -Ilib exe/slipway --help
 ```
 
 `bin/setup` runs `bundle install` and ends with a report: the Ruby it found against
-`mise.toml`, the git version (older than 2.35 is a hard failure, with the reason), and one line
-per optional tool saying which task skips or fails without it. `bin/console` opens IRB with the
-gem loaded.
+`mise.toml`, the git version (older than 2.35 is a hard failure, with the reason, and older
+than 2.41 names what skips), and one line per other tool saying which task skips or fails
+without it. `bin/console` opens IRB with the gem loaded.
 
 ## Tests and lint
 
@@ -38,12 +42,40 @@ tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3
 entries of the test matrix, and the `completions` job, which fails when zsh or fish is missing
 (run it with `bundle exec rake test:shells`, see [Testing completions](#testing-completions)).
 CI also lints the commits of every pull request against its base branch, with its title and
-body, and runs the spelling, workflow and link checks listed under
-[Checked by tools](#checked-by-tools).
+body, checks that a change under `lib/`, `exe/` or `man/` comes with a changelog line
+([Pull requests](#pull-requests)), and runs the spelling, workflow and link checks, which you
+can run before pushing:
 
-The individual tasks (`rake test`, `test:cov`, `rubocop`, `lint:man`, `lint:shell`, `audit`
-and the rest) are listed in the [README](README.md#development). Everything runs against
-temporary directories and repositories created for the test, never against your own registry.
+```sh
+typos
+zizmor .github/workflows
+lychee --config lychee.toml './*.md' './.github/**/*.md'
+```
+
+Everything runs against temporary directories and repositories created for the test, never
+against your own registry. The tasks defined under `rakelib/` are development tasks and are not
+part of the gem.
+
+| Task | Runs |
+| --- | --- |
+| `rake test`, `test:unit`, `test:integration` | Minitest with Ruby warnings on: everything under `test/`, or one of `test/unit` and `test/integration`. |
+| `rake test:cov` | The unit and golden tests under SimpleCov, failing below the line and branch minimums set in the Rakefile. |
+| `rake test:shells` | The completion script tests with zsh and fish required, locally when both are installed, otherwise with docker in an image built from `ruby:4.0`. |
+| `rake rubocop` | RuboCop with the minitest, performance and rake plugins. |
+| `rake audit` | Updates the advisory database and checks `Gemfile.lock` with bundler-audit. |
+| `rake check` | `rubocop`, `lint:shell`, `lint:man`, `lint:commits`, `test:cov`, `test:integration`, `generate:check`, `package:check` and `audit`, in that order; `CHECK_OFFLINE=1` skips the audit. |
+| `rake generate`, `generate:man`, `generate:golden` | `generate:man` renders the man pages, then `lint:man` lints them, then `generate:golden` rewrites the help, completion and man page fixtures and removes the help and completion ones no command owns; `generate` runs the three and prints `git status` for `man`, `test/fixtures/golden` and `test/fixtures/man`. |
+| `rake generate:check` | Renders the man pages into a temporary directory and fails when `man/man1` differs. |
+| `rake lint:man` | `groff -man -ww` over `man/man1` with an empty stderr. |
+| `rake lint:shell` | ShellCheck over `bin/setup` and the bash completion script. |
+| `rake lint:commits` | `bin/lint-commits` over `origin/main..HEAD`; on `main`, or without `origin/main`, it says so and lints nothing. |
+| `rake package:check` | Builds the gem, installs it into a temporary `GEM_HOME` and runs the installed `slipway` (`version`, `--help`, `man --path`, and ShellCheck over its bash completion). |
+| `rake release:verify` | Checks a release tag against `Slipway::VERSION` and `CHANGELOG.md`; run by the Release workflow. |
+| `rake release:guard_ci` | Aborts unless running inside GitHub Actions; `rake release`, `rake release:source_control_push` and `rake release:rubygem_push` run it before they tag or push. |
+| `rake github:setup` | Configures the GitHub repository (merge commits only, release environment, rulesets, security alerts, immutable releases, the `skip-changelog` label) through `gh api`, idempotently. |
+| `rake docs` | YARD documentation. |
+| `rake build`, `rake install` | The bundler gem tasks. |
+| `rake release` | The publish step `release.yml` runs through `rubygems/release-gem`; refused locally. Use `bin/release` instead. |
 
 ## Conventions
 
@@ -59,19 +91,33 @@ Each of these fails `rake check` or CI when it is broken.
   `require_relative`; a `require 'slipway/...'` line fails `test/unit/conventions_test.rb`.
 - Everything under `lib/`, `exe/`, `bin/`, `rakelib/` and the golden fixtures is ASCII.
 - No new runtime dependencies: the gemspec's `runtime_dependencies` must stay empty, and the
-  gem ships only `lib/`, `exe/`, `man/`, `README.md`, `CHANGELOG.md` and `LICENSE.txt`.
+  gem ships only `lib/`, `exe/`, `man/`, `README.md`, `CHANGELOG.md`, `LICENSE.txt` and
+  `.yardopts`, which rubydoc.info reads to render the API documentation.
 - Coverage stays above the line and branch minimums in the Rakefile, overall and per file.
 - Dependencies point one way: the command layer under `cli/` and the domain files never
   require commands, views, the runtime, the inspector or the pool, and `cli/` requires one file
   outside itself (`cli/errors.rb` requires `error.rb`). [ARCHITECTURE.md](ARCHITECTURE.md#layers)
   has the full rule.
-- `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer,
-  `Output.warning` is the only place that writes a `warning:` line, and nothing under `lib/`
-  writes to stdout or stderr except `cli/context.rb`.
+- Only `git/runner.rb` and `editor.rb` start a process (`system`, `spawn`, `exec`, backticks,
+  `%x` or `popen`), only `yaml.rb` and `manifest.rb` emit YAML, only `Output.warning` writes a
+  `warning:` line, and nothing under `lib/` writes to stdout or stderr except
+  `cli/context.rb` (`test/unit/conventions_test.rb`). `reset --keep` is the only reset slipway
+  runs and `Rollback` its only caller (`test/unit/reset_rule_test.rb`).
+- Every file under `lib/` belongs to exactly one layer
+  (`test_every_file_belongs_to_exactly_one_layer`) and loads on its own
+  (`test/unit/require_graph_test.rb`), and a file under `test/` that defines tests ends in
+  `_test.rb`, so the test tasks run it (`test_test_files_that_define_tests_end_in_test_rb`).
+- Constants that two parts of the code share stay in step: the variable each setting reads in
+  the config, the runner and the editor, the theme role of every STATUS and result word, and
+  the blocker sentences `Plan` names (`test/unit/seams_test.rb`).
+- `Git::Fake`, which the command tests run against, answers every question `Git::Repository`
+  answers, with the same parameters (`test/unit/git/fake_test.rb`).
 - The man page ENVIRONMENT section and the README variable table list every variable the code
-  reads except `HOME` and `PATH`, the README tables for STATUS words, exit statuses and rake
-  tasks match the code, and the README configuration example sets every config key and no
-  other.
+  reads except `HOME` and `PATH`. The README tables of STATUS words, drift, blockers, exit
+  statuses and the results of `fetch`, `sync` and `rollout undo`, the reasons a fetch gives,
+  the fields a field selector supports and the task table above match the code, the STATUS,
+  drift and blocker tables say what `--help` says, and the README configuration example sets
+  every config key and no other.
 - Every console example in the README prints what the executable prints
   ([README examples](#readme-examples)).
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
@@ -86,6 +132,11 @@ No tool checks these; a reviewer does.
 
 - Comments explain why the code is the way it is, never what it does. A comment that restates
   the code is removed in review.
+- A class or method gets a comment above it when a caller cannot read its contract off the name
+  and the signature: what it returns, what it raises, whether it may run on several threads.
+  Most need none. YARD renders these comments as Markdown (`.yardopts`), so a parameter name, a
+  command, a path or a literal value is written in backticks, as in `` `group` ``, while the
+  names of classes, constants and methods are left bare.
 - Every change ships with tests. A bug fix starts with a test that fails; a new option or verb
   gets unit tests in `test/unit/commands` and, when it prints something, an exact-output
   assertion. The coverage minimums are the mechanical floor; review judges whether the tests
@@ -98,8 +149,9 @@ No tool checks these; a reviewer does.
   writes, runs or contacts, or to which releases get fixes, edits [SECURITY.md](SECURITY.md).
   The README's examples show the output of a real run. The `commits` job only checks that the
   changelog was touched, the generated-files comparison that the man pages match the command
-  text, and `test/unit/readme_test.rb` that the README tables and configuration example match
-  the code; review judges whether the text is complete and still true.
+  text, and `test/unit/readme_test.rb` and `test/unit/contributing_test.rb` that the README
+  tables, the configuration example and the task table match the code; review judges whether
+  the text is complete and still true.
 - User-visible text follows kubectl's wording: `project/hldr created`, `No resources found in
   work group.`, `error: projects "hldr" not found`. When kubectl has a phrase for the situation,
   use it. Everything is in English. The golden fixtures freeze that wording, so every change to
@@ -162,9 +214,10 @@ story lacks, extend the story. A `$` line runs slipway without a shell, so a pip
 redirection, a variable, or an unquoted `~` or `!` fails with the line number; quote paths as
 the README does, and a `!key` selector as `'!kind'`, since bash expands `!kind` from its history.
 A block that cannot run in the sandbox, such as one that needs a real remote, goes right under a
-`<!-- not run: REASON -->` line, and its test is skipped with that reason; a block that runs
-`fetch` is skipped with git older than 2.41, which fetches without listing the refs that moved.
-`sh` blocks hold commands without their output and are not run.
+`<!-- not run: REASON -->` line, and its test is skipped with that reason. A block that runs
+`fetch` or `sync` is skipped with git before 2.41, which cannot tell unchanged from fetched, so
+every fetch that succeeds reads fetched, without the refs that moved. `sh` blocks hold commands
+without their output and are not run.
 
 ## Testing completions
 
@@ -194,9 +247,11 @@ docker, it stops and tells you what to install.
 
 - Conventional Commits in English and the imperative: `feat: add the label verb`,
   `fix: prune the group directory after the last delete`, `docs:`, `test:`, `refactor:`,
-  `chore:`, `ci:`. An optional scope is allowed, as in `chore(deps): bump rubocop`. The subject
-  git writes for a revert, `Revert "<subject>"` (or `Reapply "<subject>"` for a revert of a
-  revert), is accepted when the quoted subject follows these rules.
+  `chore:`, `ci:`. The summary starts with a lowercase letter. An optional scope is allowed, as
+  in `chore(deps): bump rubocop`, and a `!` before the colon marks a breaking change, as in
+  `feat!: rename the group key`. The subject git writes for a revert, `Revert "<subject>"` (or
+  `Reapply "<subject>"` for a revert of a revert), is accepted when the quoted subject follows
+  these rules.
 - One change per commit, with its tests and generated files. No `WIP`, `fixup!`, `amend!` or
   `squash!` commits in a pull request, and no summary that starts with `wip`.
 - Commits are signed by their author (`git commit -S`, with an SSH or GPG key registered on
@@ -223,6 +278,10 @@ them; GitHub signs the merge commit. `rake check` runs the same script over
   template asks for both.
 - `bundle exec rake check` is expected green before you open it; the required checks are the
   same tasks.
+- The `main` ruleset requires a pull request to be up to date with `main` before it merges.
+  Update yours with GitHub's "Update branch" button or `git merge origin/main`, which
+  `bin/lint-commits` accepts as a merge commit, or rebase your own branch and push it with
+  `git push --force-with-lease`.
 - User-visible changes get a line under `## [Unreleased]` in `CHANGELOG.md`. The `commits` job
   fails a pull request that touches `lib/`, `exe/` or `man/` without touching the changelog,
   unless the pull request carries the `skip-changelog` label: that is the explicit exception,
@@ -323,6 +382,7 @@ with exactly these fields:
 
 | Field | Value |
 | --- | --- |
+| Gem name | `slipway` |
 | Repository owner | `hvpaiva` |
 | Repository name | `slipway` |
 | Workflow filename | `release.yml` |

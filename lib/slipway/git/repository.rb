@@ -7,6 +7,13 @@ require_relative 'runner'
 
 module Slipway
   module Git
+    # Every git command slipway runs, asked of one registered path at a time. Each method runs
+    # git through the Runner, under the local deadline or, for #fetch and the moves, the network
+    # profile, and raises a Git::Error subclass when git fails: MissingPath, NotARepository,
+    # UnsafeRepository, NotInstalled or Timeout for the failures it names, a plain Error with
+    # git's first line for the rest. It keeps no state about a repository, so one instance
+    # serves every worker of a run; all it remembers is whether git predates
+    # `fetch --porcelain`.
     class Repository
       include FastForwarding
       include RollingBack
@@ -98,6 +105,11 @@ module Slipway
         result.success? ? result.out.chomp : nil
       end
 
+      # Fetches from the remote git picks. Returns a FetchResult whose `updates` lists the refs
+      # that moved, empty when none did, or is nil when git predates 2.41 and cannot tell.
+      # Raises LocalUpstream, before anything is contacted, for a branch that tracks a local one,
+      # and AuthRequired, ProtocolNotAllowed, Timeout, NotInstalled or MissingPath when the fetch
+      # fails for those reasons.
       def fetch(path, prune:)
         raise LocalUpstream, File.expand_path(path) if local_upstream?(path)
 
@@ -126,8 +138,8 @@ module Slipway
         operation(directory, git_paths(directory, *IN_PROGRESS.keys, SEQUENCER_TODO))
       end
 
-      # How far HEAD is from +revision+, a full object name, or nil when the repository holds no
-      # commit by that name. +tracking+ says the branch has an upstream that exists, and a HEAD
+      # How far HEAD is from `revision`, a full object name, or nil when the repository holds no
+      # commit by that name. `tracking` says the branch has an upstream that exists, and a HEAD
       # behind the revision then also learns how many of its commits the upstream lacks.
       def distance(path, revision, tracking: false)
         unless OBJECT_NAME.match?(revision)
@@ -142,7 +154,7 @@ module Slipway
         Distance.new(ahead:, behind:, off_upstream:)
       end
 
-      # The moves git logged for +branch+, newest first. Git answers "bad revision" for a branch
+      # The moves git logged for `branch`, newest first. Git answers "bad revision" for a branch
       # without commits, and logs nothing under core.logAllRefUpdates=false unless a log exists.
       def reflog(path, branch)
         result = run(path, *REFLOG_ARGS, "refs/heads/#{branch}", '--',
@@ -150,7 +162,7 @@ module Slipway
         result.success? ? Reflog.parse(result.out) : []
       end
 
-      # How many commits +to+ reaches that +from+ does not, both full object names, or nil when the
+      # How many commits `to` reaches that `from` does not, both full object names, or nil when the
       # repository lacks either.
       def commits_between(path, from, to)
         [from, to].each do |name|
@@ -192,7 +204,7 @@ module Slipway
         raise classify(directory, result, network:)
       end
 
-      # The counts rev-list prints for +range+, or none when it names an object the repository lacks.
+      # The counts rev-list prints for `range`, or none when it names an object the repository lacks.
       def offline_count(path, range, *options)
         result = run(path, *OFFLINE_REV_LIST, *options, '--count', range,
                      accept: ->(failed) { failed.err.include?(UNKNOWN_REVISION) }, env: OFFLINE_READ)
@@ -216,7 +228,7 @@ module Slipway
         paths.map { File.expand_path(it, directory) }
       end
 
-      # +paths+ holds the path of each IN_PROGRESS marker, then of the sequencer's todo.
+      # `paths` holds the path of each IN_PROGRESS marker, then of the sequencer's todo.
       def operation(directory, paths)
         *markers, todo = paths
         IN_PROGRESS.values.zip(markers).find { |_, marker| File.exist?(marker) }&.first ||

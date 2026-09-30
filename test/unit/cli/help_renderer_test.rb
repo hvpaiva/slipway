@@ -126,6 +126,18 @@ class HelpRendererTest < Minitest::Test
     refute_includes @plain.command(*@fixture.registry.resolve(%w[get])), 'Exit Status:'
   end
 
+  def test_glossaries_follow_the_description_with_their_intro_and_aligned_terms
+    words = Slipway::CLI::Glossary.new(title: 'Words', intro: 'The first that holds.',
+                                       entries: { 'Clean' => 'Nothing to do.', 'Missing' => 'No directory.' })
+    plain = Slipway::CLI::Glossary.new(title: 'Columns', entries: { 'NAME' => 'The name.' })
+    command = Slipway::CLI::Command.new(name: 'x', summary: 'X', description: 'Show.', glossaries: [words, plain],
+                                        exit_statuses: { '0' => 'Shown.' })
+
+    assert_includes @plain.command(command, %w[x]),
+                    "Show.\n\nWords:\n  The first that holds.\n\n  Clean     Nothing to do.\n  " \
+                    "Missing   No directory.\n\nColumns:\n  NAME   The name.\n\nExit Status:\n"
+  end
+
   def test_color_paints_headers_flags_and_examples_but_keeps_alignment_padding_outside
     colored = renderer(Slipway::CLI::Style.for('always', tty: false, env: {}))
               .command(*@fixture.registry.resolve(%w[get]))

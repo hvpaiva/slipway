@@ -7,10 +7,10 @@ require_relative 'pool'
 require_relative 'state'
 
 module Slipway
-  # +status+, +commit+ and +remote+ are nil when git could not answer; +error+ then holds the
-  # Git error and +state+ its word. +fetched_at+ is nil then too, and for a repository no fetch
-  # has reached. +operation+ is the merge, rebase or other operation in progress, asked only of a
-  # project the plan would fast-forward. +pin+ is how far HEAD is from spec.revision, a
+  # `status`, `commit` and `remote` are nil when git could not answer; `error` then holds the
+  # Git error and `state` its word. `fetched_at` is nil then too, and for a repository no fetch
+  # has reached. `operation` is the merge, rebase or other operation in progress, asked only of a
+  # project the plan would fast-forward. `pin` is how far HEAD is from spec.revision, a
   # Git::Distance or nil when the repository lacks that commit, asked only of a pinned project
   # whose HEAD is elsewhere.
   Inspection = Data.define(:project, :status, :commit, :remote, :fetched_at, :state, :error, :operation, :pin) do
@@ -29,7 +29,7 @@ module Slipway
     end
   end
 
-  # A leading ~ in a project path is +home+, the HOME of the environment the command runs in,
+  # A leading ~ in a project path is `home`, the HOME of the environment the command runs in,
   # so a manifest written as ~/dev/x means the same thing whoever runs it.
   class Inspector
     # One warning per distinct reason a project came back Unknown: the message without its

@@ -30,7 +30,7 @@ module Slipway
       # Dry-run projects that no fetch has reached, counted as they settle.
       attr_reader :unfetched
 
-      # +group+ is the one a command without -n selects, so the undo command can leave it out; nil
+      # `group` is the one a command without -n selects, so the undo command can leave it out; nil
       # when -n was typed, so every undo command names its group.
       def initialize(runtime, fetcher, dry_run:, group:)
         @runtime = runtime

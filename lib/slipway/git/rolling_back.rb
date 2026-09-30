@@ -17,7 +17,7 @@ module Slipway
         # case-insensitive file system the file in the way may differ in case.
         LITERAL = ':(literal,icase)'
 
-        # Moves the checked-out branch back to +to+, a full object name of a commit HEAD contains,
+        # Moves the checked-out branch back to `to`, a full object name of a commit HEAD contains,
         # only when @{upstream} holds every commit the move drops. Raises Blocked, or a subclass for
         # git's own refusal, and the branch then stays where it was, or WriteTimeout as the
         # fast-forward does.
@@ -70,7 +70,7 @@ module Slipway
           raise WouldOverwrite, directory unless others.out.empty?
         end
 
-        # The entries on disk git would have to replace to write +path+: the path itself, and any
+        # The entries on disk git would have to replace to write `path`: the path itself, and any
         # parent directory that is a file or a symbolic link instead. ls-files then tells whether
         # git tracks them.
         def in_the_way(directory, path)

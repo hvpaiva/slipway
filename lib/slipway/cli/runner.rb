@@ -22,7 +22,7 @@ module Slipway
       COLOR_FLAG = "--#{Globals::COLOR.long}".freeze
       COLOR_INLINE = "#{COLOR_FLAG}=".freeze
 
-      # +color+ and +theme+ are the fallbacks used when neither a flag nor the environment
+      # `color` and `theme` are the fallbacks used when neither a flag nor the environment
       # decides, which is where the configuration file values arrive.
       def initialize(registry, context, color: nil, theme: nil)
         @registry = registry

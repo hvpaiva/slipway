@@ -6,7 +6,7 @@ require_relative 'labels'
 module Slipway
   # A kubectl label selector.
   class Selector
-    # +values+ is sorted and holds one value for = and !=, none for existence checks.
+    # `values` is sorted and holds one value for = and !=, none for existence checks.
     Requirement = Data.define(:key, :operator, :values) do
       def match?(labels)
         case operator

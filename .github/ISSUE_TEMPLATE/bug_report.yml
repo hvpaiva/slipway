@@ -28,7 +28,7 @@ body:
       description: Start from an empty registry if you can (SLIPWAY_DATA_HOME=$(mktemp -d)) and list every command.
       placeholder: |
         1. slipway create group work
-        2. slipway create project api --path ~/work/api -n work
+        2. slipway create project api --path '~/work/api' -n work
         3. slipway get projects -n work
     validations:
       required: true
@@ -41,10 +41,24 @@ body:
     validations:
       required: true
   - type: input
+    id: git
+    attributes:
+      label: git version
+      description: The output of `git --version`. What fetch, sync and the STATUS words report depends on it.
+      placeholder: git version 2.51.0
+    validations:
+      required: true
+  - type: input
+    id: ssh
+    attributes:
+      label: ssh version
+      description: The output of `ssh -V`, if the problem is about fetch, sync or a remote that asks for a password.
+      placeholder: OpenSSH_10.0p2, OpenSSL 3.5.1 1 Jul 2025
+  - type: input
     id: os
     attributes:
       label: Operating system and shell
-      placeholder: Arch Linux, bash 5.3; git 2.55.0
+      placeholder: Arch Linux, bash 5.3
     validations:
       required: true
   - type: textarea
