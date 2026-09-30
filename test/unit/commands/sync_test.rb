@@ -148,6 +148,8 @@ class SyncTest < Minitest::Test
       assert_equal [0, "project/hldr unchanged\n", ''], run_sync('project/hldr', runtime:)
       assert_equal [2, '', "error: cannot sync a group\nSee 'slipway sync --help' for usage.\n"],
                    run_sync('group/default', runtime:)
+      assert_equal [2, '', "error: cannot sync a project by name across all groups\n" \
+                           "See 'slipway sync --help' for usage.\n"], run_sync('hldr', '-A', runtime:)
       assert_equal [0, '', "No resources found in work group.\n"], run_sync('-n', 'work', runtime:)
     end
   end

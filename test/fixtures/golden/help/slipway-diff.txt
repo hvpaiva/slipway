@@ -26,7 +26,7 @@ Examples:
 
 Options:
   -l, --selector EXPR   Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
-  -A, --all-groups      If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
+  -A, --all-groups      If present, compare every project across all groups with its manifest. The group in the current configuration is ignored even if specified with --group.
 
 Usage:
   slipway diff [NAME... | project/NAME...] [flags]

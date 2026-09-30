@@ -47,6 +47,7 @@ module Slipway
         raise CLI::UsageError, "cannot #{verb} a group" unless kind == Resources::PROJECTS
 
         names.each { check_name(kind, it) }
+        check_names(kind, across: "cannot #{verb} a project by name across all groups") unless names.empty?
         names
       end
 
@@ -144,10 +145,11 @@ module Slipway
       end
 
       # kubectl refuses a label or field selector or --all-namespaces next to explicit names.
-      def check_names(kind)
+      # +across+ replaces kubectl's "retrieved" for a verb that acts on the projects it names.
+      def check_names(kind, across: NAMES_WITH_ALL_GROUPS)
         selectors = @opts.values_at(:selector, :field_selector)
         raise CLI::UsageError, NAMES_WITH_SELECTOR unless selectors.all? { it.to_s.strip.empty? }
-        raise CLI::UsageError, NAMES_WITH_ALL_GROUPS if kind.namespaced? && all_groups?
+        raise CLI::UsageError, across if kind.namespaced? && all_groups?
       end
     end
   end

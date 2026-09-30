@@ -114,10 +114,11 @@ class DiffTest < Minitest::Test
 
   def test_groups_and_names_across_groups_are_usage_errors
     with_runtime do |runtime|
-      status, _, err = diff(runtime, 'group/work')
+      hint = "See 'slipway diff --help' for usage.\n"
 
-      assert_equal [2, "error: cannot diff a group\nSee 'slipway diff --help' for usage.\n"], [status, err]
-      assert_equal 2, diff(runtime, 'hldr', '-A').first
+      assert_equal [2, '', "error: cannot diff a group\n#{hint}"], diff(runtime, 'group/work')
+      assert_equal [2, '', "error: cannot diff a project by name across all groups\n#{hint}"],
+                   diff(runtime, 'hldr', '-A')
     end
   end
 

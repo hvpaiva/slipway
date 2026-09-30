@@ -64,6 +64,21 @@ the first line of git's stderr, redacted and cut to 200 characters. `spec.remote
 from `--remote` or a manifest, whenever redact would change it, so json and yaml print it as
 stored.
 
+## Safety promises
+
+[SECURITY.md](SECURITY.md#safety-promises) lists what slipway promises about the git it runs,
+the writes to a working tree, the environment git gets and what reaches the terminal. A few
+places keep those promises: `Git::Runner` spawns every git process and sets its environment;
+`Git::Repository` holds every git argv, its `FastForwarding` part the fast-forward, which only
+`Sync::Executor` and `Rollback` call, and its `RollingBack` part the reset, which only
+`Rollback` calls; `Manifest`, through `Git::Url` and `Git::BranchName`, checks each field that
+can reach git before a manifest enters the store; `Output.plain`, `CLI::Style.plain` and
+`Git::Url.redact` treat what is printed; and `Plan` and the git errors quote each word they put
+into a command printed for the user to run. A change there keeps every promise or updates
+SECURITY.md in the same pull request. `test/unit/conventions_test.rb` keeps the spawn and the
+warning line in their one place, and `test/unit/reset_rule_test.rb` keeps the reset to its one
+form and its one caller.
+
 ## One definition, four outputs
 
 A `CLI::Command` is plain data: name, summary, description, section, examples, positionals,
@@ -120,6 +135,15 @@ value differs), as an SGR parameter string or an Array for roles cycled by index
 `context.paint(:role, text)` or `context.style.paint_cycle(:role, index, text)`. The theme test
 holds a copy of both presets and `seams_test.rb` checks that every `State::ROLES` entry exists
 in both themes.
+
+**A sync action.** Name the drift in `Drift` (its type in `TYPES`, and in `MOVES` when it
+changes a working tree) with its message and, for a refusal, a `BLOCKERS` sentence built with
+`Drift.blocker`. `Plan::Planner` decides when the action applies and which obstacles block it;
+it reads only the inspection it is given, so its tests need no repository. Only
+`Sync::Executor` performs the action, through a `Git::Repository` method, inside
+`Fetcher#exclusively` and with its own reflog action. The action reports a result word in
+`Commands::Sync::ROLES` whose role exists in both themes. It keeps every promise in
+[SECURITY.md](SECURITY.md#safety-promises), or updates that list in the same pull request.
 
 ## Testing
 
