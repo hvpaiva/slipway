@@ -118,7 +118,7 @@ module Slipway
           *options_section(command.options),
           *tagged_section('EXIT STATUS', command.exit_statuses),
           *examples_section(command.examples),
-          *see_also(related(path))
+          *see_also(related(command, path))
         ]
       end
 
@@ -205,9 +205,10 @@ module Slipway
          pages.map { Roff.reference(page_name(it)) }.join(",\n")]
       end
 
-      # A command page points back at the root page and, when nested, at its group page.
-      def related(path)
-        [[], *(path.size > 1 ? [path[0...-1]] : [])]
+      # A command page points back at the root page and, when nested, at its group page; a group
+      # page also names the pages of its commands.
+      def related(command, path)
+        [[], *(path.size > 1 ? [path[0...-1]] : []), *command.visible_subcommands.map { [*path, it.name] }]
       end
 
       def see_also(paths)

@@ -37,13 +37,15 @@ class ManpageTest < Minitest::Test
                  @manpage.page(%w[get]).lines[1].chomp
   end
 
-  def test_group_page_lists_subcommands_and_nested_page_points_back_at_its_group
+  def test_group_page_lists_and_names_its_commands_and_nested_page_points_back_at_its_group
     group = @manpage.page(%w[config])
     nested = @manpage.page(%w[config view])
 
     assert_includes group, ".SH COMMANDS\n.TP 6\n\\fBview\\fR\nPrint the effective configuration\n"
     refute_includes group, '.SS'
     assert_includes group, ".SH SYNOPSIS\n.SY \"slipway config\"\n.I COMMAND\n.RI [ flags ]\n.YS\n"
+    assert_equal ".SH \"SEE ALSO\"\n.BR slipway (1),\n.BR slipway\\-config\\-view (1),\n" \
+                 ".BR slipway\\-config\\-path (1)\n", group[/\.SH "SEE ALSO".*/m]
     assert_equal ".SH \"SEE ALSO\"\n.BR slipway (1),\n.BR slipway\\-config (1)\n", nested[/\.SH "SEE ALSO".*/m]
   end
 
