@@ -123,7 +123,7 @@ OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
 | `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group; `-o yaml` prints the manifest. |
 | `create project --from-dir DIR` | Register every git repository at or under a directory, with its origin URL. |
 | `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
-| `delete TYPE NAME...` | Remove registrations and print `project "hldr" deleted from personal group`; the repository on disk is not touched. Deleting a group removes the registrations of its projects. `--ignore-not-found` turns a name that does not exist into a success. |
+| `delete TYPE NAME...` | Remove registrations, a deleted group's projects included, never the repositories on disk; prints `project "hldr" deleted from personal group`. `--ignore-not-found` makes an unknown name a success. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
 | `explain TYPE[.FIELD...]` | Print the fields of a manifest, or of one field, with the type, rule and default of each; `--recursive` prints the whole tree. |
@@ -301,7 +301,7 @@ projects are listed, as soon as it and every project before it are done:
 | --- | --- |
 | `fetched` | The remote moved refs. Up to five follow, then `and N more`: `origin/main a1b2c3d..e4f5a6b` for a ref that moved, `origin/feature d09a085 (new)` for a new one and `origin/feature deleted (was d09a085)` for one `--prune` removed. Tags appear under their bare name. |
 | `unchanged` | The remote answered and had nothing new. |
-| `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (`NoRemote`), or its branch tracks a local branch (`LocalUpstream`). |
+| `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), there is no upstream, no origin and no single remote (`NoRemote`), or the branch tracks a local branch (`LocalUpstream`). |
 | `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
 | `denied (AuthRequired)` | Git needed a password, a passphrase or a host key. Run the `git -C PATH fetch` printed below it once in a terminal to see what git needs. |
 | `failed (Reason)` | The fetch ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). |
@@ -359,10 +359,10 @@ every promise slipway makes about the repositories it touches.
 | `fast-forwarded` | The branch moved. For a move onto the upstream, the detail names the commits it gained, as `main a1b2c3d..e4f5a6b (3 commits)`, and the command that undoes the move. |
 | `fetched` | The fetch of a `FetchOnly` project moved refs; the refs follow as in `fetch`. |
 | `unchanged` | The branch stayed where it was and nothing blocked it; the fetch may still have moved remote-tracking refs. |
-| `skipped (Reason)` | The branch stayed where it was: a [blocker](#drift) stopped it, git refused the fast-forward (`WouldOverwrite` for untracked files in the way, `WouldLoseChanges` for local changes `git status` does not show, `Busy` for a lock another git process holds on the index, `HEAD` or the branch, `NotFastForward` for a branch that gained a commit since the check), or the project was skipped before its fetch as in `fetch`. |
+| `skipped (Reason)` | The branch stayed where it was: the project was skipped as in `fetch`, a [blocker](#drift) stopped it, or git refused the fast-forward for untracked files in the way (`WouldOverwrite`), changes `git status` hides (`WouldLoseChanges`), another git process's lock (`Busy`) or a commit the branch gained since the check (`NotFastForward`). |
 | `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
 | `denied (AuthRequired)` | The fetch or the fast-forward needed a password, a passphrase or a host key, as in `fetch`. |
-| `failed (Reason)` | The fetch or the fast-forward ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). A fast-forward stopped at the deadline leaves the branch where it was, but the files git had already written stay in the working tree, and the detail names the command that lists them. |
+| `failed (Reason)` | The fetch or the fast-forward failed as in `fetch` (`Timeout`, `ProtocolNotAllowed`, `Unknown`). A fast-forward stopped at `networkTimeout` leaves the branch where it was but keeps the files git wrote; the detail names the command that lists them. |
 
 A difference sync leaves alone, such as a `Remote` or a `Branch` [drift](#drift), and a branch
 that `FetchOnly` keeps behind follow as detail lines. A project pinned by `spec.revision` is
