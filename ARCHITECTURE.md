@@ -13,7 +13,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `schema.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Schema`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
 | Git adapter | `git.rb`, `git/`, `state.rb` | `Git::Runner`, `Git::Repository` with its `FastForwarding` and `RollingBack` parts, the answers (`Status` and `Porcelain`, `Commit`, `FetchResult`, `Reflog`, `Distance`, `FastForward`, `MoveBack`), `Url`, `BranchName`, the errors in `git/errors.rb`, `Git::Fake`, and `State`. |
 | Reconciliation | `drift.rb`, `plan.rb`, `rollout.rb` | `Drift`, `Plan` and `Rollout::History`. |
-| Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
+| Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
 | Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
 | Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Sync::Executor`, `Rollback` and `Pool`. |
 
@@ -30,8 +30,8 @@ its methods to the repository's.
 description, default, rule and whether it is required. The reader in `Manifest` refuses any field
 `Schema` does not name and takes its defaults and the words of its refusals from there; `Names`,
 `Labels`, `Git::Url` and `Git::BranchName` check their fields with the rules `Schema` quotes.
-The README table of a project's spec gives the same meanings and defaults, which
-`test/unit/readme_test.rb` compares in both directions.
+`explain` prints it, and the README table of a project's spec gives the same meanings and
+defaults, which `test/unit/readme_test.rb` compares in both directions.
 
 `Plan.for` reads one `Inspection` into the drift sync would resolve, the drift it leaves alone
 and the blockers that stop it. It runs no git and reads no file, so `get -o wide`, `describe`,
@@ -269,9 +269,12 @@ kind and one that takes only project names to projects, and fails when a `Comman
 subclass is reachable from `VERBS` neither directly nor as a subcommand of a group. Print results
 through `result_line` (`project/hldr created`), or through `Commands::Results` for a verb that
 prints one outcome per repository, and warnings through `Output.warning`, and raise
-`Slipway::Error` or `CLI::UsageError` rather than writing to stderr. Run `rake generate` so the
-new man page and help fixture land in `man/man1` and `test/fixtures/golden`, add the verb's row
-to the README Usage table and a line to `CHANGELOG.md`. A new file outside the directories
+`Slipway::Error` or `CLI::UsageError` rather than writing to stderr. A verb that reads nothing
+from the machine, as `explain` reads only `Schema`, skips `Base` and the runtime, so a broken
+configuration file cannot stop it: its class defines `self.command(factory)` and its handler
+responds to `call(context, args, opts)` and to `kinds`. Run `rake generate` so the new man page
+and help fixture land in `man/man1` and `test/fixtures/golden`, add the verb's row to the README
+Usage table and a line to `CHANGELOG.md`. A new file outside the directories
 `conventions_test.rb` lists goes into exactly one of its layer lists, and every file under `lib/`
 must load on its own.
 
@@ -290,6 +293,15 @@ The directive covers the whole answer, so such a completer filters by the word i
 its values only when a match goes on. `Options.name_positional` shows the pattern for values
 that need the store: build the runtime through the factory, and return `[]` on any error,
 because a completion must never fail in the shell.
+
+**A manifest field.** Add a `Schema::Field` under its kind in `Schema`, with its type,
+description, `rule` or `enum`, default and whether it is required; until then the reader refuses
+it as unknown. Add the member to `Project` or `Group` and to its `to_manifest`, in the order the
+schema gives, which `test/unit/store/schema_test.rb` compares, and read it in the reader in
+`Manifest`, with the default and the words of its refusals taken from the field. A value that can
+reach git goes through a check such as `Git::Url` or `Git::BranchName`, whose rule the field
+quotes. `explain` prints the field as it is; one in a project's spec also gets its row in the
+README table, which `readme_test.rb` holds to the schema.
 
 **A theme role.** Add the role to `CLI::Theme::DARK` (and to the `LIGHT` merge when the light
 value differs), as an SGR parameter string or an Array for roles cycled by index. Paint with

@@ -15,6 +15,7 @@ require_relative 'commands/apply'
 require_relative 'commands/delete'
 require_relative 'commands/edit'
 require_relative 'commands/label'
+require_relative 'commands/explain'
 require_relative 'commands/fetch'
 require_relative 'commands/diff'
 require_relative 'commands/sync'
@@ -39,7 +40,7 @@ module Slipway
                        "is given, and -A covers every group.\n\n " \
                        "#{Options::TYPES_SENTENCE}".freeze
     # Help lists the verbs in this order within their sections.
-    VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Fetch, Diff, SyncCommand, RolloutCommand,
+    VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Explain, Fetch, Diff, SyncCommand, RolloutCommand,
              ConfigCommand, APIResources].freeze
 
     def self.registry(factory)

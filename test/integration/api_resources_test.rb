@@ -12,8 +12,8 @@ class APIResourcesIntegrationTest < Minitest::Test
   TABLE
   WIDE = <<~TABLE
     NAME       SHORTNAMES   KIND      GROUPED   VERBS
-    groups     <none>       Group     false     apply,create,delete,describe,edit,get,label
-    projects   proj         Project   true      apply,create,delete,describe,diff,edit,fetch,get,label,rollout,sync
+    groups     <none>       Group     false     apply,create,delete,describe,edit,explain,get,label
+    projects   proj         Project   true      apply,create,delete,describe,diff,edit,explain,fetch,get,label,rollout,sync
   TABLE
 
   def test_prints_the_resource_types_in_each_format
