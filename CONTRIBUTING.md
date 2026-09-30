@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for taking the time. This page covers the workflow; [ARCHITECTURE.md](ARCHITECTURE.md)
-explains where things live and how to add a verb, an option, a completer or a theme role.
+explains where things live and how to add to them.
 
 ## Setup
 

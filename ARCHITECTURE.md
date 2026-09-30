@@ -7,15 +7,36 @@ the man pages; this file explains where things live and why they are shaped the 
 
 Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime gem dependencies.
 
-| Layer | Directory | What lives there |
+| Layer | Files | What lives there |
 | --- | --- | --- |
-| Command layer | `cli/` | `Registry`, `Command`, `Option`, `Positional`, `Example` (the data model), `Globals` (the options every command accepts), `Parser` (OptionParser adapter), `Validator`, `Runner` (front controller), `HelpRenderer`, `Completer` and `CompletionScripts`, `Manpage`, `Builtins`, `Context`, `Style` and `Theme`, `UsageError`. It knows nothing about projects or git. |
-| Domain | `error.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error` (the base of every failure reported to the user), the one YAML writer, `Project` and `Group` values, their YAML form, the on-disk store, name and label rules, the label and field selector grammars, XDG paths, the config file, the editor launcher and the search for repositories under a directory that `create project --from-dir` registers. |
-| Git adapter | `git/`, `state.rb` | `Git::Runner` is the one place that spawns git; `Git::Repository` asks the questions slipway needs (status, last commit, remote, time of the last fetch, whether the branch tracks a local one, whether a fetch without a remote argument has one to use, the git directory its worktrees share, the operation in progress, how far HEAD is from a pinned revision and how many of its commits the upstream lacks, the moves the branch reflog records and how many commits lie between two of them) and fetches with its own timeout, a no-prompt environment and only the transports the `protocols` setting lists; its `FastForwarding` part fast-forwards the checked-out branch under the same profile, one of the two writes to a working tree, raising `Git::Blocked` when the repository is in no state to move or git refuses, and its `RollingBack` part moves the branch back with `git reset --keep`, the one reset slipway runs, only to a commit HEAD contains and only when the upstream holds every commit the move drops; `Git::Status`, `Git::Commit`, `Git::FetchResult` and `Git::Reflog` parse the answers, `Git::Distance` holds how far HEAD is from a commit, and `Git::FastForward` and `Git::MoveBack` report a move; `Git::Url` validates a remote URL and redacts the credentials in one; `Git::BranchName` validates a branch name; `Git::Fake` stands in for tests. `State` reduces a status or an error to the one STATUS word. |
-| Reconciliation | `drift.rb`, `plan.rb`, `rollout.rb` | `Drift` holds the drift types (Missing, Remote, Branch, Revision, Behind) and the blockers with their fixed sentences. `Plan.for` reads one `Inspection` into the drift sync would resolve, the drift it leaves alone and the blockers that stop it; a `spec.revision` pin replaces the upstream as where the branch should be, reached only forward and only along the upstream. It runs no git and reads no file, so every verb that shows drift reads the same answer. `Rollout::History` numbers the revisions of a branch from the reflog entries whose subject starts with `slipway `, and the commits the branch stood at before those moves. |
-| Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
-| Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print, and list in `FIELDS` the paths of that hash a field selector may name. No I/O. |
-| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, asks how far HEAD is from `spec.revision` only of a pinned project whose HEAD is elsewhere, and asks for the operation in progress only of a project the plan would fast-forward; the `Pool` runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). `Fetcher` fetches one project and names the outcome (fetched, unchanged, skipped, paused, denied, failed); projects on one repository, such as a linked worktree and its main one, fetch one after the other, because they write the same refs. `Commands::Results` runs a verb's work on a `Pool` of its own, sized by the `parallel` setting, and prints each project's result through `each_ordered`, so the lines stream in the order listed, then the count of the results. `Sync::Executor` drives the fast-forward: its workers inspect, fetch through `Fetcher`, inspect again and plan with `Plan.for`, and the calling thread fast-forwards each project as its result comes up, so no two of its writes run at once and a move shares the fetches' lock on its repository. `Rollback` is the only caller of the move back and the other caller of the fast-forward: it checks the project as sync would, picks the revision from `Rollout::History`, moves the branch back with the reset or forward with the fast-forward, and writes `spec.revision` only after git moved it. A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
+| Command layer | `cli.rb`, `cli/` | `Registry`, `Command`, `Glossary`, `Option`, `Positional` and `Example` (the data model), `Globals`, `Parser`, `Validator`, `Runner` (the front controller), `HelpRenderer`, `Manpage`, `Completer`, `CompletionScripts`, `Builtins`, `Context`, `Style`, `Theme` and `UsageError`. It knows nothing about projects or git. |
+| Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
+| Git adapter | `git.rb`, `git/`, `state.rb` | `Git::Runner`, `Git::Repository` with its `FastForwarding` and `RollingBack` parts, the answers (`Status` and `Porcelain`, `Commit`, `FetchResult`, `Reflog`, `Distance`, `FastForward`, `MoveBack`), `Url`, `BranchName`, the errors in `git/errors.rb`, `Git::Fake`, and `State`. |
+| Reconciliation | `drift.rb`, `plan.rb`, `rollout.rb` | `Drift`, `Plan` and `Rollout::History`. |
+| Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
+| Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
+| Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Sync::Executor`, `Rollback` and `Pool`. |
+
+The domain holds the rules for what may enter the registry and how it is stored: `Store` writes
+each manifest as a plain file, `Manifest` parses and checks one, and `Yaml` writes every YAML
+document slipway stores or prints. `Git::Repository` holds every git argv slipway runs and asks
+the questions slipway needs, `Git::Runner` spawns git ([Running git](#running-git)), and `State`
+reduces a status or an error to the one STATUS word. `Git::Fake` answers the same questions from
+canned entries for the command tests; it sits under `lib/` next to the class it stands in for,
+so the layering rule and the coverage gates apply to it, and `test/unit/git/fake_test.rb` holds
+its methods to the repository's.
+
+`Plan.for` reads one `Inspection` into the drift sync would resolve, the drift it leaves alone
+and the blockers that stop it. It runs no git and reads no file, so `get -o wide`, `describe`,
+`diff` and `sync` read the same answer, and its tests need no repository. A `spec.revision` pin
+replaces the upstream as where the branch should be, reached only forward and only along the
+upstream. `Rollout::History` numbers the revisions of a branch from the reflog entries whose
+subject starts with `slipway `, and the commits the branch stood at before those moves.
+
+Output renders plain data through a `Context` and never touches resources. Views turn a
+resource, or an `Inspection`, into table rows, describe entries and the object hash json and
+yaml print, and list in `FIELDS` the paths of that hash a field selector may name; they do no
+I/O. `Runtime` bundles the config, paths, store, git, inspector and clock of one run.
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values, the plan and output; output paints through the command layer's `Context`. The
@@ -25,21 +46,24 @@ the pool. The command layer requires one domain file, the one allowed edge: `cli
 requires `error.rb`, because `CLI::UsageError` is a `Slipway::Error`. The domain may use the
 command layer: `labels.rb`, `selector.rb` and `field_selector.rb` raise `CLI::UsageError`, and
 `config.rb` validates against `CLI::Theme` and `CLI::Style`. `test/unit/conventions_test.rb`
-reads every `require_relative` under `lib/` and fails on an edge that breaks these rules.
+reads every `require_relative` under `lib/`, fails on an edge that breaks these rules and on a
+file that belongs to no layer or to two, and `test/unit/require_graph_test.rb` loads every file
+under `lib/` on its own.
 
 ## One invocation
 
 `exe/slipway` calls `Slipway.run(ARGV)`. From there:
 
-1. `Commands.registry(factory)` builds the `CLI::Registry`: the eleven verbs from
-   `Commands::VERBS`, each built by its class's `self.command(factory)`, plus the builtins
-   (`help`, `version`, `completion`, `man`, hidden `__complete`).
+1. `Commands.registry(factory)` builds the `CLI::Registry`: the verbs in `Commands::VERBS`,
+   each built by its class's `self.command(factory)`, plus the builtins (`help`, `version`,
+   `completion`, `man`, hidden `__complete`).
 2. `Runtime.color_defaults` peeks at `--config` in argv and reads the config file once, so the
    `color` and `theme` keys can act as fallbacks before any option is parsed.
-3. `CLI::Runner#run` walks the command tree. Global options may appear before the verb, between
-   a group and its subcommand, and after the verb (`Parser#order!` while walking, `#permute!` on
-   the leaf). Color is re-resolved after every parse step so `--color` applies to the error that
-   may follow it. `--help`, `--version` and a bare group name return early.
+3. `CLI::Runner#execute` scans argv for `--color` before anything is parsed, so even an error
+   in the parse is painted the way the user asked. It then walks the command tree. Global
+   options may appear before the verb, between a group and its subcommand, and after the verb
+   (`Parser#order!` while walking, `#permute!` on the leaf). `--help`, `--version` and a bare
+   group name return early.
 4. `Validator` checks arity, positional enums, required options and option enums, raising
    `UsageError` (exit 2) with a `See 'slipway get --help' for usage.` hint.
 5. The command's handler is an instance of `Commands::Base`. `call` asks the factory for a
@@ -49,20 +73,136 @@ reads every `require_relative` under `lib/` and fails on an edge that breaks the
    (`#examine` for one) and `State.derive` names the state. A field selector is matched after
    that, on the object hash json prints, because some of its fields are what git answered.
 7. `Views` turn the results into rows or entries, `Output` renders them through the `Context`,
-   whose two `Style` objects decide color for stdout and stderr separately.
-8. `Runner#execute` maps failures to exit statuses: `Slipway::Error` prints `error: MESSAGE`
-   and exits 1 (2 for `UsageError`), `Interrupt` exits 130, `Errno::EPIPE` exits 0 quietly, and
-   any other `StandardError` exits 1, with class and backtrace added when `SLIPWAY_DEBUG` is set.
+   whose two `Style` objects decide color for stdout and stderr separately. A verb that prints
+   one result per repository calls `Context#unbuffer` first, so each line reaches a pipe before
+   the count on stderr. Ruby also flushes stdout before every spawn, so a line a closed pipe
+   refused would otherwise stay in the buffer and fail each later git with `EPIPE`.
+8. The `Context` remembers a stream whose reader went away and drops what is written to it
+   afterwards, so a command whose stdout `head` closed still finishes its work and exits with
+   its own status. `Runner#execute` maps what escapes the command: a `Slipway::Error` prints
+   one `error: MESSAGE` line per entry of its `problems`, then its hint line when it has one
+   (the help pointer of a `UsageError`, the git command that trusts an `Unsafe` repository),
+   and exits with its `exit_status`, 1 unless the class says otherwise (2 for `UsageError`, 3
+   for diff's `Differs`). An error with no problems, such as `Commands::Fetch::Failed`, exits 1
+   without a line, because the result lines already said what failed. `Interrupt` exits 130,
+   and any other `StandardError` exits 1, with class and backtrace added when `SLIPWAY_DEBUG`
+   is set. An `Errno::EPIPE` raised past the `Context` reaches `Runner#run` and exits 0.
+
+## Running git
+
+`Git::Runner#run` is the one place that spawns git; [SECURITY.md](SECURITY.md#how-git-runs)
+states what that promises to users, and this section says how the code keeps it.
+
+- The child's environment is the caller's `env:` merged under `Runner::ENVIRONMENT`, so a caller
+  can add variables but cannot change `LC_ALL=C`, the disabled prompt and optional locks, or
+  the repository-selecting variables `ENVIRONMENT` unsets. `CEILING_VARIABLE`
+  (`GIT_CEILING_DIRECTORIES`) is set to the real parent of the registered directory, since git
+  compares real paths when it climbs.
+- Git starts with `-C` and the absolute directory, in a process group of its own, with standard
+  input closed. A reader thread drains each of stdout and stderr, so a chatty command cannot
+  fill a pipe and stall.
+- The deadline is `DEFAULT_TIMEOUT` (10 seconds) for a local command and the `timeout:` a
+  network command passes, `networkTimeout`. It covers the pipes as well as git, because a helper
+  git started can hold a pipe open after git exits.
+- Git is stopped at the deadline and whenever the block unwinds for another reason, such as an
+  interrupt or the `Thread#kill` of a pool worker: TERM to the whole group, `TERM_GRACE` for git
+  to remove its lock files, then KILL, then the reader threads are killed. `Errno::ESRCH` and
+  `Errno::EPERM` from a signal mean nothing is left to signal (macOS answers EPERM for a group
+  that exited but is not reaped) and are ignored, so they never replace the exception that is
+  ending the run.
+- Interrupts are held from before the spawn until the `ensure` that stops git is armed, so an
+  interrupt landing between the two cannot leave git running.
+- `run` returns a `Result` whatever git's exit status is, with a death by signal N read as 128+N
+  (`SIGNAL_STATUS_BASE`) and the output scrubbed to valid UTF-8. A binary that cannot start
+  raises `NotInstalled`, and the deadline `Timeout`.
+
+`Git::Repository#run` sits on top. It raises `MissingPath` for a path that is not a directory
+without spawning, returns the result when git succeeded or when `accept:` says the failure is an
+answer (a key `git config` lacks, a branch with no commits), and raises the classified error
+otherwise. `test/unit/git/runner_test.rb`, `runner_stop_test.rb` and `runner_session_test.rb`
+pin these rules, and `test/integration/fetch_process_test.rb` checks that an interrupt during a
+fetch exits with 130 and leaves no git behind.
+
+## Network commands
+
+Every git command that may contact a remote runs under one profile: `fetch`, the fast-forward
+(`FastForwarding#merge`) and the rollout move (`RollingBack#reset`), which in a partial clone
+fetch the objects they write. A new command that may contact a remote goes through
+`Repository#network_fetch` or passes the same `network: true`, `timeout: @network_timeout` and
+`env: @network_environment` to `run`, never a bare `run`. The profile is:
+
+- `Runner.network_environment(protocols)`: `Runner::NETWORK_ENVIRONMENT`, which points
+  `GIT_ASKPASS` and `SSH_ASKPASS` at `false` and sets `SSH_ASKPASS_REQUIRE=force`, plus
+  `GIT_ALLOW_PROTOCOL` joined from the `protocols` setting. Once that variable is set it is
+  git's whole transport policy and git's own refusal of `ext` no longer applies, which is why
+  `Config` refuses `ext` and `fd` (`Config::UNSAFE_PROTOCOLS`) even when listed.
+- `Runner::NETWORK_CONFIG`: no gc, no automatic maintenance and no bundle URI download.
+- The `networkTimeout` deadline.
+
+`Repository#fetch` passes no remote argument (`FETCH_ARGS`), so git picks the remote a
+`git fetch` typed in the repository would, and nothing from a manifest reaches its argv. Two
+checks run locally first: `local_upstream?` raises `LocalUpstream` for a branch that tracks
+another local branch, and `Fetcher` asks `default_remote?` (`git ls-remote --get-url`, which
+contacts nothing) only when neither an origin nor an upstream settles which remote git would
+use. The fetch then asks for `--porcelain`, which git learned in 2.41; an older git rejects it
+as a usage error before it connects, the repository remembers that and fetches again without
+it, and the `FetchResult` it returns has `updates` set to nil.
+
+A network command's failure is classified by `network_failure` only: `ProtocolNotAllowed` when
+stderr is nothing but git's refusal of a transport, and `AuthRequired` when a line matches
+`AUTH_REQUIRED`. The phrases that name a local failure are not read there, because ssh and the
+remote write to the same stream. Anything else becomes a `Git::Error` quoting the first line of
+stderr, redacted by `Git::Url.redact` before it is cut to `MESSAGE_LIMIT` characters.
+`test/unit/git/repository_fetch_test.rb`, `repository_fetch_answers_test.rb`,
+`repository_fetch_user_config_test.rb` and `test/unit/config_network_test.rb` cover the
+profile.
+
+## Concurrency and interrupts
+
+`Pool#map` and `Pool#each_ordered` run a block per item on at most `workers` threads and hand
+the results back in input order. Callers follow its contract:
+
+- The block runs on worker threads, so state it shares needs a lock. `Fetcher#exclusively`
+  holds one lock per ref store, keyed by `Repository#common_dir`, so a linked worktree and its
+  main one never fetch or move at once.
+- An exception from an item is re-raised on the calling thread at once, without waiting for
+  the other items. A caller therefore turns the failures it expects into results inside the
+  block: `Inspector#examine` returns an `Inspection` with the error, and `Fetcher` an
+  `Outcome`. What escapes is a bug or a fatal condition.
+- However a call ends early, the pool kills and joins its workers before the exception leaves
+  it, and killing a thread runs its `ensure` blocks, where `Git::Runner` stops the git it
+  started.
+
+There are two pool sizes. `Inspector` reads repositories on a fixed `DEFAULT_WORKERS` (8)
+threads: a read is local, and the `parallel` setting paces network commands only.
+`Commands::Results` runs the work of `fetch` and `sync` on `parallel` threads and prints each
+result through `each_ordered` as soon as every earlier one is done.
+`Sync::Executor` splits sync in two: its workers inspect, fetch through `Fetcher`, inspect
+again and plan, and the calling thread fast-forwards each project as its result comes up,
+inside `Fetcher#exclusively`, so no two of its writes run at once. `Rollback` runs on the
+calling thread for its one project and is the only caller of the move back.
+
+Ctrl-C raises `Interrupt` in the main thread. The pool's `ensure` kills its workers, each
+runner's `ensure` stops its process group, and `CLI::Runner#execute` writes a line feed to
+stderr, so the shell prompt starts on its own line, and returns 130. `test/unit/pool_test.rb`,
+`test/unit/sync_executor_test.rb` and `test/integration/fetch_process_test.rb` pin this.
+
+## Printing untrusted text
 
 Every table cell, describe value and `result_line` name passes `Output.plain`, which makes
 control and bidirectional characters visible, and so do the fields git answered in json and
-yaml output. Warning lines are written only by `Output.warning`, which passes the message
-through the same rule. The runner's error lines pass it through `CLI::Style.plain`; only a
-`UsageError` takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean
-this?" list. A remote URL git reports passes `Git::Url.redact`, and a git failure keeps only
-the first line of git's stderr, redacted and cut to 200 characters. `spec.remote` is refused,
-from `--remote` or a manifest, whenever redact would change it, so json and yaml print it as
-stored.
+yaml output. The detail lines under a result pass `Output.plain(Git::Url.redact(...))` in
+`Commands::Results#report`. Warning lines are written only by `Output.warning`, which passes
+the message through the same rule. The runner's error and hint lines pass it through
+`CLI::Style.plain`; only a `UsageError` takes `layout: true`, which keeps the line feeds and
+tabs of a "Did you mean this?" list. A remote URL git reports passes `Git::Url.redact`, and a
+git failure keeps only the first line of git's stderr, redacted and cut to 200 characters.
+`spec.remote` is refused, from `--remote` or a manifest, whenever redact would change it, so
+json and yaml print it as stored. [SECURITY.md](SECURITY.md#output) states the rule for users.
+
+One known limit: json and yaml print the other manifest fields as stored too, and `spec.path`
+and `spec.description` have no rule against control characters, so a tool such as `jq -r`
+passes them to the terminal. SECURITY.md names it.
 
 ## Safety promises
 
@@ -75,9 +215,9 @@ places keep those promises: `Git::Runner` spawns every git process and sets its 
 can reach git before a manifest enters the store; `Output.plain`, `CLI::Style.plain` and
 `Git::Url.redact` treat what is printed; and `Plan` and the git errors quote each word they put
 into a command printed for the user to run. A change there keeps every promise or updates
-SECURITY.md in the same pull request. `test/unit/conventions_test.rb` keeps the spawn and the
-warning line in their one place, and `test/unit/reset_rule_test.rb` keeps the reset to its one
-form and its one caller.
+SECURITY.md in the same pull request. `test/unit/conventions_test.rb` keeps git's spawn in the
+runner and the warning line in its one place, and `test/unit/reset_rule_test.rb` keeps the reset
+to its one form and its one caller.
 
 ## One definition, four outputs
 
@@ -97,12 +237,11 @@ belongs to no verb, the ENVIRONMENT, FILES, CONFIGURATION and EXIT STATUS sectio
 slipway(1), lives in `Commands::Manual`, which `bin/generate-man` hands to `Manpage`; the
 CONFIGURATION entries are `Config::DOCUMENTATION`, built from `Config::SETTINGS`, and the
 ENVIRONMENT line of each setting's variable points at its entry instead of describing the value
-again.
-`test/unit/seams_test.rb` derives the list of variables the code reads by scanning `lib/` and
-compares it with `Commands::Manual::ENVIRONMENT`, so a new `env['X']` fails the test until it is
-documented. `HOME` and `PATH` are the only variables read without a line in
-the section; the test names them in an explicit allowlist. `test/unit/readme_test.rb` holds the
-README variable table to the same keys.
+again. `test/unit/seams_test.rb` derives the list of variables the code reads by scanning `lib/`
+and compares it with `Commands::Manual::ENVIRONMENT`, so a new `env['X']` fails the test until
+it is documented. `HOME` and `PATH` are the only variables read without a line in the section;
+the test names them in an explicit allowlist. `test/unit/readme_test.rb` holds the README
+variable table to the same keys.
 
 ## Adding things
 
@@ -111,9 +250,10 @@ README variable table to the same keys.
 `Basic Commands`, `Repository Commands`, `Settings Commands`, `Other Commands`; pass
 `handler: new(factory)`) and `run(runtime, context, args, opts)`. A verb whose exit statuses
 differ from the shared ones passes `exit_statuses:`, a Hash of status to meaning, which help
-prints under the description and the man page renders as its EXIT STATUS section. Reuse
-`Options::TYPE`, `Options.name_positional(factory)`, `Options::DRY_RUN` and friends; a verb that
-acts on repositories takes `Options.project_positional(factory)` and reads it with
+prints under the description and the man page renders as its EXIT STATUS section; a verb that
+prints words a reader needs explained passes `glossaries:`. Reuse `Options::TYPE`,
+`Options.name_positional(factory)`, `Options::DRY_RUN` and friends; a verb that acts on
+repositories takes `Options.project_positional(factory)` and reads it with
 `Scope#project_targets`. Require the file in `commands.rb` and add the class to `VERBS` in help
 order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
 `Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
@@ -121,7 +261,9 @@ group. Print results through `result_line` (`project/hldr created`), or through
 `Commands::Results` for a verb that prints one outcome per repository, and warnings through
 `Output.warning`, and raise `Slipway::Error` or `CLI::UsageError` rather than writing to
 stderr. Run `rake generate` so the new man page and help fixture land in `man/man1` and
-`test/fixtures/golden`.
+`test/fixtures/golden`, add the verb's row to the README Usage table and a line to
+`CHANGELOG.md`. A new file outside the directories `conventions_test.rb` lists goes into
+exactly one of its layer lists, and every file under `lib/` must load on its own.
 
 **An option.** Add a `CLI::Option` (`long:`, optional `short:`, `argument:` for a value,
 `enum:` for a closed set, `default:`, `repeatable:`, `required:`, `optional:` plus `implicit:`
@@ -142,13 +284,38 @@ holds a copy of both presets and `seams_test.rb` checks that every `State::ROLES
 in both themes.
 
 **A sync action.** Name the drift in `Drift` (its type in `TYPES`, and in `MOVES` when it
-changes a working tree) with its message and, for a refusal, a `BLOCKERS` sentence built with
-`Drift.blocker`. `Plan::Planner` decides when the action applies and which obstacles block it;
-it reads only the inspection it is given, so its tests need no repository. Only
+changes a working tree) with its message and its line in `TYPE_MEANINGS` and, for a refusal, a
+`BLOCKERS` sentence built with `Drift.blocker` and a line in `BLOCKER_MEANINGS`; the README
+tables follow both. `Plan::Planner` decides when the action applies and which obstacles block
+it; it reads only the inspection it is given, so its tests need no repository. Only
 `Sync::Executor` performs the action, through a `Git::Repository` method, inside
 `Fetcher#exclusively` and with its own reflog action. The action reports a result word in
-`Commands::Sync::ROLES` whose role exists in both themes. It keeps every promise in
-[SECURITY.md](SECURITY.md#safety-promises), or updates that list in the same pull request.
+`Commands::SyncCommand::ROLES` whose role exists in both themes, and the verb's Results
+glossary explains it. It keeps every promise in [SECURITY.md](SECURITY.md#safety-promises), or
+updates that list in the same pull request.
+
+**A setting.** Add a `Config::Setting` to `Config::SETTINGS` with its key, `SLIPWAY_*` variable,
+default, description, check and expectation, and `parse:` when the variable is not read as a
+plain string; add the member to the `Config` Data. The description becomes its CONFIGURATION
+entry in slipway(1). Add the variable to `Commands::Manual::ENVIRONMENT` through its `setting`
+helper, which `seams_test.rb` requires, and the key to the README configuration example and the
+variable to the README table, which `readme_test.rb` requires. Read the value from
+`runtime.config`, and run `rake generate`.
+
+**A git question.** Add a public method to `Git::Repository`, or to `FastForwarding` or
+`RollingBack` for a move, that runs git through the private `run`, with the network profile
+when it may contact a remote ([Network commands](#network-commands)), and never through
+`Git::Runner` directly. Pass `accept:` for a failure that is an answer, and name a new failure
+in `git/errors.rb` and in `local_failure` or `network_failure`. Give `Git::Fake` the same
+method with the same parameters, which `test/unit/git/fake_test.rb` requires, and test the real
+one against a `GitFixtures` repository, adding a state to `GitFixtures#build_repo` when none
+has what the question needs.
+
+**A selectable field.** Add its path to `Views::Project::FIELDS` or `Views::Group::FIELDS`,
+with the value it compares as when the object leaves it out. The path must be one of the object
+`-o json` prints. The `--field-selector` help lists the fields from `FIELDS`; add the field to
+the README sentence that lists them, which `readme_test.rb` holds to `FIELDS`, and to the field
+selector line in `CHANGELOG.md`.
 
 ## Testing
 
@@ -181,13 +348,16 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   unconditionally when `SLIPWAY_REQUIRE_SHELLS` is set, which the CI `completions` job does)
   against a stub program that answers `__complete` from a `FixtureRegistry`.
 
-Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the
-single git spawner, YAML writer and warning writer, no direct stdout or stderr, no runtime
-dependencies, the files the gem ships, ASCII), `test/unit/reset_rule_test.rb` (`reset --keep` as
-the only reset and `Rollback` as its only caller), `test/unit/changelog_test.rb` (the shape of
-`CHANGELOG.md`), `test/unit/readme_test.rb` (the README tables and configuration example
-against the code) and `test/unit/contributing_test.rb` (the task table in CONTRIBUTING against
-the tasks the Rakefile and `rakelib/` define).
+Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the two
+files that spawn processes, the YAML writer, the warning writer, no direct stdout or stderr, no
+runtime dependencies, the files the gem ships, ASCII, test file names),
+`test/unit/require_graph_test.rb` (every file under `lib/` loads on its own),
+`test/unit/seams_test.rb` (the variables the code reads against the man page, and the constants
+two layers must agree on), `test/unit/reset_rule_test.rb` (`reset --keep` as the only reset and
+`Rollback` as its only caller), `test/unit/changelog_test.rb` (the shape of `CHANGELOG.md`),
+`test/unit/readme_test.rb` (the README tables and configuration example against the code) and
+`test/unit/contributing_test.rb` (the task table in CONTRIBUTING against the tasks the Rakefile
+and `rakelib/` define).
 Tests for the development code live under `test/unit/dev`. The commit tests run git in
 temporary repositories; the release and GitHub tests never run git or `gh` and hand the code a
 fake command runner.
@@ -204,12 +374,15 @@ why they are committed and shipped; `.gitattributes` marks them `linguist-genera
 
 ## Development code
 
-The Rakefile keeps the test, RuboCop, audit and documentation tasks. Everything else a
-maintainer runs lives in `rakelib/`: `check.rake`, `generate.rake`, `package.rake`,
-`shells.rake`, `release.rake` and `github.rake`, which Rake loads on its own, and plain Ruby
-under `rakelib/support/` that the tasks and the scripts in `bin/` share (`changelog.rb` parses
-and cuts the changelog, `release.rb` runs the release flow behind an injectable command runner,
-`commits.rb` holds the commit rules `bin/lint-commits` applies and the range `rake check` hands
-it, `github.rb` wraps `gh api`).
+The Rakefile keeps the test, coverage, RuboCop, audit and documentation tasks, `generate:man`,
+`lint:man` and `lint:shell`, and `require_tool`, which stops a task that needs a missing program
+and which `rakelib/package.rake` calls too. Everything else a maintainer runs lives in
+`rakelib/`: `check.rake`, `generate.rake`, `package.rake`, `shells.rake`, `release.rake` and
+`github.rake`, which Rake loads on its own, and plain Ruby under `rakelib/support/` that the
+tasks and the scripts in `bin/` share: `changelog.rb` parses and cuts the changelog, `commits.rb`
+holds the commit rules `bin/lint-commits` applies and the range `rake check` hands it,
+`golden.rb` lists the fixtures `generate:golden` keeps, `release.rb` runs the release flow,
+`github.rb` wraps `gh api`, and `runner.rb` holds `CommandRunner`, the command runner
+`bin/release` and `rake github:setup` inject so their tests can pass a fake.
 `rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
 of it ships in the gem.
