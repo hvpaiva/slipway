@@ -91,11 +91,13 @@ options, subcommands, exit statuses, handler. The same object feeds
   protocol; the bash, zsh and fish scripts only relay that answer).
 
 Nothing about a verb is written twice. Help text, option descriptions and examples live in the
-verb's class (`DESCRIPTION`, `self.examples`, shared options in `Commands::Options`), and the
-man page environment section is built from `Config::SETTINGS` and
-`Manpage::DEFAULT_ENVIRONMENT`. `test/unit/seams_test.rb` derives the list of variables the
-code reads by scanning `lib/` and compares it with that section, so a new `env['X']` fails the
-test until it is documented. `HOME` and `PATH` are the only variables read without a line in
+verb's class (`DESCRIPTION`, `self.examples`, shared options in `Commands::Options`). What
+belongs to no verb, the ENVIRONMENT, FILES, CONFIGURATION and EXIT STATUS sections of
+slipway(1), lives in `Commands::Manual`, which `bin/generate-man` hands to `Manpage`; the
+CONFIGURATION entries are `Config::DOCUMENTATION`, built from `Config::SETTINGS`.
+`test/unit/seams_test.rb` derives the list of variables the code reads by scanning `lib/` and
+compares it with `Commands::Manual::ENVIRONMENT`, so a new `env['X']` fails the test until it is
+documented. `HOME` and `PATH` are the only variables read without a line in
 the section; the test names them in an explicit allowlist. `test/unit/readme_test.rb` holds the
 README variable table to the same keys.
 

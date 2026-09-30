@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'base'
+require_relative 'manual'
 require_relative 'results'
 require_relative '../fetcher'
 require_relative '../rollback'
@@ -33,7 +34,7 @@ module Slipway
                       'spec.revision was not written, and the detail names the --to-revision command that writes ' \
                       "it without moving the branch again.\n\n" \
                       'With --dry-run=client nothing is moved or written.'
-        EXIT_STATUSES = CLI::Manpage::EXIT_STATUSES.merge(
+        EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
           '0' => 'The project was rolled back, or already stood at the revision and was held there.',
           '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project that was ' \
                  'skipped or whose move was denied or failed.'

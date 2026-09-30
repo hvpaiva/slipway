@@ -16,7 +16,7 @@ output_dir = File.expand_path(ARGV.fetch(0, File.join(ROOT, 'man', 'man1')))
 date = File.exist?(CHANGELOG) ? Changelog.release_date(File.read(CHANGELOG)).to_s : ''
 
 registry = Slipway::Commands.registry(Slipway::Runtime.method(:build))
-pages = Slipway::CLI::Manpage.new(registry, date:, configuration: Slipway::Config::DOCUMENTATION).pages
+pages = Slipway::CLI::Manpage.new(registry, date:, **Slipway::Commands::Manual.sections).pages
 
 FileUtils.mkdir_p(output_dir)
 FileUtils.rm_f(Dir[File.join(output_dir, '*.1')])

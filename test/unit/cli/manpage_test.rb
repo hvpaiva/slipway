@@ -11,7 +11,7 @@ class ManpageTest < Minitest::Test
 
   def setup
     @registry = FixtureRegistry.new.registry
-    @manpage = Slipway::CLI::Manpage.new(@registry, date: DATE)
+    @manpage = Slipway::CLI::Manpage.new(@registry, date: DATE, **Slipway::Commands::Manual.sections)
   end
 
   def test_pages_cover_the_root_and_every_visible_command_and_group
@@ -58,15 +58,25 @@ class ManpageTest < Minitest::Test
     assert_includes page, '\fB\-\-label\fR \fIKEY=VALUE\fR'
   end
 
-  def test_environment_and_configuration_are_injectable
+  def test_environment_files_configuration_and_exit_statuses_come_from_the_caller
     manpage = Slipway::CLI::Manpage.new(@registry, date: DATE, environment: { 'X_Y' => 'Means "x" - or y.' },
-                                                   configuration: { 'key' => "First.\n\nSecond paragraph." })
+                                                   files: { '~/.x' => 'State.' },
+                                                   configuration: { 'key' => "First.\n\nSecond paragraph." },
+                                                   exit_statuses: { '0' => 'Fine.' })
     page = manpage.page([])
 
-    assert_includes page, ".SH ENVIRONMENT\n.TP\n\\fBX_Y\\fR\nMeans \"x\" \\- or y.\n.SH FILES\n"
-    assert_includes page, ".SH CONFIGURATION\n.TP\n\\fBkey\\fR\nFirst.\n.PP\nSecond paragraph.\n.SH \"EXIT STATUS\"\n"
+    assert_includes page, ".SH ENVIRONMENT\n.TP\n\\fBX_Y\\fR\nMeans \"x\" \\- or y.\n" \
+                          ".SH FILES\n.TP\n\\fI~/.x\\fR\nState.\n"
+    assert_includes page, ".SH CONFIGURATION\n.TP\n\\fBkey\\fR\nFirst.\n.PP\nSecond paragraph.\n.SH \"EXIT STATUS\"\n" \
+                          ".TP\n\\fB0\\fR\nFine.\n"
     refute_includes page, 'SLIPWAY_THEME'
     refute_includes page, 'theme'
+  end
+
+  def test_a_section_the_caller_leaves_empty_is_left_out
+    page = Slipway::CLI::Manpage.new(@registry, date: DATE).page([])
+
+    ['ENVIRONMENT', 'FILES', 'CONFIGURATION', '"EXIT STATUS"'].each { refute_includes page, ".SH #{it}\n" }
   end
 
   def test_a_command_with_its_own_exit_statuses_lists_them_and_the_root_page_names_it
@@ -75,13 +85,13 @@ class ManpageTest < Minitest::Test
                                         options: [Slipway::CLI::Option.new(long: 'all', description: 'All.')])
     registry = Slipway::CLI::Registry.new(program: 'slipway', version: '0.1.0', description: 'D',
                                           globals: [], commands: [command], builtins: false)
-    manpage = Slipway::CLI::Manpage.new(registry, date: DATE)
+    manpage = Slipway::CLI::Manpage.new(registry, date: DATE, exit_statuses: { '0' => 'Success.' })
 
     assert_includes manpage.page(%w[x]), "\\fB\\-\\-all\\fR\nAll.\n.SH \"EXIT STATUS\"\n.TP\n\\fB0\\fR\nSame.\n" \
                                          ".TP\n\\fB3\\fR\nDiffers.\n.SH \"SEE ALSO\"\n"
     refute_includes @manpage.page(%w[get]), 'EXIT STATUS'
     assert_includes manpage.page([]),
-                    "Interrupted by SIGINT.\n.PP\nThe pages of these commands list their own statuses:\n" \
+                    "Success.\n.PP\nThe pages of these commands list their own statuses:\n" \
                     ".BR slipway\\-x (1)\n.SH \"SEE ALSO\"\n"
   end
 

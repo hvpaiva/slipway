@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'base'
+require_relative 'manual'
 require_relative '../inspector'
 require_relative '../plan'
 
@@ -35,7 +36,7 @@ module Slipway
                     'repository lacks the commit, HEAD is past it or its upstream does not hold it. A paused or ' \
                     'FetchOnly project shows a blocker only when git cannot read its repository.'
       USAGE = '[NAME... | project/NAME...]'
-      EXIT_STATUSES = CLI::Manpage::EXIT_STATUSES.merge(
+      EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
         '0' => 'Every selected project matches its manifest.',
         '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project whose state is ' \
                'Unknown because git failed or did not finish.',

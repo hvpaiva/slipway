@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'base'
+require_relative 'manual'
 require_relative 'fetch'
 require_relative 'results'
 require_relative '../fetcher'
@@ -37,7 +38,7 @@ module Slipway
                     "order the projects are listed.\n\n" \
                     'With --dry-run=client nothing is fetched or written: the plan is made from the last fetch.'
       USAGE = '[NAME... | project/NAME...]'
-      EXIT_STATUSES = CLI::Manpage::EXIT_STATUSES.merge(
+      EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
         '0' => 'Every selected project was fast-forwarded, fetched, left unchanged, skipped or paused.',
         '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project whose fetch or ' \
                'fast-forward was denied or failed.'

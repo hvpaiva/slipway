@@ -126,6 +126,27 @@ Configuration file; see CONFIGURATION. Also set by \-\-config or SLIPWAY_CONFIG.
 \fI$XDG_DATA_HOME/slipway/\fR
 Registry data: groups/NAME.yaml and projects/GROUP/NAME.yaml. Also set by SLIPWAY_DATA_HOME.
 .SH CONFIGURATION
+.TP
+\fBcolor\fR
+When to color output: auto, always or never. Default: auto.
+.TP
+\fBeditor\fR
+Command line of the editor that slipway edit opens.
+.TP
+\fBgroup\fR
+Group used when \-n is not given. Default: default.
+.TP
+\fBnetworkTimeout\fR
+Seconds a git network command may run before it is killed with the processes it started. Default: 60.
+.TP
+\fBparallel\fR
+How many git network commands run at once, from 1 to 16. Default: 4.
+.TP
+\fBprotocols\fR
+Transports git may use in network commands, as a list; any other transport is refused, and so are ext and fd. Add file for local mirrors. Default: ssh, https.
+.TP
+\fBtheme\fR
+Color theme: dark or light. Default: dark.
 .SH "EXIT STATUS"
 .TP
 \fB0\fR

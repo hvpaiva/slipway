@@ -17,11 +17,11 @@ class ReadmeTest < Minitest::Test
   end
 
   def test_environment_table_lists_the_man_page_variables_in_order
-    assert_equal Slipway::CLI::Manpage::DEFAULT_ENVIRONMENT.keys, first_cells('| Variable | Effect |')
+    assert_equal Slipway::Commands::Manual::ENVIRONMENT.keys, first_cells('| Variable | Effect |')
   end
 
   def test_exit_status_table_lists_every_status_in_order
-    assert_equal Slipway::CLI::Manpage::EXIT_STATUSES.keys, first_cells('| Status | Meaning |')
+    assert_equal Slipway::Commands::Manual::EXIT_STATUSES.keys, first_cells('| Status | Meaning |')
   end
 
   def test_result_tables_list_every_result_word_in_order

@@ -17,7 +17,7 @@ class ManpageGoldenTest < Minitest::Test
   def self.page_date = Changelog.release_date(File.read(CHANGELOG)).to_s
 
   REGISTRY = Slipway::Commands.registry(->(_context, _opts) { raise 'man pages do not build a runtime' })
-  PAGES = Slipway::CLI::Manpage.new(REGISTRY, date: page_date, configuration: Slipway::Config::DOCUMENTATION).pages.freeze
+  PAGES = Slipway::CLI::Manpage.new(REGISTRY, date: page_date, **Slipway::Commands::Manual.sections).pages.freeze
 
   PAGES.each do |name, roff|
     define_method("test_#{name.tr('.-', '__')}_is_fresh") do
