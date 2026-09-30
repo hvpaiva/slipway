@@ -85,10 +85,10 @@ namespace :lint do
     end
   end
 
-  desc 'Run shellcheck on bin/setup and the bash completion script'
+  desc 'Run shellcheck on bin/setup, bin/sandbox and the bash completion script'
   task :shell do
     require_tool('shellcheck')
-    sh 'shellcheck', '-s', 'bash', 'bin/setup'
+    sh 'shellcheck', '-s', 'bash', 'bin/setup', 'bin/sandbox'
     script, err, status = Open3.capture3(RbConfig.ruby, '-Ilib', 'exe/slipway', 'completion', 'bash')
     abort "lint:shell: slipway completion bash failed: #{err.lines.first&.strip}" unless status.success?
 
