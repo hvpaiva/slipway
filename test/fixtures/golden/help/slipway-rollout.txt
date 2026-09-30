@@ -1,0 +1,16 @@
+Manage the rollout of a project.
+
+Slipway records a revision each time it moves the checked-out branch of a project: every fast-forward of slipway sync and every slipway rollout undo leaves an entry in the branch's reflog, and the commit the branch stood at before such a move is a revision too. rollout history lists the revisions, rollout undo returns the branch to one of them and holds the project there with spec.revision, and rollout unpin lets sync follow the upstream again. rollout pause keeps fetch and sync away from a project until rollout resume.
+
+Available Commands:
+  history         View rollout history
+  undo            Undo a previous rollout
+  unpin           Stop holding a project at a revision
+  pause           Mark the provided project as paused
+  resume          Resume a paused project
+
+Usage:
+  slipway rollout COMMAND [flags]
+
+Use "slipway rollout <command> --help" for more information about a given command.
+Use "slipway --help" for a list of global options (applies to all commands).

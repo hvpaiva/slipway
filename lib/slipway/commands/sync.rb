@@ -77,7 +77,7 @@ module Slipway
         names = scope.project_targets(args, verb: 'sync')
         dry_run = opts[:dry_run] == 'client'
         fetcher = Fetcher.new(runtime, prune: opts[:prune] == true, dry_run:)
-        executor = Sync::Executor.new(runtime, fetcher, dry_run:)
+        executor = Sync::Executor.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
         results = Results.new(context, ROLES, dry_run:)
         scope.select(Resources::PROJECTS, names) do |projects|
           next scope.report_none(Resources::PROJECTS) if projects.empty?
@@ -92,6 +92,9 @@ module Slipway
       end
 
       private
+
+      # config.group already holds a typed -n, and the undo line is run later without it.
+      def configured_group(runtime, opts) = opts[:group] ? nil : runtime.config.group
 
       def unfetched(context, count)
         return if count.zero?

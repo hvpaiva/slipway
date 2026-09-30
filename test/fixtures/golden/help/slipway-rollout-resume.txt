@@ -1,0 +1,12 @@
+Resume paused projects.
+
+Removes spec.paused from the manifest of each named project, so slipway fetch and slipway sync act on it again. A project that is not paused prints not paused.
+
+Examples:
+  # Resume the paused project dots
+  slipway rollout resume dots
+
+Usage:
+  slipway rollout resume (NAME... | project/NAME...) [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

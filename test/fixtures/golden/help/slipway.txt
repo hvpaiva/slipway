@@ -19,6 +19,7 @@ Repository Commands:
   fetch           Fetch from the remote of each project
   diff            Show where projects differ from their manifests
   sync            Fetch projects and fast-forward their branches
+  rollout         Manage the rollout of a project
 
 Settings Commands:
   config          Inspect the configuration in effect

@@ -43,8 +43,6 @@ module Slipway
         @context.warn(@context.paint_err(:muted, line))
       end
 
-      private
-
       # Ref names and messages come from git and the remote, so they are redacted and made plain.
       def report(outcome)
         word = outcome.word

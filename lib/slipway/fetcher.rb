@@ -9,9 +9,27 @@ module Slipway
   # workers call it at once.
   class Fetcher
     # +details+ are printed under the result line as they are; the printer redacts them and
-    # makes them plain.
+    # makes them plain. The verbs that move a branch name their failures in the same words.
     Outcome = Data.define(:project, :word, :reason, :details) do
       def initialize(project:, word:, reason: nil, details: []) = super
+
+      # The line above already names the project, so the path is cut from the message.
+      def self.failure(project, error)
+        reason = REASONS.fetch(error.class) { State.for_error(error) }
+        new(project:, word: ERROR_WORDS.fetch(error.class, FAILED), reason:,
+            details: [detail(error), error.hint].compact)
+      end
+
+      # Nothing else in the result says which directory could not be read, so it leads the
+      # detail, as the manifest writes it.
+      def self.unreadable(project, inspection)
+        error = inspection.error
+        new(project:, word: SKIPPED, reason: inspection.state,
+            details: ["#{project.path}: #{detail(error)}", error.hint].compact)
+      end
+
+      def self.detail(error) = error.message.delete_prefix("#{error.path}: ")
+      private_class_method :detail
     end
 
     FETCHED = 'fetched'
@@ -45,7 +63,7 @@ module Slipway
       return Outcome.new(project:, word: PAUSED) if project.paused
 
       inspection = @runtime.inspector.examine(project)
-      return unreadable(project, inspection) if inspection.error
+      return Outcome.unreadable(project, inspection) if inspection.error
 
       fetch(project, inspection)
     end
@@ -58,20 +76,13 @@ module Slipway
 
       fetched(project, exclusively(project) { @runtime.git.fetch(path(project), prune: @prune) })
     rescue Git::Error => e
-      failure(project, e)
+      Outcome.failure(project, e)
     end
 
     # Two writes into one ref store race on its ref locks, and one of them fails.
     def exclusively(project, &)
       key = @runtime.git.common_dir(path(project))
       @guard.synchronize { @locks[key] }.synchronize(&)
-    end
-
-    # The line above already names the project, so the path is cut from the message.
-    def failure(project, error)
-      reason = REASONS.fetch(error.class) { State.for_error(error) }
-      Outcome.new(project:, word: ERROR_WORDS.fetch(error.class, FAILED), reason:,
-                  details: [message(error), error.hint].compact)
     end
 
     def path(project) = Paths.expand(project.path, home: @runtime.paths.home)
@@ -103,16 +114,6 @@ module Slipway
 
       Outcome.new(project:, word: FETCHED, details: refs(updates))
     end
-
-    # Nothing else in the result says which directory could not be read, so it leads the
-    # detail, as the manifest writes it.
-    def unreadable(project, inspection)
-      error = inspection.error
-      Outcome.new(project:, word: SKIPPED, reason: inspection.state,
-                  details: ["#{project.path}: #{message(error)}", error.hint].compact)
-    end
-
-    def message(error) = error.message.delete_prefix("#{error.path}: ")
 
     def refs(updates)
       lines = updates.first(REF_LIMIT).map { |ref, old_id, new_id| ref_line(ref.sub(SHORT_REF, ''), old_id, new_id) }

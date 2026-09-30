@@ -105,7 +105,7 @@ class SyncExecutorTest < Minitest::Test
         project/api failed (Timeout)
           git did not finish within 60 seconds
         project/hldr fast-forwarded
-          main a1b2c3d..e4f5a6b (1 commit); undo with 'git -C ~/dev/hldr reset --keep a1b2c3d'
+          main a1b2c3d..e4f5a6b (1 commit); undo with 'slipway rollout undo project/hldr'
         project/odd failed (Unknown)
           exploded
         project/same unchanged
@@ -169,6 +169,30 @@ class SyncExecutorTest < Minitest::Test
 
       assert_equal [0, %w[fast-forwarded unchanged]], [status, out.lines.grep(/\Aproject/).map { it.split[1] }]
       refute runtime.git.overlapped
+    end
+  end
+
+  # The line is copied and run without this invocation's -n, so it resolves the name in the
+  # configured group.
+  def test_the_undo_command_names_a_group_given_with_n
+    with_sandbox do |env|
+      runtime = sandbox_runtime(env, flags: { group: 'work' })
+      register_group(runtime, 'work')
+      register(runtime, 'api', group: 'work', status: BEHIND, fast_forward: MOVE)
+
+      assert_includes run_sync('api', '-n', 'work', runtime:)[1], "undo with 'slipway rollout undo project/api -n work'"
+    end
+  end
+
+  def test_the_undo_command_names_the_group_when_it_is_not_the_one_in_effect
+    with_runtime do |runtime|
+      register_group(runtime, 'work')
+      register(runtime, 'api', group: 'work', status: BEHIND, fast_forward: MOVE)
+      register(runtime, 'hldr', status: BEHIND, fast_forward: MOVE)
+
+      undo = run_sync('-A', runtime:)[1].scan(/undo with '(.*)'$/).flatten
+
+      assert_equal ['slipway rollout undo project/hldr', 'slipway rollout undo project/api -n work'], undo.sort.reverse
     end
   end
 

@@ -49,8 +49,8 @@ module Slipway
       end
 
       # No TYPE word comes first, so completion always offers project names.
-      def self.project_positional(factory)
-        CLI::Positional.new(name: 'NAME', variadic: true, required: false,
+      def self.project_positional(factory, variadic: true, required: false)
+        CLI::Positional.new(name: 'NAME', variadic:, required:,
                             completer: ->(_given) { names(factory, [Resources::PROJECTS.plural]) })
       end
 

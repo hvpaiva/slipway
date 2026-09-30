@@ -4,6 +4,7 @@ require_relative 'drift'
 require_relative 'fetcher'
 require_relative 'git'
 require_relative 'plan'
+require_relative 'rollout'
 
 module Slipway
   # Brings projects to their manifests by the one move that cannot lose work: each is fetched,
@@ -12,7 +13,7 @@ module Slipway
     FAST_FORWARDED = 'fast-forwarded'
 
     # Observes and plans on the workers and moves branches on the calling thread, one project at
-    # a time, so no two writes ever run at once. The only caller of the git write.
+    # a time, so no two of its writes run at once.
     class Executor
       # The plan for a project whose fetch went through, made from what git answered after it.
       Observed = Data.define(:project, :inspection, :fetched, :plan)
@@ -29,10 +30,13 @@ module Slipway
       # Dry-run projects that no fetch has reached, counted as they settle.
       attr_reader :unfetched
 
-      def initialize(runtime, fetcher, dry_run:)
+      # +group+ is the one a command without -n selects, so the undo command can leave it out; nil
+      # when -n was typed, so every undo command names its group.
+      def initialize(runtime, fetcher, dry_run:, group:)
         @runtime = runtime
         @fetcher = fetcher
         @dry_run = dry_run
+        @group = group
         @unfetched = 0
       end
 
@@ -81,7 +85,7 @@ module Slipway
       rescue Git::Blocked => e
         refused(step, e)
       rescue Git::Error => e
-        @fetcher.failure(project, e)
+        Fetcher::Outcome.failure(project, e)
       end
 
       def moved(step, forward)
@@ -89,7 +93,7 @@ module Slipway
         return "#{range} #{TO_PIN}" if step.plan.to_revision?
 
         gained = forward.count
-        undo = Plan.git(step.project, 'reset', '--keep', forward.from[0, ABBREV])
+        undo = Rollout.command('undo', step.project, @group)
         "#{range} (#{gained} commit#{'s' unless gained == 1}); undo with '#{undo}'"
       end
 

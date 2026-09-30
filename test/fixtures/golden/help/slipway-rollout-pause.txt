@@ -1,0 +1,12 @@
+Mark the provided projects as paused.
+
+Sets spec.paused in the manifest of each named project. Paused projects are left alone by slipway fetch and slipway sync, which run no git command in them; slipway rollout undo still acts on them. Use slipway rollout resume to resume a paused project.
+
+Examples:
+  # Keep fetch and sync away from project dots
+  slipway rollout pause dots
+
+Usage:
+  slipway rollout pause (NAME... | project/NAME...) [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).
