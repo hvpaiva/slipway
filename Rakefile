@@ -8,11 +8,10 @@ require 'rubocop/rake_task'
 require 'tempfile'
 require 'yard'
 
-# Coverage gates for test:cov, two points under the measured 99.7% line and 98.0% branch coverage.
+# Coverage gates for test:cov. Each sits at least two points under what test:cov measures, overall
+# or for the least covered file, and is raised when the measured figure rises.
 MINIMUM_LINE_COVERAGE = 97
 MINIMUM_BRANCH_COVERAGE = 96
-# Per-file gates, at least two points under the least covered files: lib/slipway/editor.rb at
-# 97.4% of lines and lib/slipway/commands/create.rb at 87.5% of branches.
 MINIMUM_LINE_COVERAGE_BY_FILE = 93
 MINIMUM_BRANCH_COVERAGE_BY_FILE = 85
 
