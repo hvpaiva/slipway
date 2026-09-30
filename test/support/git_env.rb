@@ -33,15 +33,15 @@ module GitEnv
     skip 'git before 2.41 fetches without listing the refs that moved' if GitEnv.version < FETCH_PORCELAIN
   end
 
-  def git!(dir, *args)
-    out, err, status = git(dir, *args)
+  def git!(dir, *args, env: {})
+    out, err, status = git(dir, *args, env:)
     raise "git #{args.join(' ')} failed in #{dir}: #{err}" unless status.success?
 
     out
   end
 
-  def git(dir, *)
-    Open3.capture3(ENVIRONMENT, 'git', *CONFIG, '-C', dir, *)
+  def git(dir, *, env: {})
+    Open3.capture3(ENVIRONMENT.merge(env), 'git', *CONFIG, '-C', dir, *)
   end
 
   def hermetic_env(root)

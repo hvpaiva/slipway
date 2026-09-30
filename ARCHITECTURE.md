@@ -138,6 +138,9 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   and `index_lock`, whose origin holds a commit only a fetch reveals) with a pinned environment and
   dates, so the same recipe yields the same commit ids on every machine. The git adapter and
   the inspector are unit-tested against the same fixtures with the real `git`.
+  `readme_examples_test.rb` runs the console examples of the README from top to bottom on the
+  repositories `ReadmeStory` builds and compares what each command prints with the lines under
+  it, once times, commit ids and ages in seconds are normalized.
 - Golden tests under `test/golden` compare the help page of every command, the three completion
   scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`, and
   `test/unit/cli/manpage_test.rb` compares two pages of a test registry with `test/fixtures/man`;
