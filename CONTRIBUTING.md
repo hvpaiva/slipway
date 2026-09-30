@@ -90,9 +90,10 @@ Each of these fails `rake check` or CI when it is broken.
   `Output.warning` is the only place that writes a `warning:` line, and nothing under `lib/`
   writes to stdout or stderr except `cli/context.rb`.
 - The man page ENVIRONMENT section and the README variable table list every variable the code
-  reads except `HOME` and `PATH`, the README tables for STATUS words and exit statuses and the
-  task table above match the code, and the README configuration example sets every config key
-  and no other.
+  reads except `HOME` and `PATH`. The README tables of STATUS words, drift, blockers, exit
+  statuses and the results of `fetch`, `sync` and `rollout undo`, the reasons a fetch gives,
+  the fields a field selector supports and the task table above match the code, and the README
+  configuration example sets every config key and no other.
 - Every console example in the README prints what the executable prints
   ([README examples](#readme-examples)).
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
