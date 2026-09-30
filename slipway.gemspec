@@ -8,10 +8,12 @@ Gem::Specification.new do |spec|
   spec.authors = ['Highlander Paiva']
   spec.email = ['contact@hvpaiva.dev']
 
-  spec.summary = 'A kubectl-style registry for the git repositories on your machine'
-  spec.description = 'Slipway keeps a registry of the development projects on your machine and shows ' \
-                     'their git state the way kubectl shows a cluster: get, describe, apply, labels, ' \
-                     'selectors, groups, table/json/yaml output, shell completion and man pages.'
+  spec.summary = 'A kubectl-style registry of the git repositories on your machine'
+  spec.description = 'Slipway keeps a registry of the git repositories on your machine and shows their state ' \
+                     'the way kubectl shows a cluster. It fetches them without prompts, compares each one with ' \
+                     'the remote, branch and revision its manifest declares, and fast-forwards the branches that ' \
+                     'can move without losing work, and it can take such a move back. Groups, labels and ' \
+                     'selectors pick the repositories, and it ships shell completion and man pages.'
   spec.homepage = 'https://github.com/hvpaiva/slipway'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.4'
