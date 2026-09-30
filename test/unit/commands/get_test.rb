@@ -194,4 +194,11 @@ class GetTest < Minitest::Test
       assert_equal [2, '', "error: missing required argument \"TYPE\"\nSee 'slipway get --help' for usage.\n"], missing
     end
   end
+
+  def test_help_explains_every_column_a_table_can_show
+    headers = Slipway::Views::Project.headers(wide: true, group: true, labels: true) |
+              Slipway::Views::Group.headers(wide: true, labels: true)
+
+    assert_equal headers.sort, Slipway::Commands::Get::COLUMNS.keys.sort
+  end
 end

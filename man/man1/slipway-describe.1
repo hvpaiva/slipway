@@ -12,6 +12,8 @@ Show details of one or many resources.
 .PP
 Print a detailed description of the selected resources, including the state of the repository at the registered path and where it differs from the manifest. You may select a single object by name, all objects of that type, or use a label or field selector.
 .PP
+Status is one of the words listed below. Last Fetch reads <never> when git answered and no fetch is on record, and a field with no value reads <none>. When git cannot read the repository, the Repository block holds git's reason instead of the fields.
+.PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
 .TP
@@ -23,6 +25,47 @@ Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. \-\-fiel
 .TP
 \fB\-A\fR, \fB\-\-all\-groups\fR
 If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with \-\-group.
+.SH "STATUS WORDS"
+STATUS is the first of these words that holds, in this order.
+.TP
+\fBMissing\fR
+The registered path is relative, or is not a directory on this machine.
+.TP
+\fBNotARepo\fR
+The directory exists but no repository contains it.
+.TP
+\fBUnsafe\fR
+git refused the repository because another user owns it (safe.directory); describe, diff and fetch print the git command that trusts it.
+.TP
+\fBConflicted\fR
+The working tree has unmerged paths.
+.TP
+\fBDetached\fR
+HEAD points at a commit rather than a branch.
+.TP
+\fBUnborn\fR
+The branch has no commits yet.
+.TP
+\fBDirty\fR
+Staged, modified or untracked files are present.
+.TP
+\fBGone\fR
+An upstream is configured but its remote\-tracking ref is gone, as of the last fetch \-\-prune (or a fetch with fetch.prune set).
+.TP
+\fBDiverged\fR
+The branch is both ahead of and behind its upstream, as of the last fetch (FETCHED).
+.TP
+\fBAhead\fR
+Commits not yet pushed to the upstream, as of the last fetch (FETCHED).
+.TP
+\fBBehind\fR
+Commits on the upstream not yet pulled, as of the last fetch (FETCHED).
+.TP
+\fBClean\fR
+Nothing to do.
+.TP
+\fBUnknown\fR
+git could not answer: it is not installed, it did not finish within 10 seconds, or it failed for a reason slipway does not classify. Each distinct reason is printed once on stderr per run.
 .SH EXAMPLES
 .EX
 # Describe a project

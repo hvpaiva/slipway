@@ -116,6 +116,7 @@ module Slipway
           '.SH DESCRIPTION', *Roff.paragraphs(command.description),
           *commands_section(command),
           *options_section(command.options),
+          *command.glossaries.flat_map { glossary_section(it) },
           *tagged_section('EXIT STATUS', command.exit_statuses),
           *examples_section(command.examples),
           *see_also(related(command, path))
@@ -193,6 +194,12 @@ module Slipway
         return [] if entries.empty?
 
         [Roff.heading(title), *entries.flat_map { |key, meaning| Roff.tagged(label.call(key), meaning) }]
+      end
+
+      def glossary_section(glossary)
+        intro = glossary.intro ? Roff.paragraphs(glossary.intro) : []
+        [Roff.heading(glossary.title.upcase), *intro,
+         *glossary.entries.flat_map { |term, meaning| Roff.tagged(Roff.bold(term), meaning) }]
       end
 
       # A script author reads the root page for the exit statuses, so it names the pages that add

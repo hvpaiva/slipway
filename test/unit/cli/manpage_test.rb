@@ -97,6 +97,19 @@ class ManpageTest < Minitest::Test
                     ".BR slipway\\-x (1)\n.SH \"SEE ALSO\"\n"
   end
 
+  def test_a_glossary_becomes_a_section_after_the_options
+    glossary = Slipway::CLI::Glossary.new(title: 'Status Words', intro: 'The first that holds.',
+                                          entries: { 'Clean' => 'Nothing to do.' })
+    command = Slipway::CLI::Command.new(name: 'x', summary: 'Show', glossaries: [glossary],
+                                        options: [Slipway::CLI::Option.new(long: 'all', description: 'All.')])
+    registry = Slipway::CLI::Registry.new(program: 'slipway', version: '0.1.0', description: 'D',
+                                          globals: [], commands: [command], builtins: false)
+
+    assert_includes Slipway::CLI::Manpage.new(registry, date: DATE).page(%w[x]),
+                    "All.\n.SH \"STATUS WORDS\"\nThe first that holds.\n.TP\n\\fBClean\\fR\nNothing to do.\n" \
+                    ".SH \"SEE ALSO\"\n"
+  end
+
   def test_paragraphs_turn_bullet_lines_into_indented_items_and_drop_leading_spaces
     text = "Intro.\n\n  *  First item.\n  *  Second item.\n\n Indented prose."
 

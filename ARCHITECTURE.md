@@ -82,7 +82,8 @@ form and its one caller.
 ## One definition, four outputs
 
 A `CLI::Command` is plain data: name, summary, description, section, examples, positionals,
-options, subcommands, exit statuses, handler. The same object feeds
+options, subcommands, exit statuses, glossaries (`CLI::Glossary`, a titled list of terms such as
+the columns or result words a verb prints), handler. The same object feeds
 
 - parsing and validation (`Parser`, `Validator`),
 - `slipway VERB --help` and `slipway help VERB` (`HelpRenderer`),

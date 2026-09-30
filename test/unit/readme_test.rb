@@ -7,8 +7,12 @@ class ReadmeTest < Minitest::Test
   README = File.join(ROOT, 'README.md')
   RESULTS = '| Result | Meaning |'
 
-  def test_status_table_lists_every_state_in_order
-    assert_equal Slipway::State::ROLES.keys, first_cells('| STATUS | Meaning |')
+  # The help of get and describe prints State::MEANINGS, so the table says the same.
+  def test_status_table_lists_every_state_in_order_with_the_meaning_help_gives
+    table = rows('| STATUS | Meaning |').to_h { it.split('|')[1, 2].map { it.strip.delete('`') } }
+
+    assert_equal Slipway::State::ROLES.keys, table.keys
+    assert_equal Slipway::State::MEANINGS, table
   end
 
   def test_drift_tables_list_every_type_and_blocker_in_order

@@ -31,6 +31,7 @@ module Slipway
       def command(command, path)
         join([
                command.description,
+               *command.glossaries.map { glossary(it) },
                exit_statuses(command.exit_statuses),
                examples(command.examples),
                *command_sections(command),
@@ -57,9 +58,17 @@ module Slipway
       def exit_statuses(statuses)
         return nil if statuses.empty?
 
-        width = statuses.keys.map { it.size + GAP.size }.max
-        rows = statuses.map { |status, meaning| "#{INDENT}#{status.ljust(width)}#{meaning}" }
-        "#{header('Exit Status')}\n#{rows.join("\n")}"
+        "#{header('Exit Status')}\n#{terms(statuses)}"
+      end
+
+      def glossary(glossary)
+        intro = glossary.intro && "#{INDENT}#{glossary.intro}\n\n"
+        "#{header(glossary.title)}\n#{intro}#{terms(glossary.entries)}"
+      end
+
+      def terms(entries)
+        width = entries.keys.map { it.size + GAP.size }.max
+        entries.map { |term, meaning| "#{INDENT}#{term.ljust(width)}#{meaning}" }.join("\n")
       end
 
       def examples(examples)

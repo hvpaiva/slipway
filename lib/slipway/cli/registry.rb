@@ -70,18 +70,25 @@ module Slipway
     # +command+ omits the program name; help and man pages prepend it.
     Example = Data.define(:comment, :command)
 
+    # A titled list of terms and what each means, such as the columns or the result words a command
+    # prints. +intro+ is a paragraph printed above the terms.
+    Glossary = Data.define(:title, :intro, :entries) do
+      def initialize(title:, entries:, intro: nil) = super
+    end
+
     # +handler+ responds to call(context, args, opts). A +raw+ command receives argv untouched,
     # with no option parsing, which is what the completion endpoint needs. +usage+ replaces
     # the positional list in the Usage line when the accepted forms cannot be read off them.
     # +exit_statuses+ maps each status to its meaning, for a command whose statuses differ from
-    # the ones every command shares.
-    Command = Data.define(:name, :aliases, :summary, :description, :section, :examples,
-                          :positionals, :options, :subcommands, :hidden, :raw, :handler, :usage, :exit_statuses) do
+    # the ones every command shares. +glossaries+ are the Glossary sections help prints under the
+    # description and the man page renders after the options.
+    Command = Data.define(:name, :aliases, :summary, :description, :section, :examples, :positionals, :options,
+                          :subcommands, :hidden, :raw, :handler, :usage, :exit_statuses, :glossaries) do
       def initialize(name:, summary:, description: nil, aliases: [], section: 'Available Commands', examples: [],
                      positionals: [], options: [], subcommands: [], hidden: false, raw: false, handler: nil,
-                     usage: nil, exit_statuses: {})
+                     usage: nil, exit_statuses: {}, glossaries: [])
         super(name:, summary:, description: description || summary, aliases:, section:, examples:,
-              positionals:, options:, subcommands:, hidden:, raw:, handler:, usage:, exit_statuses:)
+              positionals:, options:, subcommands:, hidden:, raw:, handler:, usage:, exit_statuses:, glossaries:)
       end
 
       def group? = !subcommands.empty?
