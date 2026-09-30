@@ -278,6 +278,10 @@ them; GitHub signs the merge commit. `rake check` runs the same script over
   template asks for both.
 - `bundle exec rake check` is expected green before you open it; the required checks are the
   same tasks.
+- The `main` ruleset requires a pull request to be up to date with `main` before it merges.
+  Update yours with GitHub's "Update branch" button or `git merge origin/main`, which
+  `bin/lint-commits` accepts as a merge commit, or rebase your own branch and push it with
+  `git push --force-with-lease`.
 - User-visible changes get a line under `## [Unreleased]` in `CHANGELOG.md`. The `commits` job
   fails a pull request that touches `lib/`, `exe/` or `man/` without touching the changelog,
   unless the pull request carries the `skip-changelog` label: that is the explicit exception,
