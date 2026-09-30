@@ -98,16 +98,26 @@ Each of these fails `rake check` or CI when it is broken.
   require commands, views, the runtime, the inspector or the pool, and `cli/` requires one file
   outside itself (`cli/errors.rb` requires `error.rb`). [ARCHITECTURE.md](ARCHITECTURE.md#layers)
   has the full rule.
-- `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer,
-  `Output.warning` is the only place that writes a `warning:` line, and nothing under `lib/`
-  writes to stdout or stderr except `cli/context.rb`.
+- Only `git/runner.rb` and `editor.rb` start a process (`system`, `spawn`, `exec`, backticks,
+  `%x` or `popen`), only `yaml.rb` and `manifest.rb` emit YAML, only `Output.warning` writes a
+  `warning:` line, and nothing under `lib/` writes to stdout or stderr except
+  `cli/context.rb` (`test/unit/conventions_test.rb`). `reset --keep` is the only reset slipway
+  runs and `Rollback` its only caller (`test/unit/reset_rule_test.rb`).
+- Every file under `lib/` belongs to exactly one layer
+  (`test_every_file_belongs_to_exactly_one_layer`) and loads on its own
+  (`test/unit/require_graph_test.rb`), and a file under `test/` that defines tests ends in
+  `_test.rb`, so the test tasks run it (`test_test_files_that_define_tests_end_in_test_rb`).
+- Constants that two parts of the code share stay in step: the variable each setting reads in
+  the config, the runner and the editor, the theme role of every STATUS and result word, and
+  the blocker sentences `Plan` names (`test/unit/seams_test.rb`).
 - `Git::Fake`, which the command tests run against, answers every question `Git::Repository`
   answers, with the same parameters (`test/unit/git/fake_test.rb`).
 - The man page ENVIRONMENT section and the README variable table list every variable the code
   reads except `HOME` and `PATH`. The README tables of STATUS words, drift, blockers, exit
   statuses and the results of `fetch`, `sync` and `rollout undo`, the reasons a fetch gives,
-  the fields a field selector supports and the task table above match the code, and the README
-  configuration example sets every config key and no other.
+  the fields a field selector supports and the task table above match the code, the STATUS,
+  drift and blocker tables say what `--help` says, and the README configuration example sets
+  every config key and no other.
 - Every console example in the README prints what the executable prints
   ([README examples](#readme-examples)).
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
