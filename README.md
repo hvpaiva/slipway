@@ -111,7 +111,8 @@ with [mise](https://mise.jdx.dev).
 
 Slipway needs Ruby 3.4 or newer and git 2.35 or newer on `PATH`, and has no runtime gem
 dependencies. Git before 2.41 cannot tell `unchanged` from `fetched`, so every fetch that
-succeeds reads `fetched`, without the refs that moved.
+succeeds reads `fetched`, without the refs that moved. Fetching over ssh without a prompt needs
+OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
 
 ## Usage
 
@@ -314,7 +315,8 @@ slipway fetch -A --prune; slipway get projects -A
 ```
 
 Git never prompts during a fetch: slipway sets `GIT_TERMINAL_PROMPT=0`, points `GIT_ASKPASS` and
-`SSH_ASKPASS` at `false`, and sets `SSH_ASKPASS_REQUIRE=force` so ssh never reads the terminal.
+`SSH_ASKPASS` at `false`, and sets `SSH_ASKPASS_REQUIRE=force`, so an ssh from OpenSSH 8.4 on
+never reads the terminal.
 Your ssh configuration, `SSH_AUTH_SOCK` and credential helpers are used as they are. Only ssh
 and https remotes are fetched unless the `protocols` setting adds more, so an `http://`,
 `git://` or local path remote fails with `ProtocolNotAllowed` until it does. A fetch that runs
