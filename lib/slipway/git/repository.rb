@@ -7,6 +7,13 @@ require_relative 'runner'
 
 module Slipway
   module Git
+    # Every git command slipway runs, asked of one registered path at a time. Each method runs
+    # git through the Runner, under the local deadline or, for #fetch and the moves, the network
+    # profile, and raises a Git::Error subclass when git fails: MissingPath, NotARepository,
+    # UnsafeRepository, NotInstalled or Timeout for the failures it names, a plain Error with
+    # git's first line for the rest. It keeps no state about a repository, so one instance
+    # serves every worker of a run; all it remembers is whether git predates
+    # `fetch --porcelain`.
     class Repository
       include FastForwarding
       include RollingBack
@@ -98,6 +105,11 @@ module Slipway
         result.success? ? result.out.chomp : nil
       end
 
+      # Fetches from the remote git picks. Returns a FetchResult whose `updates` lists the refs
+      # that moved, empty when none did, or is nil when git predates 2.41 and cannot tell.
+      # Raises LocalUpstream, before anything is contacted, for a branch that tracks a local one,
+      # and AuthRequired, ProtocolNotAllowed, Timeout, NotInstalled or MissingPath when the fetch
+      # fails for those reasons.
       def fetch(path, prune:)
         raise LocalUpstream, File.expand_path(path) if local_upstream?(path)
 

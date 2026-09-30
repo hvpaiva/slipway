@@ -7,6 +7,10 @@ require_relative 'cli/style'
 require_relative 'names'
 
 module Slipway
+  # The settings in effect for one run. Config.load resolves each from the flag typed on the
+  # command line, then its `SLIPWAY_*` variable, then the configuration file, then its default,
+  # and raises Config::Error naming the file or the variable whose value is refused. `variables`
+  # maps each key whose value came from its variable to the variable's name.
   Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :parallel, :protocols, :path, :exists,
                        :variables)
 

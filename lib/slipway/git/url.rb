@@ -4,6 +4,8 @@ require_relative '../error'
 
 module Slipway
   module Git
+    # Remote URLs: the forms slipway accepts (validate!, valid?) and the masking of credentials
+    # in any text that may quote one (redact).
     module Url
       # Callers decide whether the URL came from the command line or a file.
       class Invalid < Slipway::Error; end

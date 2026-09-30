@@ -7,6 +7,11 @@ require_relative 'resources'
 require_relative 'manifest'
 
 module Slipway
+  # The registry on disk: one manifest per resource, `groups/NAME.yaml` and
+  # `projects/GROUP/NAME.yaml` under `root`. A write goes to a temporary file renamed over the
+  # target, so a reader sees the old manifest or the new one and never part of one. Nothing is
+  # locked: two processes that write the same resource at once leave the one that renamed last.
+  # A file is trusted only when its kind, name and group match where it was found.
   class Store
     class NotFound < Error
       # kubectl's form for every kind: `projects "hldr" not found`, `groups "work" not found`.
