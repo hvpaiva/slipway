@@ -3,7 +3,7 @@ Update the labels on a resource.
   *  A label key and value must begin with a letter or number, and may contain letters, numbers, hyphens, dots, and underscores, up to 63 characters each.
   *  Optionally, the key can begin with a DNS subdomain prefix and a single '/', like example.com/my-app.
   *  If --overwrite is true, then existing labels can be overwritten, otherwise attempting to overwrite a label will result in an error.
-  *  KEY- removes the label KEY; removing a label that is not set changes nothing.
+  *  KEY- removes the label KEY; removing a label that is not set changes nothing. A change that leaves the labels as they were prints not labeled.
 
 Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
 
