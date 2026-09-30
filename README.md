@@ -306,7 +306,7 @@ with exit status 1. `--dry-run=client` reports what would change without writing
 
 ### Editing
 
-`slipway edit project hldr` writes the manifest to a temporary file, opens it in
+`slipway edit project hldr -n personal` writes the manifest to a temporary file, opens it in
 `SLIPWAY_EDITOR`, then the `editor` config key, then `VISUAL`, then `EDITOR`, or `vi`, and
 saves what comes back as `project/hldr edited`. Text that changes without changing the object
 prints `project/hldr skipped`. An unchanged file prints `Edit cancelled, no changes made.` on
@@ -317,10 +317,12 @@ with status 1.
 
 ### Labels
 
-`slipway label project hldr tier=web` sets a label and prints `project/hldr labeled`;
-`tier-` removes one (`unlabeled`). Setting a key that already has a different value fails with
-`error: 'tier' already has a value (web), and --overwrite is false` unless `--overwrite` is
-given. `--list` prints the labels one `key=value` per line instead of writing.
+`slipway label project hldr tier=web -n personal` sets a label and prints
+`project/hldr labeled`; `tier-` removes one (`unlabeled`). Setting a key that already has a
+different value fails unless `--overwrite` is given: with `tier=web` set,
+`slipway label project hldr tier=api -n personal` prints
+`error: 'tier' already has a value (web), and --overwrite is false`. `--list` prints the labels
+one `key=value` per line instead of writing.
 
 ## Configuration
 
