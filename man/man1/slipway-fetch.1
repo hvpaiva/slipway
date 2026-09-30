@@ -26,10 +26,10 @@ If present, fetch every project across all groups. The group in the current conf
 \fB\-\-prune\fR
 Before fetching, remove any remote\-tracking references that no longer exist on the remote.
 .TP
-\fB\-\-dry\-run\fR \fISTRATEGY\fR
-Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+\fB\-\-dry\-run\fR
+Print what would change and write nothing.
 .SH RESULTS
-When more than one project ran, a count of the results closes the run on stderr. With \-\-dry\-run=client no remote is contacted: a project that would be fetched reads fetched, and every line and the count end in (dry run). Ctrl\-C stops the git processes slipway started and exits with status 130.
+When more than one project ran, a count of the results closes the run on stderr. With \-\-dry\-run no remote is contacted: a project that would be fetched reads fetched, and every line and the count end in (dry run). Ctrl\-C stops the git processes slipway started and exits with status 130.
 .TP
 \fBfetched\fR
 The remote moved refs, and up to 5 follow: origin/main a1b2c3d..e4f5a6b for a ref that moved, origin/feature d09a085 (new) for a new one and origin/feature deleted (was d09a085) for one \-\-prune removed. A last line, and N more, counts the rest. Tags appear under their bare name. With git before 2.41, every fetch that succeeds reads fetched, without the refs.
@@ -71,7 +71,7 @@ slipway fetch \-l lang=rust \-\-prune
 .PP
 .EX
 # List the projects a fetch would reach, without contacting any remote
-slipway fetch \-A \-\-dry\-run=client
+slipway fetch \-A \-\-dry\-run
 .EE
 .SH "SEE ALSO"
 .BR slipway (1)

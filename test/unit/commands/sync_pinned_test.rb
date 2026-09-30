@@ -39,7 +39,7 @@ class SyncPinnedTest < Minitest::Test
       held = "project/hldr unchanged\n  held at a1b2c3d by spec.revision\n"
 
       assert_equal [0, held, ''], run_sync(runtime:)
-      assert_equal held.sub("\n", " (dry run)\n"), run_sync('--dry-run=client', runtime:)[1]
+      assert_equal held.sub("\n", " (dry run)\n"), run_sync('--dry-run', runtime:)[1]
       refute(runtime.git.calls.any? { it.first == :fast_forward })
     end
   end

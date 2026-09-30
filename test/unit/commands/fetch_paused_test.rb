@@ -32,7 +32,7 @@ class FetchPausedTest < Minitest::Test
       register(runtime, 'dots', paused: true)
 
       assert_equal [0, "project/dots \e[90;3mpaused\e[0m\n", ''], run_fetch('dots', '--color=always', runtime:)
-      assert_equal [0, "project/dots paused (dry run)\n", ''], run_fetch('--dry-run=client', runtime:)
+      assert_equal [0, "project/dots paused (dry run)\n", ''], run_fetch('--dry-run', runtime:)
       assert_empty runtime.git.calls
     end
   end

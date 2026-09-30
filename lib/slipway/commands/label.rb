@@ -86,7 +86,7 @@ module Slipway
         return list(context, labels) if opts[:list] == true
 
         write(runtime.store, context, kind, resource.with_labels(labels), change.outcome(resource.labels),
-              dry_run: opts[:dry_run] == 'client')
+              dry_run: opts[:dry_run] == true)
       end
 
       private

@@ -90,7 +90,7 @@ alone, and slipway prints git's command to trust it instead of adding it to `saf
   never write to a repository and never contact a remote: git runs with `GIT_OPTIONAL_LOCKS=0`,
   so reading a status does not even refresh the index, and asking whether a partial clone holds
   a pinned commit never fetches it.
-- Only `fetch` and `sync` contact remotes, and not with `--dry-run=client`; a move of
+- Only `fetch` and `sync` contact remotes, and not with `--dry-run`; a move of
   `rollout undo` in a partial clone may fetch the objects it writes, as a fast-forward may. Only
   `create`, `apply`, `delete`, `edit`, `label` and the `rollout` verbs other than `history`
   write the registry.

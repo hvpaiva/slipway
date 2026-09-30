@@ -43,13 +43,13 @@ module Slipway
           CLI::Example.new(comment: 'Apply every manifest in a directory', command: 'apply -f ./projects'),
           CLI::Example.new(comment: 'Apply the YAML passed into stdin', command: 'apply -f - < hldr.yaml'),
           CLI::Example.new(comment: 'Show what would change without writing anything',
-                           command: 'apply -f hldr.yaml --dry-run=client')
+                           command: 'apply -f hldr.yaml --dry-run')
         ]
       end
       private_class_method :examples
 
       def run(runtime, context, _args, opts)
-        dry_run = opts[:dry_run] == 'client'
+        dry_run = opts[:dry_run] == true
         session = Session.new(runtime.store, default_group: scope(runtime, context, opts).group, dry_run:)
         opts[:filename].each do |file|
           session.apply(file) { |kind, name, word, role| result_line(context, kind, name, word, role, dry_run:) }

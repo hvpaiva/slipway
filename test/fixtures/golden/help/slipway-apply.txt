@@ -15,11 +15,11 @@ Examples:
   slipway apply -f - < hldr.yaml
 
   # Show what would change without writing anything
-  slipway apply -f hldr.yaml --dry-run=client
+  slipway apply -f hldr.yaml --dry-run
 
 Options:
-  -f, --filename FILE      The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '-' reads stdin. (required)
-      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+  -f, --filename FILE   The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '-' reads stdin. (required)
+      --dry-run         Print what would change and write nothing.
 
 Usage:
   slipway apply -f FILE [flags]

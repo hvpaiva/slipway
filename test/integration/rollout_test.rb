@@ -43,7 +43,7 @@ class RolloutIntegrationTest < Minitest::Test
       manifest = File.read(manifest_file(env))
 
       assert_equal "project/stale rolled back (dry run)\n  main #{new[0, 7]}..#{old[0, 7]} (1 commit back to " \
-                   "revision 1); held there by spec.revision\n", slipway('rollout', 'undo', 'stale', '--dry-run=client',
+                   "revision 1); held there by spec.revision\n", slipway('rollout', 'undo', 'stale', '--dry-run',
                                                                          env:)[1].lines.first(2).join
       assert_equal [new, manifest], [head(dir), File.read(manifest_file(env))]
     end

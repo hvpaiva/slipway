@@ -34,7 +34,7 @@ module Slipway
                     'and the details under it. The parallel setting caps how many projects fetch at once, ' \
                     'fast-forwards run one at a time, and the results print in the order the projects are ' \
                     "listed.\n\n" \
-                    'With --dry-run=client nothing is fetched or written: the plan is made from the last fetch.'
+                    'With --dry-run nothing is fetched or written: the plan is made from the last fetch.'
       USAGE = '[NAME... | project/NAME...]'
       EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
         '0' => 'Every selected project was fast-forwarded, fetched, left unchanged, skipped or paused.',
@@ -44,7 +44,7 @@ module Slipway
       RESULTS = CLI::Glossary.new(
         title: 'Results',
         intro: 'When more than one project ran, a count of the results closes the run on stderr. With ' \
-               '--dry-run=client every line and the count end in (dry run). Ctrl-C stops the git processes slipway ' \
+               '--dry-run every line and the count end in (dry run). Ctrl-C stops the git processes slipway ' \
                'started and exits with status 130; a fast-forward it stops ends as one stopped at the deadline.',
         entries: {
           Sync::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits it ' \
@@ -97,7 +97,7 @@ module Slipway
           CLI::Example.new(comment: 'Sync every project in every group', command: 'sync -A'),
           CLI::Example.new(comment: 'Sync two projects of the work group', command: 'sync api web -n work'),
           CLI::Example.new(comment: 'Show what sync would do from the last fetch, without contacting any remote',
-                           command: 'sync -A --dry-run=client')
+                           command: 'sync -A --dry-run')
         ]
       end
       private_class_method :examples
@@ -105,7 +105,7 @@ module Slipway
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         names = scope.project_targets(args, verb: 'sync')
-        dry_run = opts[:dry_run] == 'client'
+        dry_run = opts[:dry_run] == true
         fetcher = Fetcher.new(runtime, prune: opts[:prune] == true, dry_run:)
         executor = Sync::Executor.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
         results = Results.new(context, ROLES, dry_run:)

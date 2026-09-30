@@ -37,7 +37,7 @@ class CreateFromDirIntegrationTest < Minitest::Test
   def test_a_dry_run_prints_a_list_that_apply_registers
     with_home do |env|
       clones(env)
-      manifests = slipway!('create', 'project', '--from-dir', '~/dev', '--dry-run=client', '-o', 'yaml', env:)
+      manifests = slipway!('create', 'project', '--from-dir', '~/dev', '--dry-run', '-o', 'yaml', env:)
 
       refute_path_exists data_home(env)
       assert_match(/\Akind: List\nitems:\n/, manifests)

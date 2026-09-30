@@ -15,7 +15,7 @@ class BaseTest < Minitest::Test
 
     def run(runtime, context, args, opts)
       kind = scope(runtime, context, opts).kind(args.first)
-      result_line(context, kind, args[1], 'created', :create_created, dry_run: opts[:dry_run] == 'client')
+      result_line(context, kind, args[1], 'created', :create_created, dry_run: opts[:dry_run] == true)
     end
   end
 
@@ -31,11 +31,21 @@ class BaseTest < Minitest::Test
   def test_result_line_paints_the_verb_and_the_dry_run_suffix
     with_sandbox do |env|
       runtime = sandbox_runtime(env)
-      _, plain, = run_commands('echo', 'groups', 'work', '--dry-run', 'client', runtime:, commands: [Echo])
-      _, painted, = run_commands('echo', 'groups', 'work', '--dry-run=client', '--color', runtime:, commands: [Echo])
+      _, plain, = run_commands('echo', 'groups', 'work', '--dry-run', runtime:, commands: [Echo])
+      _, painted, = run_commands('echo', 'groups', 'work', '--dry-run', '--color', runtime:, commands: [Echo])
 
       assert_equal "group/work created (dry run)\n", plain
       assert_equal "group/work \e[32mcreated\e[0m \e[36m(dry run)\e[0m\n", painted
+    end
+  end
+
+  def test_dry_run_takes_no_value
+    with_sandbox do |env|
+      runtime = sandbox_runtime(env)
+      status, out, err = run_commands('echo', 'groups', 'work', '--dry-run=client', runtime:, commands: [Echo])
+
+      assert_equal [2, '', "error: needless argument: --dry-run=client\nSee 'slipway echo --help' for usage.\n"],
+                   [status, out, err]
     end
   end
 
@@ -72,8 +82,8 @@ class BaseTest < Minitest::Test
                  [options::SELECTOR, options::ALL_GROUPS, options::NO_HEADERS, options::SHOW_LABELS,
                   options::DRY_RUN].map(&:key)
     assert_equal %w[A l], [options::ALL_GROUPS.short, options::SELECTOR.short]
-    assert_equal [%w[none client], 'none'], [options::DRY_RUN.enum, options::DRY_RUN.default]
     assert_predicate options::ALL_GROUPS, :flag?
+    assert_predicate options::DRY_RUN, :flag?
   end
 
   def test_type_positional_completes_the_plural_type_words_with_descriptions

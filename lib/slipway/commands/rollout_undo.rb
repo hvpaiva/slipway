@@ -31,7 +31,7 @@ module Slipway
                       "can be rolled back: pausing only keeps fetch and sync away.\n\n" \
                       'The project prints one line, one of the results listed below, with a reason in ' \
                       "parentheses and the details under it.\n\n" \
-                      'With --dry-run=client nothing is moved or written, and the line ends in (dry run).'
+                      'With --dry-run nothing is moved or written, and the line ends in (dry run).'
         EXIT_STATUSES = Manual::EXIT_STATUSES.merge(
           '0' => 'The project was rolled back, or already stood at the revision and was held there.',
           '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project that was ' \
@@ -92,7 +92,7 @@ module Slipway
             CLI::Example.new(comment: 'Roll back project hldr to revision 3',
                              command: 'rollout undo hldr --to-revision=3'),
             CLI::Example.new(comment: 'Show where undo would move project hldr, without moving or writing anything',
-                             command: 'rollout undo hldr --dry-run=client')
+                             command: 'rollout undo hldr --dry-run')
           ]
         end
         private_class_method :examples
@@ -101,7 +101,7 @@ module Slipway
           scope = scope(runtime, context, opts)
           names = scope.project_targets(args, verb: 'roll back')
           number = revision(opts[:to_revision])
-          dry_run = opts[:dry_run] == 'client'
+          dry_run = opts[:dry_run] == true
           rollback = Rollback.new(runtime, dry_run:, group: opts[:group] ? nil : runtime.config.group)
           results = Results.new(context, ROLES, dry_run:)
           scope.select(Resources::PROJECTS, names) do |projects|

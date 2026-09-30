@@ -53,8 +53,8 @@ class ManpageTest < Minitest::Test
     page = @manpage.page(%w[create])
 
     assert_includes page, "\\fB\\-\\-path\\fR \\fIDIR\\fR\nDirectory of the repository. (required)\n"
-    assert_includes page, "\\fB\\-\\-dry\\-run\\fR \\fIMODE\\fR\nOnly print the object that would be sent. " \
-                          "One of: none, client. (default \"none\")\n"
+    assert_includes page, "\\fB\\-\\-output\\fR \\fIFORMAT\\fR\nOutput format. One of: table, yaml, json. " \
+                          "(default \"table\")\n"
     assert_includes page, ".SH SYNOPSIS\n.SY \"slipway create\"\n.B \\-\\-path\n.I DIR\n.I TYPE\\&\n.I NAME\\&\n" \
                           ".RI [ flags ]\n.YS\n"
     assert_includes page, '\fB\-\-label\fR \fIKEY=VALUE\fR'

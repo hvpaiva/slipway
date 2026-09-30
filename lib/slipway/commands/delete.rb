@@ -47,7 +47,7 @@ module Slipway
         raise CLI::UsageError, NO_NAMES if names.empty?
 
         group = kind.namespaced? ? scope.group : nil
-        dry_run = opts[:dry_run] == 'client'
+        dry_run = opts[:dry_run] == true
         resolve(runtime.store, kind, names.uniq, group, ignore: opts[:ignore_not_found] == true).each do |resource|
           runtime.store.delete(kind, resource.name, group:) unless dry_run
           context.puts(line(context, kind, resource, dry_run:))

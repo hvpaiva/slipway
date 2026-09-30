@@ -104,7 +104,7 @@ class SyncIntegrationTest < Minitest::Test
       before = [paused, stale].map { snapshot(it) }
 
       assert_equal [0, "project/dots paused (dry run)\nproject/stale unchanged (dry run)\n"],
-                   slipway('sync', '--dry-run=client', env:).first(2)
+                   slipway('sync', '--dry-run', env:).first(2)
       assert_equal [0, "project/dots paused\n"], slipway('sync', 'dots', env:).first(2)
       assert_equal(before, [paused, stale].map { snapshot(it) })
       [paused, stale].each { refute_path_exists File.join(it, '.git', 'FETCH_HEAD') }

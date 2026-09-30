@@ -85,7 +85,7 @@ class ApplyIntegrationTest < Minitest::Test
     with_home do |env|
       api = manifest('Project', 'api', group: 'work', path: '~/work/api')
       file = manifest_file(env, 'one.yaml', "#{manifest('Group', 'work')}#{api}")
-      status, out, err = slipway('apply', '-f', file, '--dry-run=client', env:)
+      status, out, err = slipway('apply', '-f', file, '--dry-run', env:)
 
       assert_equal [0, "group/work created (dry run)\nproject/api created (dry run)\n", ''], [status, out, err]
       refute_path_exists data_home(env)
@@ -93,7 +93,7 @@ class ApplyIntegrationTest < Minitest::Test
       slipway!('apply', '-f', file, env:)
 
       assert_equal "group/work unchanged (dry run)\nproject/api unchanged (dry run)\n",
-                   slipway!('apply', '-f', file, '--dry-run=client', env:)
+                   slipway!('apply', '-f', file, '--dry-run', env:)
     end
   end
 

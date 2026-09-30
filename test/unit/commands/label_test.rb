@@ -79,9 +79,9 @@ class LabelTest < Minitest::Test
   def test_dry_run_prints_the_word_and_writes_nothing
     with_runtime do |runtime|
       register(runtime, 'hldr', labels: { 'lang' => 'rust' })
-      labeled = run_label('project', 'hldr', 'app=web', '--dry-run', 'client', runtime:)
-      unlabeled = run_label('project', 'hldr', 'lang-', '--dry-run=client', '--color', runtime:)
-      unchanged = run_label('project', 'hldr', 'lang=rust', '--dry-run=client', '--color', runtime:)
+      labeled = run_label('project', 'hldr', 'app=web', '--dry-run', runtime:)
+      unlabeled = run_label('project', 'hldr', 'lang-', '--dry-run', '--color', runtime:)
+      unchanged = run_label('project', 'hldr', 'lang=rust', '--dry-run', '--color', runtime:)
 
       assert_equal [0, "project/hldr labeled (dry run)\n", ''], labeled
       assert_equal [0, "project/hldr \e[33munlabeled\e[0m \e[36m(dry run)\e[0m\n", ''], unlabeled

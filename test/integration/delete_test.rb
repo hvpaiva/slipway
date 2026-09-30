@@ -41,7 +41,7 @@ class DeleteIntegrationTest < Minitest::Test
   def test_dry_run_prints_the_line_without_deleting
     with_home do |env|
       registry(env)
-      status, out, err = slipway('delete', 'projects', 'api', 'web', '-n', 'work', '--dry-run=client', env:)
+      status, out, err = slipway('delete', 'projects', 'api', 'web', '-n', 'work', '--dry-run', env:)
 
       assert_equal [0, "project \"api\" deleted from work group (dry run)\nproject \"web\" deleted from work group " \
                        "(dry run)\n", ''], [status, out, err]

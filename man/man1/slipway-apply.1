@@ -19,8 +19,8 @@ YAML is accepted, with several documents per file, and a document of kind List s
 \fB\-f\fR, \fB\-\-filename\fR \fIFILE\fR
 The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '\-' reads stdin. (required)
 .TP
-\fB\-\-dry\-run\fR \fISTRATEGY\fR
-Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+\fB\-\-dry\-run\fR
+Print what would change and write nothing.
 .SH EXAMPLES
 .EX
 # Apply the configuration in hldr.yaml to a project
@@ -39,7 +39,7 @@ slipway apply \-f \- < hldr.yaml
 .PP
 .EX
 # Show what would change without writing anything
-slipway apply \-f hldr.yaml \-\-dry\-run=client
+slipway apply \-f hldr.yaml \-\-dry\-run
 .EE
 .SH "SEE ALSO"
 .BR slipway (1)

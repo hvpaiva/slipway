@@ -71,7 +71,7 @@ class HelpRendererTest < Minitest::Test
     Options:
           --path DIR          Directory of the repository. (required)
           --label KEY=VALUE   Label to set.
-          --dry-run MODE      Only print the object that would be sent. One of: none, client. (default "none")
+          --output FORMAT     Output format. One of: table, yaml, json. (default "table")
   HELP
 
   def setup

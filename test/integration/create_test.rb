@@ -71,12 +71,12 @@ class CreateIntegrationTest < Minitest::Test
 
   def test_dry_run_checks_the_arguments_without_writing
     with_home do |env|
-      status, out, err = slipway('create', 'project', 'dry', '--path', '~/dev/dry', '--dry-run=client', env:)
+      status, out, err = slipway('create', 'project', 'dry', '--path', '~/dev/dry', '--dry-run', env:)
 
       assert_equal [0, "project/dry created (dry run)\n", ''], [status, out, err]
       refute_path_exists data_home(env)
 
-      status, _, err = slipway('create', 'project', 'dry', '--path', '~/dev/dry', '-n', 'nope', '--dry-run=client',
+      status, _, err = slipway('create', 'project', 'dry', '--path', '~/dev/dry', '-n', 'nope', '--dry-run',
                                env:)
 
       assert_equal [1, "error: groups \"nope\" not found\n"], [status, err]
