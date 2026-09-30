@@ -1,0 +1,39 @@
+Fetch each selected project and fast-forward its branch.
+
+Runs in every project of the current group, in the projects named, in the ones a label selector matches, or with --all-groups in every project. Each project is fetched as slipway fetch fetches it and compared with its manifest as slipway diff compares it, and its checked-out branch is fast-forwarded onto its upstream when the branch tracks an upstream that still exists, is behind it without commits of its own, has no staged, unstaged or conflicted changes and no merge, rebase or other operation in progress. Untracked files do not stop it, and git refuses a fast-forward that would overwrite one. Sync never merges, rebases, stashes, resets, switches a branch or changes a remote.
+
+A project whose spec.syncPolicy is FetchOnly is only fetched, and one whose spec.paused is true is left alone: no git command runs in it. A project pinned by spec.revision is fast-forwarded up to that commit instead of its upstream, only when its upstream holds the commit, never past it, and never moved back to it.
+
+Each project prints one line: fast-forwarded, fetched when the fetch of a FetchOnly project brought references, unchanged, skipped, paused, denied or failed, with the reason in parentheses and the details below. A fast-forward onto the upstream names the commits the branch moved across and the command that undoes it. The parallel setting caps how many projects fetch at once, fast-forwards run one at a time, and the results print in the order the projects are listed.
+
+With --dry-run=client nothing is fetched or written: the plan is made from the last fetch.
+
+Exit Status:
+  0     Every selected project was fast-forwarded, fetched, left unchanged, skipped or paused.
+  1     Runtime error, such as a missing resource or an unreadable manifest, or a project whose fetch or fast-forward was denied or failed.
+  2     Usage error: unknown command, unknown flag or invalid argument.
+  130   Interrupted by SIGINT.
+
+Examples:
+  # Sync every project in the current group
+  slipway sync
+
+  # Sync every project in every group
+  slipway sync -A
+
+  # Sync two projects of the work group
+  slipway sync api web -n work
+
+  # Show what sync would do from the last fetch, without contacting any remote
+  slipway sync -A --dry-run=client
+
+Options:
+  -l, --selector EXPR      Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
+  -A, --all-groups         If present, sync every project across all groups. The group in the current configuration is ignored even if specified with --group.
+      --prune              Before fetching, remove any remote-tracking references that no longer exist on the remote.
+      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+
+Usage:
+  slipway sync [NAME... | project/NAME...] [flags]
+
+Use "slipway --help" for a list of global options (applies to all commands).

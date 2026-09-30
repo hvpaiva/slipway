@@ -31,9 +31,11 @@ class SeamsTest < Minitest::Test
     end
   end
 
-  def test_every_result_role_fetch_paints_exists_in_both_themes
+  def test_every_result_role_fetch_and_sync_paint_exists_in_both_themes
     Slipway::CLI::Theme::PRESETS.each do |name, roles|
-      Slipway::Commands::Fetch::ROLES.each_value { assert_includes roles.keys, it, name }
+      [Slipway::Commands::Fetch, Slipway::Commands::SyncCommand].each do |verb|
+        verb::ROLES.each_value { assert_includes roles.keys, it, "#{name} #{verb}" }
+      end
     end
   end
 

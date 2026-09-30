@@ -106,6 +106,7 @@ bundle exec rake install
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
 | `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
 | `diff [NAME...]` | Show where projects differ from their manifests, without contacting a remote; exit status 3 when any does. |
+| `sync [NAME...]` | Fetch the selected projects and fast-forward each clean branch that is behind; prints `fast-forwarded`, `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -231,8 +232,9 @@ project/notes fetched
   origin/main 1c2d3e4..5f6a7b8
 project/augur skipped (NoRemote)
   no upstream, no origin and no single remote to fetch from
-project/hldr unchanged
-3 projects: 1 fetched, 1 unchanged, 1 skipped
+project/hldr fetched
+  origin/main e001395..4c5d6e7
+3 projects: 2 fetched, 1 skipped
 ```
 
 `slipway fetch` runs `git fetch` in the projects of the current group, in the projects named
@@ -312,16 +314,17 @@ field is optional, and one at its default is not written:
 | --- | --- | --- |
 | `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
 | `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
-| `spec.revision` | The commit the project is expected to be at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. | none |
-| `spec.syncPolicy` | `FastForward` allows the checked-out branch to be fast-forwarded onto its upstream; `FetchOnly` allows fetching only. | `FastForward` |
-| `spec.paused` | `true` keeps `fetch` away from the project, which prints `project/NAME paused` and runs no git command there. | `false` |
+| `spec.revision` | The commit the project is held at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. | none |
+| `spec.syncPolicy` | `FastForward` allows `sync` to fast-forward the checked-out branch; `FetchOnly` allows fetching only. | `FastForward` |
+| `spec.paused` | `true` keeps `fetch` and `sync` away from the project, which prints `project/NAME paused` and runs no git command there. | `false` |
 
-Only `fetch` acts on one of these fields: it leaves a project with `spec.paused: true` alone. No
-command changes a repository to match the other four, and STATUS does not take them into
-account; the repository is compared with them as [Drift](#drift). The fields are checked
-whenever a manifest is read, and a value that breaks its rule is refused with that rule, so
-nothing that could reach git as an option or carry a control character is accepted.
-`describe`, `-o json` and `-o yaml` show them.
+`fetch` and `sync` leave a project with `spec.paused: true` alone, and `sync` follows
+`spec.syncPolicy` and `spec.revision`. No command changes a remote or switches a branch to match
+`spec.remote` or `spec.branch`, and STATUS does not take any of the fields into account; the
+repository is compared with them as [Drift](#drift). The fields are checked whenever a manifest
+is read, and a value that breaks its rule is refused with that rule, so nothing that could reach
+git as an option or carry a control character is accepted. `describe`, `-o json` and `-o yaml`
+show them.
 
 `slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
 and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
@@ -387,13 +390,66 @@ project/notes
     git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
 project/augur
   NoUpstream: main tracks no upstream; sync fast-forwards only a tracking branch
+project/hldr
+  Behind: 3 commits behind origin/main; sync will fast-forward
 ```
 
-A project that matches its manifest, as hldr does here, prints nothing. Names are given bare or
-in the `project/NAME` form that `get projects -o name` prints. The exit status is 0 when every
+A project that matches its manifest prints nothing. Names are given bare or in the
+`project/NAME` form that `get projects -o name` prints. The exit status is 0 when every
 project matches its manifest and 3 when any differs or is blocked, `NotARepo` and `Unsafe`
 included. It is 1 on an error, such as an unreadable manifest or a project whose state is
 `Unknown`, so a script or a timer can tell drift from failure.
+
+### Syncing
+
+```console
+$ slipway sync -A
+project/notes skipped (Diverged)
+  1 ahead, 1 behind origin/main; sync never merges or rebases
+  git -C ~/dev/notes log --oneline --left-right HEAD...@{upstream}
+project/augur skipped (NoRemote)
+  no upstream, no origin and no single remote to fetch from
+project/hldr fast-forwarded
+  main e001395..4c5d6e7 (3 commits); undo with 'git -C ~/dev/hldr reset --keep e001395'
+3 projects: 1 fast-forwarded, 2 skipped
+```
+
+`slipway sync` fetches the projects of the current group, the ones named, the ones `-l` selects,
+or with `-A` every project, as `slipway fetch` does. It then compares each one with its manifest
+as `slipway diff` does and fast-forwards the checked-out branch onto its upstream with
+`git merge --ff-only --no-autostash` when nothing blocks it: the branch has commits and tracks
+an upstream that still exists, is behind it and not ahead of it, and has no staged, unstaged or
+conflicted changes and no merge, rebase, cherry-pick, revert, bisect or `git am` in progress.
+Untracked files do not block it; git refuses a fast-forward that would overwrite one, and sync
+reports that. Sync never pulls, merges, rebases, stashes, resets, cleans, pushes, switches a
+branch, changes a remote or removes a lock.
+
+| Result | Meaning |
+| --- | --- |
+| `fast-forwarded` | The branch moved. For a move onto the upstream, the detail names the commits it gained, as `main a1b2c3d..e4f5a6b (3 commits)`, and the command that undoes the move. |
+| `fetched` | The fetch of a `FetchOnly` project moved refs; the refs follow as in `fetch`. |
+| `unchanged` | The branch stayed where it was and nothing blocked it; the fetch may still have moved remote-tracking refs. |
+| `skipped (Reason)` | The branch stayed where it was: a [blocker](#drift) stopped it, git refused the fast-forward (`WouldOverwrite` for untracked files in the way, `WouldLoseChanges` for local changes `git status` does not show, `Busy` for a held `index.lock`, `NotFastForward`), or the project was skipped before its fetch as in `fetch`. |
+| `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
+| `denied (AuthRequired)` | The fetch or the fast-forward needed a password, a passphrase or a host key, as in `fetch`. |
+| `failed (Reason)` | The fetch or the fast-forward ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). A fast-forward stopped at the deadline leaves the branch where it was, but the files git had already written stay in the working tree, and the detail names the command that lists them. |
+
+A difference sync leaves alone, such as a `Remote` or a `Branch` [drift](#drift), and a branch
+that `FetchOnly` keeps behind follow as detail lines. A project pinned by `spec.revision` is
+fast-forwarded up to that commit, `main a1b2c3d..b2c3d4e (to the pinned revision)`, and then
+stays there whatever its upstream brings, with `held at b2c3d4e by spec.revision` under its
+result. A pin the repository lacks is skipped as `RevisionNotFound`, a HEAD past the pin as
+`PastRevision`, and a pin its upstream does not hold, such as a commit on another branch or a fork,
+as `OffUpstream`: a manifest can hold a project back but never send it where its upstream has not
+been.
+
+Up to `parallel` projects fetch at once, while fast-forwards run one at a time; each result prints
+in the order the projects are listed, and a count of the results closes the run on stderr. Each
+fast-forward leaves `slipway sync: Fast-forward` in the branch's reflog. The exit status is 1
+when a fetch or a fast-forward was denied or failed, once every line has printed; a skipped
+project never changes it, so a timer does not fail on a dirty tree. `--dry-run=client` fetches
+nothing and writes nothing: it plans from the last fetch, prints the same lines followed by
+`(dry run)`, and warns about the projects no fetch has reached.
 
 ### Editing
 
@@ -541,8 +597,8 @@ man slipway-get
 | `2` | Usage error: unknown command, unknown flag or invalid argument. |
 | `130` | Interrupted by SIGINT. |
 
-`slipway diff` also exits with 3 when a project differs from its manifest; its man page lists
-its statuses.
+`slipway diff` also exits with 3 when a project differs from its manifest. The man pages of
+`diff` and `sync` list their statuses.
 
 ## Development
 

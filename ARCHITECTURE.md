@@ -15,16 +15,16 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Reconciliation | `drift.rb`, `plan.rb` | `Drift` holds the drift types (Missing, Remote, Branch, Revision, Behind) and the blockers with their fixed sentences. `Plan.for` reads one `Inspection` into the drift sync would resolve, the drift it leaves alone and the blockers that stop it; a `spec.revision` pin replaces the upstream as where the branch should be, reached only forward and only along the upstream. It runs no git and reads no file, so every verb that shows drift reads the same answer. |
 | Output | `output/` | `Table`, `Describe`, `Serializer` (json and yaml) and `Age`. They render plain data through a `Context` and never touch resources. |
 | Views | `views/` | `Views::Project` and `Views::Group` turn a resource, or an `Inspection`, into table rows, describe entries and the object hash json and yaml print, and list in `FIELDS` the paths of that hash a field selector may name. No I/O. |
-| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, asks how far HEAD is from `spec.revision` only of a pinned project whose HEAD is elsewhere, and asks for the operation in progress only of a project the plan would fast-forward; the `Pool` runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). `Fetcher` fetches one project and names the outcome (fetched, unchanged, skipped, paused, denied, failed); projects on one repository, such as a linked worktree and its main one, fetch one after the other, because they write the same refs. `Commands::Results` runs a verb's work on a `Pool` of its own, sized by the `parallel` setting, and prints each project's result through `each_ordered`, so the lines stream in the order listed, then the count of the results. A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
+| Commands and runtime | `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `sync.rb`, `pool.rb` | One class per verb. `Runtime` bundles config, paths, store, git, inspector and clock for one run; `Inspector` reads many repositories on a `Pool`, asks how far HEAD is from `spec.revision` only of a pinned project whose HEAD is elsewhere, and asks for the operation in progress only of a project the plan would fast-forward; the `Pool` runs one block per item on a bounded number of threads and hands the results back in input order, all at once (`map`) or each as soon as every earlier one is done (`each_ordered`). `Fetcher` fetches one project and names the outcome (fetched, unchanged, skipped, paused, denied, failed); projects on one repository, such as a linked worktree and its main one, fetch one after the other, because they write the same refs. `Commands::Results` runs a verb's work on a `Pool` of its own, sized by the `parallel` setting, and prints each project's result through `each_ordered`, so the lines stream in the order listed, then the count of the results. `Sync::Executor` is the only caller of the write: its workers inspect, fetch through `Fetcher`, inspect again and plan with `Plan.for`, and the calling thread fast-forwards each project as its result comes up, so no two writes ever run at once and a move shares the fetches' lock on its repository. A call that ends early, on an exception or an interrupt, kills and joins its workers first, so their `ensure` blocks stop any git they started. |
 
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values, the plan and output; output paints through the command layer's `Context`. The
 command layer and the domain (with the git adapter and reconciliation) sit at the bottom:
-neither requires commands, views, the runtime, the inspector or the pool. The command layer
-requires one domain file, the one allowed edge: `cli/errors.rb` requires `error.rb`, because
-`CLI::UsageError` is a `Slipway::Error`. The domain may use the command layer: `labels.rb`,
-`selector.rb` and `field_selector.rb` raise `CLI::UsageError`, and `config.rb` validates against
-`CLI::Theme` and `CLI::Style`.
+neither requires commands, views, the runtime, the inspector, the fetcher, sync or the pool. The
+command layer requires one domain file, the one allowed edge: `cli/errors.rb` requires
+`error.rb`, because `CLI::UsageError` is a `Slipway::Error`. The domain may use the command
+layer: `labels.rb`, `selector.rb` and `field_selector.rb` raise `CLI::UsageError`, and
+`config.rb` validates against `CLI::Theme` and `CLI::Style`.
 `test/unit/conventions_test.rb` reads every `require_relative` under `lib/` and fails on an edge
 that breaks these rules.
 
@@ -32,7 +32,7 @@ that breaks these rules.
 
 `exe/slipway` calls `Slipway.run(ARGV)`. From there:
 
-1. `Commands.registry(factory)` builds the `CLI::Registry`: the ten verbs from
+1. `Commands.registry(factory)` builds the `CLI::Registry`: the eleven verbs from
    `Commands::VERBS`, each built by its class's `self.command(factory)`, plus the builtins
    (`help`, `version`, `completion`, `man`, hidden `__complete`).
 2. `Runtime.color_defaults` peeks at `--config` in argv and reads the config file once, so the
@@ -98,7 +98,8 @@ acts on repositories takes `Options.project_positional(factory)` and reads it wi
 `Scope#project_targets`. Require the file in `commands.rb` and add the class to `VERBS` in help
 order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
 `Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
-group. Print results through `result_line` (`project/hldr created`) and warnings through
+group. Print results through `result_line` (`project/hldr created`), or through
+`Commands::Results` for a verb that prints one outcome per repository, and warnings through
 `Output.warning`, and raise `Slipway::Error` or `CLI::UsageError` rather than writing to
 stderr. Run `rake generate` so the new man page and help fixture land in `man/man1` and
 `test/fixtures/golden`.

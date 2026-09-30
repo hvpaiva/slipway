@@ -16,6 +16,7 @@ require_relative 'commands/edit'
 require_relative 'commands/label'
 require_relative 'commands/fetch'
 require_relative 'commands/diff'
+require_relative 'commands/sync'
 require_relative 'commands/config'
 
 module Slipway
@@ -29,7 +30,7 @@ module Slipway
                        "is \"#{Resources::DEFAULT_GROUP}\" unless -n is given, and -A lists every group.\n\n " \
                        "#{Options::TYPES_SENTENCE}".freeze
     # Help lists the verbs in this order within their sections.
-    VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Fetch, Diff, ConfigCommand].freeze
+    VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Fetch, Diff, SyncCommand, ConfigCommand].freeze
 
     def self.registry(factory)
       CLI::Registry.new(program: PROGRAM, version: VERSION, description: DESCRIPTION,

@@ -26,6 +26,19 @@ module Slipway
 
     def self.for(inspection) = Planner.new(inspection).result
 
+    # The git command line that runs +words+ in +project+'s repository. Slipway prints it and
+    # never runs it.
+    def self.git(project, *words) = ['git', '-C', shell_path(project.path), *words].join(' ')
+
+    # The path as the manifest writes it, so the line matches what was registered. Only the part
+    # after ~ is quoted, since a shell does not expand a quoted ~.
+    def self.shell_path(path)
+      rest = path.sub(Paths::TILDE, '')
+      return Shellwords.escape(path) if rest == path
+
+      rest.empty? ? '~' : "~#{Shellwords.escape(rest)}"
+    end
+
     class Planner
       ABBREVIATION = Git::Porcelain::ABBREVIATION
       FAST_FORWARD = 'sync will fast-forward'
@@ -220,17 +233,9 @@ module Slipway
 
       def reason(error) = error.message.delete_prefix("#{error.path}: ")
 
-      def git(*words) = ['git', '-C', shell_path, *words].join(' ')
+      def git(*words) = Plan.git(@project, *words)
 
-      # The path as the manifest writes it, so the line matches what was registered. Only the part
-      # after ~ is quoted, since a shell does not expand a quoted ~.
-      def shell_path
-        path = @project.path
-        rest = path.sub(Paths::TILDE, '')
-        return Shellwords.escape(path) if rest == path
-
-        rest.empty? ? '~' : "~#{Shellwords.escape(rest)}"
-      end
+      def shell_path = Plan.shell_path(@project.path)
     end
     private_constant :Planner
   end

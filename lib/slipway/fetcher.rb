@@ -25,7 +25,8 @@ module Slipway
     NO_REMOTE_DETAIL = 'no upstream, no origin and no single remote to fetch from'
     ERROR_WORDS = { Git::AuthRequired => DENIED, Git::LocalUpstream => SKIPPED }.freeze
     REASONS = { Git::AuthRequired => 'AuthRequired', Git::LocalUpstream => 'LocalUpstream',
-                Git::Timeout => 'Timeout', Git::ProtocolNotAllowed => 'ProtocolNotAllowed' }.freeze
+                Git::Timeout => 'Timeout', Git::WriteTimeout => 'Timeout',
+                Git::ProtocolNotAllowed => 'ProtocolNotAllowed' }.freeze
     REF_LIMIT = 5
     ABBREV = Git::Porcelain::ABBREVIATION
     ZERO_ID = /\A0+\z/
