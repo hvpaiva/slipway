@@ -452,7 +452,7 @@ Up to `parallel` projects fetch at once, while fast-forwards run one at a time; 
 in the order the projects are listed, and a count of the results closes the run on stderr. Each
 fast-forward leaves `slipway sync: Fast-forward` in the branch's reflog. The exit status is 1
 when a fetch or a fast-forward was denied or failed, once every line has printed; a skipped
-project never changes it, so a timer does not fail on a dirty tree. `--dry-run=client` fetches
+project never changes it, so a dirty tree does not fail the run. `--dry-run=client` fetches
 nothing and writes nothing: it plans from the last fetch, prints the same lines followed by
 `(dry run)`, and warns about the projects no fetch has reached.
 
@@ -506,6 +506,88 @@ git. A paused project can still be rolled back: pausing keeps only `fetch` and `
 The history is the local reflog, so it lasts as long as git keeps it (`gc.reflogExpire`, 90 days
 by default; slipway never runs `git gc`) and is empty when `core.logAllRefUpdates` is off. The pin
 lives in the manifest and outlasts the reflog. Rollout moves commits only.
+
+### Periodic fetch
+
+`fetch` moves no branch and touches no working tree, so it can run on a timer that keeps
+FETCHED current, and with it every STATUS word that compares a branch with its upstream. `sync`
+is not meant for a timer: it moves checked-out branches, and a branch should not move under an
+open editor or a half-done change unless you ask. A systemd user timer that fetches every
+project once an hour:
+
+```ini
+# ~/.config/systemd/user/slipway-fetch.service
+[Unit]
+Description=Fetch every project in the slipway registry
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/slipway fetch -A
+```
+
+```ini
+# ~/.config/systemd/user/slipway-fetch.timer
+[Unit]
+Description=Fetch every project in the slipway registry hourly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now slipway-fetch.timer
+journalctl --user -u slipway-fetch.service
+```
+
+`ExecStart` takes an absolute path: replace `/path/to/slipway` with what `command -v slipway`
+prints. The service runs with the environment of the systemd user manager, which
+`systemctl --user show-environment` prints, not with your shell's: git has to be on its `PATH`,
+and a `SLIPWAY_*` variable exported in your shell profile does not reach it, so put settings in
+the config file or in `Environment=` lines of the service. `Persistent=true` runs a fetch the
+timer missed while the machine was off as soon as the timer starts again. `journalctl` shows
+the result lines of each run. A run in which a project was denied or failed exits with status 1,
+and `systemctl --user status slipway-fetch.service` reports it as failed; a skipped project does
+not fail the run.
+
+The ssh client finds your agent through `SSH_AUTH_SOCK`, which the user manager has only when
+your session imported it. When `show-environment` does not list it, add
+`Environment=SSH_AUTH_SOCK=...` with the agent's socket to the service, run
+`systemctl --user import-environment SSH_AUTH_SOCK` from a shell that has it, or name the agent
+with `IdentityAgent` in `~/.ssh/config`, as the setup of the 1Password SSH agent does.
+
+An agent that asks before it signs, as the 1Password one does while it is locked or before it
+has approved the program asking, shows its prompt when the timer runs, whether or not you are
+there to answer. Slipway keeps git and ssh from prompting, but the agent's own dialog is outside
+ssh: the fetch waits until `networkTimeout` (60 seconds by default) ends it and every process it
+started, and reports `failed (Timeout)`; a dismissed prompt reports `denied (AuthRequired)`. The
+other projects fetch either way. `Environment=SLIPWAY_NETWORK_TIMEOUT=20` in the service shortens
+that wait for the timer's runs alone.
+
+### A daily routine
+
+With the timer running, the first look of the day needs no network:
+
+```sh
+slipway get projects -A --field-selector status.state!=Clean
+slipway diff -A
+slipway sync -A
+```
+
+`get` lists the projects that need attention, with STATUS as of the timer's last fetch, whose
+age FETCHED shows. `diff` says which of them sync will fast-forward, what blocks the others and
+the git command that resolves each blocker, still without contacting a remote. `sync` fetches
+once more, fast-forwards each clean branch that is behind and reports what it leaves alone with
+the reason. To move only some projects, name them (`slipway sync hldr augur -n personal`) or
+select them with `-l`. `slipway get projects -A --field-selector status.lastFetch=never` lists
+the projects no fetch has reached, including those whose last fetch was denied or failed.
+A fast-forward you did not want is undone with the `slipway rollout undo` command sync prints
+under it, as [Rolling back](#rolling-back) describes.
 
 ### Editing
 
