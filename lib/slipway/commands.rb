@@ -2,7 +2,7 @@
 
 require_relative 'version'
 require_relative 'cli'
-require_relative 'config'
+require_relative 'settings'
 require_relative 'paths'
 require_relative 'commands/manual'
 require_relative 'commands/options'
@@ -40,8 +40,8 @@ module Slipway
                        "is given, and -A covers every group.\n\n " \
                        "#{Options::TYPES_SENTENCE}".freeze
     # Help lists the verbs in this order within their sections.
-    VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Explain, Fetch, Diff, SyncCommand, RolloutCommand,
-             ConfigCommand, APIResources].freeze
+    VERBS = [Get, Describe, Create, Apply, Delete, Edit, Label, Explain, Fetch, Diff, Sync, Rollout, Config,
+             APIResources].freeze
 
     def self.registry(factory)
       CLI::Registry.new(program: PROGRAM, version: VERSION, description: DESCRIPTION,

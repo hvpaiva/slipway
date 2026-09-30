@@ -2,32 +2,32 @@
 
 require 'test_helper'
 require 'slipway/paths'
-require 'slipway/config'
+require 'slipway/settings'
 
-class ConfigTest < Minitest::Test
-  include ConfigHelper
+class SettingsTest < Minitest::Test
+  include SettingsHelper
 
   def test_defaults_when_the_default_file_is_missing
     with_sandbox do |env|
-      config = load(env)
+      settings = load(env)
 
-      assert_equal %w[auto dark default], [config.color, config.theme, config.group]
-      assert_equal [60, %w[ssh https]], [config.network_timeout, config.protocols]
-      assert_nil config.editor
-      assert_equal File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml'), config.path
-      refute_predicate config, :exists?
+      assert_equal %w[auto dark default], [settings.color, settings.theme, settings.group]
+      assert_equal [60, %w[ssh https]], [settings.network_timeout, settings.protocols]
+      assert_nil settings.editor
+      assert_equal File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml'), settings.path
+      refute_predicate settings, :exists?
     end
   end
 
   def test_file_values_override_the_defaults
     with_sandbox do |env|
       write(env, "color: never\ntheme: light\neditor: code --wait\ngroup: work\n")
-      config = load(env)
+      settings = load(env)
 
-      assert_equal %w[never light], [config.color, config.theme]
-      assert_equal 'code --wait', config.editor
-      assert_equal 'work', config.group
-      assert_predicate config, :exists?
+      assert_equal %w[never light], [settings.color, settings.theme]
+      assert_equal 'code --wait', settings.editor
+      assert_equal 'work', settings.group
+      assert_predicate settings, :exists?
     end
   end
 
@@ -49,29 +49,29 @@ class ConfigTest < Minitest::Test
       write(env, "color: never\ntheme: light\neditor: nano\ngroup: work\n")
       env = env.merge('SLIPWAY_COLOR' => 'always', 'SLIPWAY_THEME' => 'dark',
                       'SLIPWAY_EDITOR' => 'vim', 'SLIPWAY_GROUP' => 'home')
-      config = load(env)
+      settings = load(env)
 
-      assert_equal %w[always dark vim home], [config.color, config.theme, config.editor, config.group]
+      assert_equal %w[always dark vim home], [settings.color, settings.theme, settings.editor, settings.group]
     end
   end
 
   def test_empty_environment_values_count_as_unset
     with_sandbox do |env|
       write(env, "color: never\ngroup: work\n")
-      config = load(env.merge('SLIPWAY_COLOR' => '', 'SLIPWAY_GROUP' => '', 'SLIPWAY_THEME' => ''))
+      settings = load(env.merge('SLIPWAY_COLOR' => '', 'SLIPWAY_GROUP' => '', 'SLIPWAY_THEME' => ''))
 
-      assert_equal %w[never dark work], [config.color, config.theme, config.group]
+      assert_equal %w[never dark work], [settings.color, settings.theme, settings.group]
     end
   end
 
   def test_flags_outrank_the_environment
     with_sandbox do |env|
       write(env, "color: never\ngroup: work\n")
-      config = load(env.merge('SLIPWAY_COLOR' => 'auto', 'SLIPWAY_GROUP' => 'home'),
-                    flags: { color: 'always', group: 'lab', help: false })
+      settings = load(env.merge('SLIPWAY_COLOR' => 'auto', 'SLIPWAY_GROUP' => 'home'),
+                      flags: { color: 'always', group: 'lab', help: false })
 
-      assert_equal 'always', config.color
-      assert_equal 'lab', config.group
+      assert_equal 'always', settings.color
+      assert_equal 'lab', settings.group
     end
   end
 
@@ -92,8 +92,8 @@ class ConfigTest < Minitest::Test
     with_sandbox do |env|
       file = File.join(env['HOME'], 'missing.yaml')
 
-      assert_config_error "#{file}: no such file", env, config: file
-      assert_config_error "#{file}: no such file", env.merge('SLIPWAY_CONFIG' => file)
+      assert_settings_error "#{file}: no such file", env, config: file
+      assert_settings_error "#{file}: no such file", env.merge('SLIPWAY_CONFIG' => file)
     end
   end
 
@@ -102,7 +102,7 @@ class ConfigTest < Minitest::Test
       dir = File.join(env['HOME'], 'dir.yaml')
       Dir.mkdir(dir)
 
-      assert_config_error "#{dir}: Is a directory", env, config: dir
+      assert_settings_error "#{dir}: Is a directory", env, config: dir
     end
   end
 
@@ -157,10 +157,10 @@ class ConfigTest < Minitest::Test
 
   def test_environment_values_are_validated_with_the_variable_as_prefix
     with_sandbox do |env|
-      assert_config_error 'SLIPWAY_COLOR: must be one of auto, always, never', env.merge('SLIPWAY_COLOR' => 'on')
-      assert_config_error 'SLIPWAY_THEME: must be one of dark, light', env.merge('SLIPWAY_THEME' => 'blue')
-      assert_config_error "SLIPWAY_GROUP: must be a valid group name: #{Slipway::Names::RULE}",
-                          env.merge('SLIPWAY_GROUP' => 'My Group')
+      assert_settings_error 'SLIPWAY_COLOR: must be one of auto, always, never', env.merge('SLIPWAY_COLOR' => 'on')
+      assert_settings_error 'SLIPWAY_THEME: must be one of dark, light', env.merge('SLIPWAY_THEME' => 'blue')
+      assert_settings_error "SLIPWAY_GROUP: must be a valid group name: #{Slipway::Names::RULE}",
+                            env.merge('SLIPWAY_GROUP' => 'My Group')
     end
   end
 
@@ -170,18 +170,18 @@ class ConfigTest < Minitest::Test
 
       assert_equal({ 'color' => 'auto', 'editor' => nil, 'group' => 'default', 'networkTimeout' => 30,
                      'parallel' => 4, 'protocols' => %w[ssh https], 'theme' => 'light' }, load(env).to_h)
-      assert_equal Slipway::Config::KEYS, load(env).to_h.keys
+      assert_equal Slipway::Settings::KEYS, load(env).to_h.keys
     end
   end
 
   def test_keys_and_documentation_cover_the_same_settings
-    assert_equal %w[color editor group networkTimeout parallel protocols theme], Slipway::Config::KEYS
-    assert_equal Slipway::Config::KEYS, Slipway::Config::DOCUMENTATION.keys
-    assert(Slipway::Config::DOCUMENTATION.values.all? { it.is_a?(String) && it.end_with?('.') })
+    assert_equal %w[color editor group networkTimeout parallel protocols theme], Slipway::Settings::KEYS
+    assert_equal Slipway::Settings::KEYS, Slipway::Settings::DOCUMENTATION.keys
+    assert(Slipway::Settings::DOCUMENTATION.values.all? { it.is_a?(String) && it.end_with?('.') })
   end
 
   def test_error_is_a_slipway_error_with_exit_status_one
-    error = Slipway::Config::Error.new('boom')
+    error = Slipway::Settings::Error.new('boom')
 
     assert_kind_of Slipway::Error, error
     assert_equal 1, error.exit_status

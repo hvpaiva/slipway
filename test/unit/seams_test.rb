@@ -33,7 +33,7 @@ class SeamsTest < Minitest::Test
 
   def test_every_result_role_fetch_sync_and_undo_paint_exists_in_both_themes
     Slipway::CLI::Theme::PRESETS.each do |name, roles|
-      [Slipway::Commands::Fetch, Slipway::Commands::SyncCommand, Slipway::Commands::RolloutCommand::Undo].each do |verb|
+      [Slipway::Commands::Fetch, Slipway::Commands::Sync, Slipway::Commands::Rollout::Undo].each do |verb|
         verb::ROLES.each_value { assert_includes roles.keys, it, "#{name} #{verb}" }
       end
     end
@@ -45,8 +45,8 @@ class SeamsTest < Minitest::Test
     assert_equal Slipway::Drift::BLOCKERS.keys.sort, named.sort
   end
 
-  def test_config_group_setting_applies_the_names_rule
-    setting = Slipway::Config::SETTINGS.find { it.key == 'group' }
+  def test_the_group_setting_applies_the_names_rule
+    setting = Slipway::Settings::ALL.find { it.key == 'group' }
 
     %w[ok 3d-viewer -lead a.b Work].each do |value|
       assert_equal Slipway::Names.valid?(value), setting.valid.call(value), value
@@ -54,7 +54,7 @@ class SeamsTest < Minitest::Test
   end
 
   def test_manpage_environment_lists_every_variable_the_code_reads
-    expected = (variables_read_by_lib + Slipway::Config::SETTINGS.map(&:variable)).uniq - UNDOCUMENTED - CHILD_ONLY
+    expected = (variables_read_by_lib + Slipway::Settings::ALL.map(&:variable)).uniq - UNDOCUMENTED - CHILD_ONLY
 
     assert_equal expected.sort, Slipway::Commands::Manual::ENVIRONMENT.keys.sort
     assert_operator expected.size, :>, 15
@@ -74,29 +74,29 @@ class SeamsTest < Minitest::Test
     assert_equal %w[A_ONE B_TWO C_THREE D_FOUR E_five F_SIX G_SEVEN H_EIGHT I_NINE], variables_in(source).sort
   end
 
-  def test_runner_config_and_editor_read_the_same_variables
-    variables = Slipway::Config::SETTINGS.to_h { [it.key, it.variable] }
+  def test_runner_settings_and_editor_read_the_same_variables
+    variables = Slipway::Settings::ALL.to_h { [it.key, it.variable] }
 
     assert_equal variables.fetch('color'), Slipway::CLI::Runner::COLOR_VARIABLE
     assert_equal variables.fetch('theme'), Slipway::CLI::Runner::THEME_VARIABLE
     assert_equal variables.fetch('editor'), Slipway::Editor::VARIABLE
   end
 
-  def test_the_repository_falls_back_to_the_network_defaults_of_the_config
-    defaults = Slipway::Config::SETTINGS.to_h { [it.key, it.default] }
+  def test_the_repository_falls_back_to_the_network_defaults_of_the_settings
+    defaults = Slipway::Settings::ALL.to_h { [it.key, it.default] }
 
     assert_equal defaults.fetch('networkTimeout'), Slipway::Git::Repository::NETWORK_TIMEOUT
     assert_equal defaults.fetch('protocols'), Slipway::Git::Repository::PROTOCOLS
   end
 
-  def test_a_refused_transport_gets_no_hint_to_list_what_the_config_refuses
-    assert_equal Slipway::Config::UNSAFE_PROTOCOLS.keys, Slipway::Git::ProtocolNotAllowed::UNSAFE
+  def test_a_refused_transport_gets_no_hint_to_list_what_the_settings_refuse
+    assert_equal Slipway::Settings::UNSAFE_PROTOCOLS.keys, Slipway::Git::ProtocolNotAllowed::UNSAFE
   end
 
-  def test_config_documentation_covers_every_key_and_reads_as_the_man_page_prints_it
-    assert_equal Slipway::Config::KEYS, Slipway::Config::DOCUMENTATION.keys
-    assert_equal 'Group used when -n is not given. Default: default.', Slipway::Config::DOCUMENTATION.fetch('group')
-    assert_equal 'Command line of the editor that slipway edit opens.', Slipway::Config::DOCUMENTATION.fetch('editor')
+  def test_settings_documentation_covers_every_key_and_reads_as_the_man_page_prints_it
+    assert_equal Slipway::Settings::KEYS, Slipway::Settings::DOCUMENTATION.keys
+    assert_equal 'Group used when -n is not given. Default: default.', Slipway::Settings::DOCUMENTATION.fetch('group')
+    assert_equal 'Command line of the editor that slipway edit opens.', Slipway::Settings::DOCUMENTATION.fetch('editor')
   end
 
   def test_an_untyped_color_flag_lets_the_config_file_decide
@@ -110,9 +110,9 @@ class SeamsTest < Minitest::Test
       path = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, "color: never\n")
-      config = Slipway::Config.load(Slipway::Paths.new(env), env:, flags: opts.first.slice(:color, :group))
+      settings = Slipway::Settings.load(Slipway::Paths.new(env), env:, flags: opts.first.slice(:color, :group))
 
-      assert_equal %w[never default], [config.color, config.group]
+      assert_equal %w[never default], [settings.color, settings.group]
     end
   end
 

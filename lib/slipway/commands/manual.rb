@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../config'
+require_relative '../settings'
 require_relative '../git'
 
 module Slipway
@@ -17,7 +17,7 @@ module Slipway
       # A setting's variable points at the CONFIGURATION entry that describes its value, so the
       # value is described once.
       def self.setting(key, rest = '')
-        variable = Config::SETTINGS.find { it.key == key }.variable
+        variable = Settings::ALL.find { it.key == key }.variable
         [variable, "Outranks the #{key} key (see CONFIGURATION)#{rest}."]
       end
       private_class_method :setting
@@ -59,7 +59,7 @@ module Slipway
 
       # The keyword arguments CLI::Manpage takes for slipway's own sections.
       def self.sections
-        { environment: ENVIRONMENT.merge(CLEARED), files: FILES, configuration: Config::DOCUMENTATION,
+        { environment: ENVIRONMENT.merge(CLEARED), files: FILES, configuration: Settings::DOCUMENTATION,
           exit_statuses: EXIT_STATUSES }
       end
     end

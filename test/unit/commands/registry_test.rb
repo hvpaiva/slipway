@@ -39,7 +39,7 @@ class CommandsRegistryTest < Minitest::Test
 
     assert_empty(shipped.reject { handlers.include?(it) }.map(&:name))
     assert_operator shipped.size, :>, 8
-    assert_includes handlers, Slipway::Commands::ConfigCommand::Path
+    assert_includes handlers, Slipway::Commands::Config::Path
   end
 
   def test_the_kinds_a_verb_acts_on_follow_its_arguments

@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-require_relative 'fetcher'
+require_relative 'command_line'
+require_relative 'drift'
 require_relative 'git'
+require_relative 'outcome'
 require_relative 'paths'
-require_relative 'plan'
-require_relative 'rollout'
+require_relative 'rollout_history'
 
 module Slipway
   # Moves a project's branch to a revision of its rollout history and holds the project there
@@ -37,14 +38,15 @@ module Slipway
     ABBREV = Git::Porcelain::ABBREVIATION
     HELD = 'held there by spec.revision'
     NOT_PINNED = 'NotPinned'
-    # Each leaves the branch and the manifest as they were.
+    # Each leaves the branch and the manifest as they were. A conflict and an operation in progress
+    # stop sync too, and read as diff and sync word them.
     REFUSALS = {
-      'Conflicted' => '%<paths>s; finish or abort the merge first',
+      'Conflicted' => Drift::BLOCKERS.fetch('Conflicted'),
       'Detached' => 'HEAD is detached at %<head>s; undo moves only a checked-out branch',
       'Unborn' => 'no commits yet; nothing to roll back',
       'NoUpstream' => '%<branch>s tracks no upstream; undo drops only commits an upstream holds',
       'Gone' => 'upstream %<upstream>s no longer exists; undo drops only commits an upstream holds',
-      'InProgress' => 'a %<operation>s is in progress',
+      'InProgress' => Drift::BLOCKERS.fetch('InProgress'),
       'NoHistory' => 'no rollout history found for %<branch>s',
       'NoPrevious' => 'no last revision to roll back to',
       'UnknownRevision' => 'unable to find specified revision %<number>d in history',
@@ -78,7 +80,7 @@ module Slipway
     # `number` is a revision the history lists; nil or 0 is the one before the current one.
     def undo(project, number: nil)
       inspection = @runtime.inspector.examine(project)
-      return Fetcher::Outcome.unreadable(project, inspection) if inspection.error
+      return Outcome.unreadable(project, inspection) if inspection.error
 
       ready(inspection)
       step = plan(inspection, number)
@@ -106,7 +108,7 @@ module Slipway
       project = inspection.project
       status = inspection.status
       head = inspection.commit.sha
-      history = Rollout::History.new(@runtime.git.reflog(path(project), status.branch))
+      history = RolloutHistory.new(@runtime.git.reflog(path(project), status.branch))
       revision = target(history, head, number, status.branch)
       distance = @runtime.git.distance(path(project), revision.sha, tracking: true)
       refuse('RevisionNotFound', commit: short(revision.sha), number: revision.number) if distance.nil?
@@ -151,7 +153,7 @@ module Slipway
     rescue Git::Blocked => e
       relayed(step.project, e)
     rescue Git::Error => e
-      Fetcher::Outcome.failure(step.project, e)
+      Outcome.failure(step.project, e)
     end
 
     def move(step)
@@ -170,12 +172,12 @@ module Slipway
       pin(step)
       settled(step, from:, count:)
     rescue Error => e
-      Fetcher::Outcome.new(project: step.project, word: Fetcher::FAILED, reason: NOT_PINNED,
-                           details: [position(step, from, count), unpinned(step, e)])
+      Outcome.new(project: step.project, word: Outcome::FAILED, reason: NOT_PINNED,
+                  details: [position(step, from, count), unpinned(step, e)])
     end
 
     def unpinned(step, error)
-      retry_command = "#{Rollout.command('undo', step.project, @group)} --to-revision=#{step.revision.number}"
+      retry_command = "#{RolloutHistory.command('undo', step.project, @group)} --to-revision=#{step.revision.number}"
       "spec.revision was not written: #{error.message}; run '#{retry_command}' to hold it there"
     end
 
@@ -188,8 +190,8 @@ module Slipway
     def settled(step, from: step.head, count: step.count)
       project = step.project
       changed = count.positive? || project.revision != step.revision.sha
-      Fetcher::Outcome.new(project:, word: changed ? ROLLED_BACK : Fetcher::UNCHANGED,
-                           details: ["#{position(step, from, count)}; #{HELD}", following(project, step.status)])
+      Outcome.new(project:, word: changed ? ROLLED_BACK : Outcome::UNCHANGED,
+                  details: ["#{position(step, from, count)}; #{HELD}", following(project, step.status)])
     end
 
     def position(step, from, count)
@@ -202,7 +204,9 @@ module Slipway
       "#{branch} #{short(from)}..#{target} (#{commits(count)} #{way} to revision #{revision.number})"
     end
 
-    def following(project, status) = "'#{Rollout.command('unpin', project, @group)}' follows #{status.upstream} again"
+    def following(project, status)
+      "'#{RolloutHistory.command('unpin', project, @group)}' follows #{status.upstream} again"
+    end
 
     def relayed(project, error)
       reason = error.reason
@@ -215,8 +219,8 @@ module Slipway
 
     def skipped(project, reason, detail)
       words = COMMANDS[reason]
-      Fetcher::Outcome.new(project:, word: Fetcher::SKIPPED, reason:,
-                           details: [detail, words && Plan.git(project, *words)].compact)
+      Outcome.new(project:, word: Outcome::SKIPPED, reason:,
+                  details: [detail, words && CommandLine.git(project, *words)].compact)
     end
 
     def refuse(reason, **values) = raise(Refused.new(reason, values))

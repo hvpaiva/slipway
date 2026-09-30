@@ -3,7 +3,7 @@
 require_relative 'slipway/version'
 require_relative 'slipway/cli'
 require_relative 'slipway/paths'
-require_relative 'slipway/config'
+require_relative 'slipway/settings'
 require_relative 'slipway/editor'
 require_relative 'slipway/names'
 require_relative 'slipway/labels'

@@ -56,7 +56,8 @@ class RolloutHistoryTest < Minitest::Test
     project = Slipway::Project.new(name: 'api', group: 'work', path: '~/dev/api')
 
     assert_equal ['slipway rollout undo project/api', 'slipway rollout unpin project/api -n work'],
-                 [Slipway::Rollout.command('undo', project, 'work'), Slipway::Rollout.command('unpin', project, nil)]
+                 [Slipway::RolloutHistory.command('undo', project, 'work'),
+                  Slipway::RolloutHistory.command('unpin', project, nil)]
   end
 
   private
@@ -66,7 +67,7 @@ class RolloutHistoryTest < Minitest::Test
     entries = moves.each_with_index.map do |(sha, subject), index|
       Slipway::Git::ReflogEntry.new(sha:, time: Time.at(1_727_000_000 + index).utc, subject:)
     end
-    Slipway::Rollout::History.new(entries.reverse)
+    Slipway::RolloutHistory.new(entries.reverse)
   end
 
   def summary(history) = history.revisions.map { [it.number, it.sha, it.action, it.from] }

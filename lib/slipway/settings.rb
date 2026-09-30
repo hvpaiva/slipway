@@ -7,14 +7,14 @@ require_relative 'cli/style'
 require_relative 'names'
 
 module Slipway
-  # The settings in effect for one run. Config.load resolves each from the flag typed on the
+  # The settings in effect for one run. Settings.load resolves each from the flag typed on the
   # command line, then its `SLIPWAY_*` variable, then the configuration file, then its default,
-  # and raises Config::Error naming the file or the variable whose value is refused. `variables`
-  # maps each key whose value came from its variable to the variable's name.
-  Config = Data.define(:color, :theme, :editor, :group, :network_timeout, :parallel, :protocols, :path, :exists,
-                       :variables)
+  # and raises Settings::Error naming the file or the variable whose value is refused.
+  # `variables` maps each key whose value came from its variable to the variable's name.
+  Settings = Data.define(:color, :theme, :editor, :group, :network_timeout, :parallel, :protocols, :path, :exists,
+                         :variables)
 
-  class Config
+  class Settings
     class Error < Slipway::Error; end
 
     # A git transport name, spelled as a URL scheme. The names reach GIT_ALLOW_PROTOCOL joined by
@@ -58,7 +58,7 @@ module Slipway
       def documentation = [description, default && "Default: #{Array(default).join(', ')}."].compact.join(' ')
     end
 
-    SETTINGS = [
+    ALL = [
       Setting.new(key: 'color', variable: 'SLIPWAY_COLOR', default: CLI::Style::DEFAULT_MODE,
                   description: 'When to color output: auto, always or never.',
                   valid: ->(value) { CLI::Style::MODES.include?(value) },
@@ -99,8 +99,8 @@ module Slipway
                   expectation: "must be one of #{CLI::Theme::NAMES.join(', ')}")
     ].freeze
 
-    KEYS = SETTINGS.map(&:key).freeze
-    DOCUMENTATION = SETTINGS.to_h { [it.key, it.documentation] }.freeze
+    KEYS = ALL.map(&:key).freeze
+    DOCUMENTATION = ALL.to_h { [it.key, it.documentation] }.freeze
 
     class Document
       Contents = Data.define(:values, :exists)
@@ -141,7 +141,7 @@ module Slipway
       end
 
       def setting(key)
-        SETTINGS.find { it.key == key } ||
+        ALL.find { it.key == key } ||
           raise(Error, "#{@path}: unknown key \"#{key}\" (known keys: #{KEYS.join(', ')})")
       end
     end
@@ -149,10 +149,10 @@ module Slipway
     def self.load(paths, env:, flags: {})
       path = paths.config_file
       contents = Document.read(path, explicit: paths.config_explicit?)
-      resolved = SETTINGS.to_h { |setting| [setting.attribute, resolve(setting, flags, env, contents.values)] }
+      resolved = ALL.to_h { |setting| [setting.attribute, resolve(setting, flags, env, contents.values)] }
       # Each key whose value its environment variable supplied, with that variable's name, so a
       # message can point at the variable rather than at a file it outranks.
-      variables = SETTINGS.select { from_variable?(it, flags, env) }.to_h { [it.key, it.variable] }.freeze
+      variables = ALL.select { from_variable?(it, flags, env) }.to_h { [it.key, it.variable] }.freeze
       new(path:, exists: contents.exists, variables:, **resolved)
     end
 
@@ -169,6 +169,6 @@ module Slipway
 
     def exists? = exists
 
-    def to_h = SETTINGS.to_h { [it.key, public_send(it.attribute)] }
+    def to_h = ALL.to_h { [it.key, public_send(it.attribute)] }
   end
 end

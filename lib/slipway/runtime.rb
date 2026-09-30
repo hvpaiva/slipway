@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'paths'
-require_relative 'config'
+require_relative 'settings'
 require_relative 'store'
 require_relative 'git'
 require_relative 'inspector'
@@ -12,16 +12,17 @@ module Slipway
     CONFIG_FLAG = '--config'
     CONFIG_INLINE = "#{CONFIG_FLAG}=".freeze
 
-    attr_reader :config, :paths, :store, :git, :inspector, :clock, :env
+    attr_reader :settings, :paths, :store, :git, :inspector, :clock, :env
 
     def self.build(context, opts)
       paths = Paths.new(context.env, config: opts[:config])
-      config = Config.load(paths, env: context.env, flags: opts.slice(:color, :group))
+      settings = Settings.load(paths, env: context.env, flags: opts.slice(:color, :group))
       clock = -> { Time.now.utc }
       # The variable outranks the file, so a transport added to the file would change nothing.
-      protocols_source = config.variables.fetch('protocols') { %("protocols" in #{config.path}) }
-      git = Git::Repository.new(network_timeout: config.network_timeout, protocols: config.protocols, protocols_source:)
-      new(config:, paths:, store: Store.new(root: paths.data_home, clock:), git:,
+      protocols_source = settings.variables.fetch('protocols') { %("protocols" in #{settings.path}) }
+      git = Git::Repository.new(network_timeout: settings.network_timeout, protocols: settings.protocols,
+                                protocols_source:)
+      new(settings:, paths:, store: Store.new(root: paths.data_home, clock:), git:,
           inspector: Inspector.new(git:, clock:, home: paths.home), clock:, env: context.env)
     end
 
@@ -30,9 +31,9 @@ module Slipway
     # its exit status.
     def self.color_defaults(context, argv)
       paths = Paths.new(context.env, config: config_flag(argv))
-      config = Config.load(paths, env: context.env)
-      [config.color, config.theme]
-    rescue Config::Error
+      settings = Settings.load(paths, env: context.env)
+      [settings.color, settings.theme]
+    rescue Settings::Error
       [nil, nil]
     end
 
@@ -46,8 +47,8 @@ module Slipway
     end
     private_class_method :config_flag
 
-    def initialize(config:, paths:, store:, git:, inspector:, clock:, env:)
-      @config = config
+    def initialize(settings:, paths:, store:, git:, inspector:, clock:, env:)
+      @settings = settings
       @paths = paths
       @store = store
       @git = git
@@ -56,9 +57,9 @@ module Slipway
       @env = env
     end
 
-    def group_for(opts) = opts[:group] || config.group
+    def group_for(opts) = opts[:group] || settings.group
 
     # Leaves the environment out so a debugging print never dumps every variable of the process.
-    def inspect = "#<#{self.class.name} data_home=#{store.root.inspect} config=#{config.to_h.inspect}>"
+    def inspect = "#<#{self.class.name} data_home=#{store.root.inspect} settings=#{settings.to_h.inspect}>"
   end
 end

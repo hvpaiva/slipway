@@ -7,8 +7,8 @@ require 'test_helper'
 class ResultsHelpTest < Minitest::Test
   UNREADABLE = [Slipway::Git::MissingPath, Slipway::Git::NotARepository, Slipway::Git::UnsafeRepository,
                 Slipway::Git::Error].map { Slipway::State.for_error(it.allocate) }.freeze
-  FETCH = [*Slipway::Fetcher::REASONS.values, Slipway::Fetcher::NO_REMOTE, *UNREADABLE].uniq.freeze
-  SYNC = [*FETCH, *Slipway::Sync::Executor::ADVICE.keys].freeze
+  FETCH = [*Slipway::Outcome::REASONS.values, Slipway::Fetcher::NO_REMOTE, *UNREADABLE].uniq.freeze
+  SYNC = [*FETCH, *Slipway::Syncer::ADVICE.keys].freeze
   UNDO = [*UNREADABLE, *Slipway::Rollback::REFUSALS.keys, *Slipway::Rollback::RELAYED.keys, 'Busy',
           Slipway::Rollback::NOT_PINNED, 'AuthRequired', 'Timeout'].uniq.freeze
   REASON = ' (Reason)'
@@ -18,11 +18,11 @@ class ResultsHelpTest < Minitest::Test
   end
 
   def test_sync_explains_every_result_and_reason
-    assert_explains Slipway::Commands::SyncCommand, SYNC
+    assert_explains Slipway::Commands::Sync, SYNC
   end
 
   def test_rollout_undo_explains_every_result_and_reason
-    assert_explains Slipway::Commands::RolloutCommand::Undo, UNDO
+    assert_explains Slipway::Commands::Rollout::Undo, UNDO
   end
 
   private

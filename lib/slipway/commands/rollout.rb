@@ -4,12 +4,11 @@ require_relative 'base'
 require_relative 'rollout_undo'
 require_relative 'rollout_spec'
 require_relative '../paths'
-require_relative '../rollout'
+require_relative '../rollout_history'
 
 module Slipway
   module Commands
-    # Named apart from Slipway::Rollout, the history it reads.
-    module RolloutCommand
+    module Rollout
       DESCRIPTION = "Manage the rollout of a project.\n\n" \
                     'Slipway records a revision each time it moves the checked-out branch of a project: every ' \
                     'fast-forward of slipway sync and every slipway rollout undo leaves an entry in the ' \
@@ -70,7 +69,7 @@ module Slipway
         def show(runtime, context, project)
           name = "#{Resources::PROJECTS.singular}/#{project.name}"
           path = Paths.expand(project.path, home: runtime.paths.home)
-          history = Rollout::History.new(entries(runtime, project, name, path))
+          history = RolloutHistory.new(entries(runtime, project, name, path))
           return context.warn(context.paint_err(:muted, format(EMPTY, name))) if history.empty?
 
           pinned = history.pinned(project.revision)
@@ -97,10 +96,10 @@ module Slipway
         def cause(runtime, path, history, revision)
           case revision.action
           when nil then nil
-          when Rollout::SYNC then "sync: fast-forward#{gained(runtime, path, revision)}"
-          when Rollout::UNDO
+          when RolloutHistory::SYNC then "sync: fast-forward#{gained(runtime, path, revision)}"
+          when RolloutHistory::UNDO
             undone = history.undone_to(revision)
-            undone ? "rollout undo to revision #{undone.number}" : Rollout::UNDO
+            undone ? "rollout undo to revision #{undone.number}" : RolloutHistory::UNDO
           else revision.action
           end
         end

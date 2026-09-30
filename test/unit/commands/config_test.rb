@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class ConfigCommandTest < Minitest::Test
+class ConfigTest < Minitest::Test
   include CommandsHelper
 
   NETWORK = "networkTimeout: 60\nparallel: 4\nprotocols:\n- ssh\n- https\n"
@@ -167,7 +167,7 @@ class ConfigCommandTest < Minitest::Test
     registry = Slipway::CLI::Registry.new(program: Slipway::Commands::PROGRAM, version: Slipway::VERSION,
                                           description: Slipway::Commands::DESCRIPTION,
                                           globals: Slipway::CLI::Globals::ALL,
-                                          commands: [Slipway::Commands::ConfigCommand.command(Slipway::Runtime.method(:build))])
+                                          commands: [Slipway::Commands::Config.command(Slipway::Runtime.method(:build))])
     run_cli(*argv, env:, registry:, **)
   end
 

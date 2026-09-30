@@ -38,8 +38,8 @@ class ReadmeTest < Minitest::Test
 
   def test_result_tables_list_every_result_word_in_order
     assert_equal Slipway::Commands::Fetch::ROLES.keys, result_words('### Fetching')
-    assert_equal Slipway::Commands::SyncCommand::ROLES.keys, result_words('### Syncing')
-    assert_equal Slipway::Commands::RolloutCommand::Undo::ROLES.keys, result_words('### Rolling back')
+    assert_equal Slipway::Commands::Sync::ROLES.keys, result_words('### Syncing')
+    assert_equal Slipway::Commands::Rollout::Undo::ROLES.keys, result_words('### Rolling back')
   end
 
   # The words a fetch puts in parentheses: its own reasons and the states in which git could not
@@ -47,7 +47,7 @@ class ReadmeTest < Minitest::Test
   def test_fetch_table_names_every_reason_a_fetch_gives
     unreadable = [Slipway::Git::MissingPath, Slipway::Git::NotARepository, Slipway::Git::UnsafeRepository,
                   Slipway::Git::Error].map { Slipway::State.for_error(it.allocate) }
-    reasons = [*Slipway::Fetcher::REASONS.values, Slipway::Fetcher::NO_REMOTE, *unreadable]
+    reasons = [*Slipway::Outcome::REASONS.values, Slipway::Fetcher::NO_REMOTE, *unreadable]
     documented = rows(RESULTS, after: '### Fetching').flat_map { it.scan(/`([A-Z][A-Za-z]+)`|\(([A-Z][A-Za-z]+)\)`/) }
 
     assert_equal reasons.uniq.sort, documented.flatten.compact.uniq.sort - ['Reason']
@@ -62,7 +62,7 @@ class ReadmeTest < Minitest::Test
   end
 
   def test_configuration_example_sets_exactly_the_config_keys
-    assert_equal Slipway::Config::KEYS.sort, yaml_block('## Configuration').keys.sort
+    assert_equal Slipway::Settings::KEYS.sort, yaml_block('## Configuration').keys.sort
   end
 
   private

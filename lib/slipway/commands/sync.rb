@@ -5,12 +5,12 @@ require_relative 'manual'
 require_relative 'fetch'
 require_relative 'results'
 require_relative '../fetcher'
-require_relative '../sync'
+require_relative '../outcome'
+require_relative '../syncer'
 
 module Slipway
   module Commands
-    # Named apart from Slipway::Sync, the executor it drives.
-    class SyncCommand < Base
+    class Sync < Base
       # Raised once every line has printed: the lines already say what went wrong, so it adds no
       # error line, only exit status 1.
       class Failed < Error
@@ -47,13 +47,13 @@ module Slipway
                '--dry-run every line and the count end in (dry run). Ctrl-C stops the git processes slipway ' \
                'started and exits with status 130; a fast-forward it stops ends as one stopped at the deadline.',
         entries: {
-          Sync::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits it ' \
-                                  'gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the ' \
-                                  "move; a move up to a spec.revision pin ends in #{Sync::Executor::TO_PIN}.",
-          Fetcher::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
-          Fetcher::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
+          Syncer::FAST_FORWARDED => 'The branch moved. For a move onto the upstream, the detail names the commits ' \
+                                    'it gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes ' \
+                                    "the move; a move up to a spec.revision pin ends in #{Syncer::TO_PIN}.",
+          Outcome::FETCHED => 'The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.',
+          Outcome::UNCHANGED => 'The branch stayed where it was and nothing blocked it; the fetch may still have ' \
                                 'moved remote-tracking refs.',
-          "#{Fetcher::SKIPPED} (Reason)" => 'The branch stayed where it was: a blocker stopped it, under the name ' \
+          "#{Outcome::SKIPPED} (Reason)" => 'The branch stayed where it was: a blocker stopped it, under the name ' \
                                             'slipway diff gives it; git refused the fast-forward (WouldOverwrite ' \
                                             'for untracked files in the way, WouldLoseChanges for local changes git ' \
                                             'status does not show, Busy for a lock another git process holds on ' \
@@ -61,10 +61,10 @@ module Slipway
                                             'gained a commit since the check); or the project was skipped before ' \
                                             'its fetch, as in slipway fetch (Missing, NotARepo, Unsafe, Unknown, ' \
                                             'NoRemote, LocalUpstream).',
-          Fetcher::PAUSED => 'spec.paused is true, so no git command ran in the project.',
-          "#{Fetcher::DENIED} (Reason)" => 'The fetch or the fast-forward needed a password, a passphrase or a ' \
+          Outcome::PAUSED => 'spec.paused is true, so no git command ran in the project.',
+          "#{Outcome::DENIED} (Reason)" => 'The fetch or the fast-forward needed a password, a passphrase or a ' \
                                            'host key (AuthRequired), as in slipway fetch.',
-          "#{Fetcher::FAILED} (Reason)" => 'The fetch or the fast-forward ran past networkTimeout (Timeout), used ' \
+          "#{Outcome::FAILED} (Reason)" => 'The fetch or the fast-forward ran past networkTimeout (Timeout), used ' \
                                            'a transport protocols leaves out (ProtocolNotAllowed), or git failed ' \
                                            'for another reason (Unknown). A fast-forward stopped at the deadline ' \
                                            'leaves the branch where it was, but the files git had already written ' \
@@ -73,10 +73,10 @@ module Slipway
         }
       )
       # In the order the closing summary counts them.
-      ROLES = { Sync::FAST_FORWARDED => :result_changed, Fetcher::FETCHED => :result_changed,
-                Fetcher::UNCHANGED => :result_unchanged, Fetcher::SKIPPED => :result_skipped,
-                Fetcher::PAUSED => :result_paused, Fetcher::DENIED => :result_denied,
-                Fetcher::FAILED => :result_failed }.freeze
+      ROLES = { Syncer::FAST_FORWARDED => :result_changed, Outcome::FETCHED => :result_changed,
+                Outcome::UNCHANGED => :result_unchanged, Outcome::SKIPPED => :result_skipped,
+                Outcome::PAUSED => :result_paused, Outcome::DENIED => :result_denied,
+                Outcome::FAILED => :result_failed }.freeze
       ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, sync every project across all groups. The ' \
                                                          'group in the current configuration is ignored even if ' \
                                                          'specified with --group.')
@@ -109,24 +109,24 @@ module Slipway
         names = scope.project_targets(args, verb: 'sync')
         dry_run = opts[:dry_run] == true
         fetcher = Fetcher.new(runtime, prune: opts[:prune] == true, dry_run:)
-        executor = Sync::Executor.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
+        syncer = Syncer.new(runtime, fetcher, dry_run:, group: configured_group(runtime, opts))
         results = Results.new(context, ROLES, dry_run:)
         scope.select(Resources::PROJECTS, names) do |projects|
           next scope.report_none(Resources::PROJECTS) if projects.empty?
 
-          results.stream(projects, workers: runtime.config.parallel, work: executor.method(:observe)) do |step|
-            executor.settle(step)
+          results.stream(projects, workers: runtime.settings.parallel, work: syncer.method(:observe)) do |step|
+            syncer.settle(step)
           end
-          unfetched(context, executor.unfetched)
+          unfetched(context, syncer.unfetched)
           results.summarize
         end
-        raise Failed if results.any?(Fetcher::DENIED, Fetcher::FAILED)
+        raise Failed if results.any?(Outcome::DENIED, Outcome::FAILED)
       end
 
       private
 
-      # config.group already holds a typed -n, and the undo line is run later without it.
-      def configured_group(runtime, opts) = opts[:group] ? nil : runtime.config.group
+      # settings.group already holds a typed -n, and the undo line is run later without it.
+      def configured_group(runtime, opts) = opts[:group] ? nil : runtime.settings.group
 
       def unfetched(context, count)
         return if count.zero?

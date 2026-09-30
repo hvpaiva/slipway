@@ -5,8 +5,7 @@ require_relative '../yaml'
 
 module Slipway
   module Commands
-    # Named apart from Slipway::Config, the settings it displays.
-    module ConfigCommand
+    module Config
       DESCRIPTION = 'Inspect the configuration that slipway resolved from flags, environment variables and ' \
                     'the configuration file.'
       NOT_FOUND = ' (not found)'
@@ -38,11 +37,11 @@ module Slipway
         end
 
         def run(runtime, context, _args, _opts)
-          config = runtime.config
-          comment = "# #{config.path}"
-          comment += NOT_FOUND unless config.exists?
+          settings = runtime.settings
+          comment = "# #{settings.path}"
+          comment += NOT_FOUND unless settings.exists?
           context.puts(context.paint(:muted, comment))
-          context.print(Yaml.dump(config.to_h))
+          context.print(Yaml.dump(settings.to_h))
         end
       end
 
@@ -64,9 +63,9 @@ module Slipway
 
         # stdout stays the bare path so "$(slipway config path)" can open the file before it exists.
         def run(runtime, context, _args, _opts)
-          config = runtime.config
-          context.puts(config.path)
-          context.warn(context.paint_err(:muted, MISSING)) unless config.exists?
+          settings = runtime.settings
+          context.puts(settings.path)
+          context.warn(context.paint_err(:muted, MISSING)) unless settings.exists?
         end
       end
     end

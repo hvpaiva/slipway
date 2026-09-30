@@ -26,7 +26,7 @@ class RuntimeTest < Minitest::Test
 
       runtime = Slipway::Runtime.build(context(env), opts(config: file, group: 'flagged'))
 
-      assert_equal %w[flagged always light], [runtime.config.group, runtime.config.color, runtime.config.theme]
+      assert_equal %w[flagged always light], [runtime.settings.group, runtime.settings.color, runtime.settings.theme]
     end
   end
 
@@ -36,8 +36,8 @@ class RuntimeTest < Minitest::Test
       File.write(file, "group: filed\n")
       varied = env.merge('SLIPWAY_GROUP' => 'envied')
 
-      assert_equal 'envied', Slipway::Runtime.build(context(varied), opts(config: file)).config.group
-      assert_equal 'filed', Slipway::Runtime.build(context(env), opts(config: file)).config.group
+      assert_equal 'envied', Slipway::Runtime.build(context(varied), opts(config: file)).settings.group
+      assert_equal 'filed', Slipway::Runtime.build(context(env), opts(config: file)).settings.group
     end
   end
 
@@ -45,18 +45,18 @@ class RuntimeTest < Minitest::Test
     with_sandbox do |env|
       file = File.join(env['HOME'], 'other.yaml')
       File.write(file, "group: filed\ncolor: never\n")
-      filed = Slipway::Runtime.build(context(env), opts(config: file)).config
-      defaults = Slipway::Runtime.build(context(env), opts).config
+      filed = Slipway::Runtime.build(context(env), opts(config: file)).settings
+      defaults = Slipway::Runtime.build(context(env), opts).settings
 
       assert_equal %w[filed never dark], [filed.group, filed.color, filed.theme]
       assert_equal %w[default auto dark], [defaults.group, defaults.color, defaults.theme]
     end
   end
 
-  def test_build_raises_config_errors_for_the_runner_to_report
+  def test_build_raises_settings_errors_for_the_runner_to_report
     with_sandbox do |env|
       file = write_config(env, "colour: always\n")
-      error = assert_raises(Slipway::Config::Error) { Slipway::Runtime.build(context(env), opts(config: file)) }
+      error = assert_raises(Slipway::Settings::Error) { Slipway::Runtime.build(context(env), opts(config: file)) }
 
       assert_equal "#{file}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
                    'parallel, protocols, theme)', error.message
@@ -135,7 +135,7 @@ class RuntimeTest < Minitest::Test
     end
   end
 
-  def test_color_defaults_are_nil_when_the_config_cannot_be_loaded
+  def test_color_defaults_are_nil_when_the_settings_cannot_be_loaded
     with_sandbox do |env|
       write_config(env, "theme: sepia\n")
 

@@ -39,7 +39,8 @@ module Slipway
     MOVES = [REVISION, BEHIND].freeze
 
     # In the order Plan checks them. Each sentence says what holds sync back, so the line reads
-    # the same in diff, describe and sync.
+    # the same in diff, describe and sync. Rollback refuses with Conflicted and InProgress too,
+    # so those two name no verb.
     BLOCKERS = {
       'NotARepo' => '%<path>s holds files but no repository; sync clones only into an absent directory',
       'Unsafe' => '%<reason>s',
