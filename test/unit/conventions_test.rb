@@ -37,6 +37,8 @@ module SyntaxRules
     end
   end
 
+  def warning_prefix?(node) = node.is_a?(Prism::StringNode) && node.unescaped.start_with?('warning:')
+
   def kernel_call?(call) = call.receiver.nil? || constant?(call.receiver, *KERNEL_RECEIVERS)
 
   def constant?(node, *names)
@@ -51,7 +53,7 @@ class ConventionsTest < Minitest::Test
   LIB = File.join(ROOT, 'lib')
   SHIPPED_DIRECTORIES = %w[lib/ exe/ man/].freeze
   SHIPPED_DOCUMENTS = %w[README.md CHANGELOG.md LICENSE.txt].freeze
-  ASCII_TREES = %w[lib exe bin rakelib test/fixtures/golden].freeze
+  ASCII_TREES = %w[lib exe bin rakelib test/fixtures/golden test/fixtures/man].freeze
   TEST_TREES = %w[test/unit test/integration test/golden].freeze
 
   # Paths are relative to lib/slipway.
@@ -67,6 +69,9 @@ class ConventionsTest < Minitest::Test
 
   # Context wraps the process streams; everything else prints through it.
   STREAM_OWNERS = ['cli/context.rb'].freeze
+
+  # Output.warning neutralizes the message after the prefix, so no other file writes the prefix.
+  WARNING_WRITERS = ['output.rb'].freeze
 
   CLI = %w[cli.rb cli/].freeze
   DOMAIN = %w[paths.rb config.rb editor.rb names.rb labels.rb selector.rb resources.rb manifest.rb
@@ -110,6 +115,10 @@ class ConventionsTest < Minitest::Test
 
   def test_only_the_context_touches_the_standard_streams
     assert_equal(STREAM_OWNERS, files_where { stream?(it) })
+  end
+
+  def test_only_the_output_helper_writes_a_warning_line
+    assert_equal(WARNING_WRITERS, files_where { warning_prefix?(it) })
   end
 
   def test_the_spawn_rule_reads_calls_not_text
@@ -160,6 +169,14 @@ class ConventionsTest < Minitest::Test
     RUBY
 
     assert_equal caught.keys.sort, scratch_files_where(caught.merge('ignored.rb' => ignored)) { stream?(it) }
+  end
+
+  def test_the_warning_rule_reads_strings_not_comments_or_symbols
+    caught = { 'literal.rb' => "context.warn('warning: x')\n", 'interpolated.rb' => %(warn("warning: \#{text}")\n),
+               'painted.rb' => %(warn("\#{paint_err(:warning, 'warning:')} x")\n) }
+    ignored = "# warning: x\nTHEME = { warning: '33' }.freeze\nNOTE = 'a warning: x'\nOutput.warning(context, x)\n"
+
+    assert_equal caught.keys.sort, scratch_files_where(caught.merge('ignored.rb' => ignored)) { warning_prefix?(it) }
   end
 
   def test_the_require_rules_read_calls_not_text

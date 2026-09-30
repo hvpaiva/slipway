@@ -52,12 +52,13 @@ that breaks these rules.
    and exits 1 (2 for `UsageError`), `Interrupt` exits 130, `Errno::EPIPE` exits 0 quietly, and
    any other `StandardError` exits 1, with class and backtrace added when `SLIPWAY_DEBUG` is set.
 
-Every table cell, describe value and warning line passes `Output.plain`, which makes control
-and bidirectional characters visible, and so do the fields git answered in json and yaml output.
-The runner's error lines pass the same rule through `CLI::Style.plain`; only a `UsageError`
-takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean this?" list. A
-remote URL passes `Git::Url.redact`, and a git failure keeps only the first line of git's
-stderr, redacted and cut to 200 characters.
+Every table cell, describe value and `result_line` name passes `Output.plain`, which makes
+control and bidirectional characters visible, and so do the fields git answered in json and
+yaml output. Warning lines are written only by `Output.warning`, which passes the message
+through the same rule. The runner's error lines pass it through `CLI::Style.plain`; only a
+`UsageError` takes `layout: true`, which keeps the line feeds and tabs of a "Did you mean
+this?" list. A remote URL passes `Git::Url.redact`, and a git failure keeps only the first line
+of git's stderr, redacted and cut to 200 characters.
 
 ## One definition, four outputs
 
@@ -88,9 +89,10 @@ README variable table to the same keys.
 `Options::DRY_RUN` and friends. Require the file in `commands.rb` and add the class to `VERBS`
 in help order; `test/unit/commands/registry_test.rb` asserts that order and fails when a
 `Commands::Base` subclass is reachable from `VERBS` neither directly nor as a subcommand of a
-group. Print results through `result_line` (`project/hldr created`) and raise
-`Slipway::Error` or `CLI::UsageError` rather than writing to stderr. Run `rake generate` so the
-new man page and help fixture land in `man/man1` and `test/fixtures/golden`.
+group. Print results through `result_line` (`project/hldr created`) and warnings through
+`Output.warning`, and raise `Slipway::Error` or `CLI::UsageError` rather than writing to
+stderr. Run `rake generate` so the new man page and help fixture land in `man/man1` and
+`test/fixtures/golden`.
 
 **An option.** Add a `CLI::Option` (`long:`, optional `short:`, `argument:` for a value,
 `enum:` for a closed set, `default:`, `repeatable:`, `required:`, `optional:` plus `implicit:`
@@ -130,27 +132,30 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   recipe yields the same commit ids on every machine. The git adapter and the inspector are
   unit-tested against the same fixtures with the real `git`.
 - Golden tests under `test/golden` compare the help page of every command, the three completion
-  scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`;
-  `rake generate` refreshes both after an intended change. `ShellHarness` also drives
+  scripts and the man pages with the files under `test/fixtures/golden` and `man/man1`, and
+  `test/unit/cli/manpage_test.rb` compares two pages of a test registry with `test/fixtures/man`;
+  `rake generate` refreshes all three after an intended change. `ShellHarness` also drives
   the completion scripts inside real shells (bash always; zsh and fish when installed, or
   unconditionally when `SLIPWAY_REQUIRE_SHELLS` is set, which the CI `completions` job does)
   against a stub program that answers `__complete` from a `FixtureRegistry`.
 
 Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the
-single git spawner and YAML writer, no direct stdout or stderr, no runtime dependencies, the
-files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of `CHANGELOG.md`) and
-`test/unit/readme_test.rb` (the README tables against the code). Tests for the development
-code live under `test/unit/dev` and never run git or `gh`: the release and GitHub tests hand
-the code a fake command runner.
+single git spawner, YAML writer and warning writer, no direct stdout or stderr, no runtime
+dependencies, the files the gem ships, ASCII), `test/unit/changelog_test.rb` (the shape of
+`CHANGELOG.md`) and `test/unit/readme_test.rb` (the README tables and configuration example
+against the code).
+Tests for the development code live under `test/unit/dev`. The commit tests run git in
+temporary repositories; the release and GitHub tests never run git or `gh` and hand the code a
+fake command runner.
 
 ## Generated artifacts
 
 Two kinds of generated text are committed: the man pages under `man/man1` and the golden
 fixtures under `test/fixtures/golden` (the help page of every command and the three completion
-scripts). One command refreshes both: `rake generate` renders the pages through
-`bin/generate-man`, lints them with groff, rewrites the fixtures from the current output,
-removes fixtures that no longer belong to a command, and prints `git status` for both
-directories so the diff is reviewed before it is committed.
+scripts) and `test/fixtures/man` (two pages of a test registry). One command refreshes both:
+`rake generate` renders the pages through `bin/generate-man`, lints them with groff, rewrites
+the fixtures from the current output, removes fixtures that no longer belong to a command, and
+prints `git status` for the three directories so the diff is reviewed before it is committed.
 
 The page date is the date of the newest `## [x.y.z] - YYYY-MM-DD` heading in `CHANGELOG.md` (a
 trailing ` [YANKED]` is allowed) and is empty while there is none, so a rebuild is
@@ -169,6 +174,7 @@ maintainer runs lives in `rakelib/`: `check.rake`, `generate.rake`, `package.rak
 `shells.rake`, `release.rake` and `github.rake`, which Rake loads on its own, and plain Ruby
 under `rakelib/support/` that the tasks and the scripts in `bin/` share (`changelog.rb` parses
 and cuts the changelog, `release.rb` runs the release flow behind an injectable command runner,
-`commits.rb` holds the commit rules `bin/lint-commits` applies, `github.rb` wraps `gh api`).
+`commits.rb` holds the commit rules `bin/lint-commits` applies and the range `rake check` hands
+it, `github.rb` wraps `gh api`).
 `rakelib/` is covered by RuboCop and the conventions test, and the gemspec excludes it, so none
 of it ships in the gem.

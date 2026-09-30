@@ -3,6 +3,7 @@
 require 'test_helper'
 
 class ManpageTest < Minitest::Test
+  include GoldenHelper
   include ShellHarness
 
   FIXTURES = File.expand_path('../../fixtures/man', __dir__)
@@ -20,12 +21,12 @@ class ManpageTest < Minitest::Test
   end
 
   def test_root_page_matches_the_golden_file
-    assert_equal File.read(File.join(FIXTURES, 'slipway.1')), @manpage.page([])
     assert_equal @manpage.page([]), @manpage.pages['slipway.1']
+    assert_golden('slipway.1', @manpage.page([]), root: FIXTURES)
   end
 
   def test_command_page_matches_the_golden_file
-    assert_equal File.read(File.join(FIXTURES, 'slipway-get.1')), @manpage.page(%w[get])
+    assert_golden('slipway-get.1', @manpage.page(%w[get]), root: FIXTURES)
   end
 
   def test_title_line_carries_the_date_and_source_given

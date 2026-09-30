@@ -14,7 +14,7 @@ module Slipway
       # Prints the warnings here so neither read verb can forget them.
       def self.examine(runtime, context, resources)
         batch = runtime.inspector.examine_all(resources)
-        batch.warnings.each { context.warn("#{context.paint_err(:warning, 'warning:')} #{Output.plain(it)}") }
+        batch.warnings.each { Output.warning(context, it) }
         batch.inspections
       end
 
@@ -32,7 +32,7 @@ module Slipway
       def scope(runtime, context, opts) = Scope.new(runtime, context, opts)
 
       def result_line(context, kind, name, verb_word, role, dry_run: false)
-        line = "#{kind.singular}/#{name} #{context.paint(role, verb_word)}"
+        line = "#{kind.singular}/#{Output.plain(name)} #{context.paint(role, verb_word)}"
         line = "#{line} #{context.paint(:dry_run, '(dry run)')}" if dry_run
         context.puts(line)
       end

@@ -28,15 +28,17 @@ bundle exec rake check   # what CI runs
 ```
 
 `rake check` runs, in this order, RuboCop, ShellCheck over `bin/setup` and the bash completion
-script, `groff -ww` over the man pages, the unit and golden tests under SimpleCov with the
-coverage minimums, the integration tests, the generated-files comparison, the package smoke
-test (build, install into a temporary `GEM_HOME`, run the installed executable) and, last,
-bundler-audit. Set `CHECK_OFFLINE=1` to skip the audit when you have no network; the task says
-so when it does. CI runs the same tasks. What `rake check` leaves out is what one machine
-cannot cover: the Ruby 3.4 and macOS entries of the test matrix, and the `completions` job,
-which fails when zsh or fish is missing (run it with `bundle exec rake test:shells`, see
-[Testing completions](#testing-completions)). CI also lints the commits of every pull request
-([Commits](#commits)) and runs the spelling, workflow and link checks listed under
+script, `groff -ww` over the man pages, `bin/lint-commits` over the commits your branch adds to
+`origin/main` ([Commits](#commits); on `main`, or without `origin/main`, it says so and lints
+nothing), the unit and golden tests under SimpleCov with the coverage minimums, the integration
+tests, the generated-files comparison, the package smoke test (build, install into a temporary
+`GEM_HOME`, run the installed executable) and, last, bundler-audit. Set `CHECK_OFFLINE=1` to
+skip the audit when you have no network; the task says so when it does. CI runs the same
+tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3.4 and macOS
+entries of the test matrix, and the `completions` job, which fails when zsh or fish is missing
+(run it with `bundle exec rake test:shells`, see [Testing completions](#testing-completions)).
+CI also lints the commits of every pull request against its base branch, with its title and
+body, and runs the spelling, workflow and link checks listed under
 [Checked by tools](#checked-by-tools).
 
 The individual tasks (`rake test`, `test:cov`, `rubocop`, `lint:man`, `lint:shell`, `audit`
@@ -63,11 +65,13 @@ Each of these fails `rake check` or CI when it is broken.
   require commands, views, the runtime, the inspector or the pool, and `cli/` requires one file
   outside itself (`cli/errors.rb` requires `error.rb`). [ARCHITECTURE.md](ARCHITECTURE.md#layers)
   has the full rule.
-- `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer, and
-  nothing under `lib/` writes to stdout or stderr except `cli/context.rb`.
+- `Git::Runner` is the only place that spawns git, `yaml.rb` is the only YAML writer,
+  `Output.warning` is the only place that writes a `warning:` line, and nothing under `lib/`
+  writes to stdout or stderr except `cli/context.rb`.
 - The man page ENVIRONMENT section and the README variable table list every variable the code
-  reads except `HOME` and `PATH`, and the README tables for STATUS words, exit statuses and
-  rake tasks match the code.
+  reads except `HOME` and `PATH`, the README tables for STATUS words, exit statuses and rake
+  tasks match the code, and the README configuration example sets every config key and no
+  other.
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
   release, dated `YYYY-MM-DD` and ordered newest first by version and date, and a link
   reference for every heading and a heading for every link reference.
@@ -94,8 +98,9 @@ No tool checks these; a reviewer does.
 ## Generated files
 
 Two kinds of generated text are committed: the man pages under `man/man1`, rendered from the
-command definitions, and the golden fixtures under `test/fixtures/golden`, which freeze the
-text of every help page and of the three completion scripts. After changing a command, an
+command definitions, and the golden fixtures. Those under `test/fixtures/golden` freeze the
+text of every help page and of the three completion scripts; the two under `test/fixtures/man`
+freeze the roff the man page builder writes for the test registry. After changing a command, an
 option, a description or an example, run
 
 ```sh
@@ -104,11 +109,12 @@ bundle exec rake generate
 
 review the diff it prints at the end, and commit the pages and fixtures with the change. The
 task renders the pages, lints them with groff, rewrites the golden fixtures from the current
-output and removes fixtures that no longer belong to a command. Forgetting it is caught: a new
-command without its fixture fails `test_every_fixture_belongs_to_a_command` in
-`test/golden/help_test.rb`, a missing page fails `test_man1_holds_exactly_the_rendered_pages`
-in `test/golden/manpage_test.rb` and a stale one fails that page's `_is_fresh` test, and the CI
-`generated` job fails when the committed pages differ from what `rake generate:check` renders.
+output and removes fixtures that no longer belong to a command. Forgetting it is caught: a
+stale fixture fails its test with a diff, a new command without its fixture fails
+`test_every_fixture_belongs_to_a_command` in `test/golden/help_test.rb`, a missing page fails
+`test_man1_holds_exactly_the_rendered_pages` in `test/golden/manpage_test.rb` and a stale one
+fails that page's `_is_fresh` test, and the CI `generated` job fails when the committed pages
+differ from what `rake generate:check` renders.
 
 The page date comes from the newest `## [x.y.z] - YYYY-MM-DD` heading in `CHANGELOG.md` and is
 empty while the changelog has no release heading, so a plain change does not touch the date.
@@ -162,8 +168,8 @@ are all checked there. Merge commits are included but checked for attribution tr
 because git writes their subject. The `main` ruleset on GitHub requires the rest: signed commits, a pull
 request for everyone including the maintainer, green required checks, and merge commits as the
 only merge method. Squash and rebase are disabled so your atomic commits land as you signed
-them; GitHub signs the merge commit. To check a branch before pushing it, run
-`bin/lint-commits origin/main..HEAD`.
+them; GitHub signs the merge commit. `rake check` runs the same script over
+`origin/main..HEAD`, so a branch is checked before it is pushed.
 
 ## Pull requests
 

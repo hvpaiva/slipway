@@ -1,10 +1,26 @@
 # frozen_string_literal: true
 
+require_relative 'support/commits'
+
 desc 'Run what CI runs, except the Ruby and OS matrix and the zsh and fish job (CHECK_OFFLINE=1 skips audit)'
-task check: %w[rubocop lint:shell lint:man test:cov test:integration generate:check package:check] do
+task check: %w[rubocop lint:shell lint:man lint:commits test:cov test:integration generate:check package:check] do
   if ENV.fetch('CHECK_OFFLINE', '').empty?
     Rake::Task['audit'].invoke
   else
     puts 'check: CHECK_OFFLINE is set, so the advisory audit was skipped; CI still runs it'
+  end
+end
+
+namespace :lint do
+  desc "Run bin/lint-commits over the commits HEAD adds to #{Commits::BASE}"
+  task :commits do
+    range, skipped = Commits.branch_range
+    if range
+      ruby 'bin/lint-commits', range
+    else
+      puts "lint:commits: #{skipped}, so no commit was linted"
+    end
+  rescue Commits::Error => e
+    abort "lint:commits: #{e.message}"
   end
 end

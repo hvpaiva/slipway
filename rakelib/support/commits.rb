@@ -3,6 +3,7 @@
 require 'open3'
 
 module Commits
+  BASE = 'origin/main'
   TYPES = %w[feat fix docs test refactor chore ci].freeze
   # Dependabot puts "[security] " between the prefix and the summary of a security update.
   SUBJECT = /\A(#{TYPES.join('|')})(\([a-z0-9-]+\))?!?: (\[security\] )?[a-z]/
@@ -38,6 +39,21 @@ module Commits
       sha, parents, message = record.split("\x1f", 3)
       Commit.new(sha:, parents: parents.to_s.split, message: message.to_s)
     end
+  end
+
+  # [range, nil] when HEAD has commits that +base+ lacks, otherwise [nil, why nothing is linted].
+  def branch_range(base = BASE, chdir: Dir.pwd)
+    return [nil, "no #{base} to compare HEAD with"] unless commit?(base, chdir:)
+
+    range = "#{base}..HEAD"
+    return [nil, "HEAD has no commits that #{base} lacks"] if read(range, chdir:).empty?
+
+    [range, nil]
+  end
+
+  def commit?(ref, chdir: Dir.pwd)
+    _, status = Open3.capture2e('git', 'rev-parse', '--verify', '--quiet', "#{ref}^{commit}", chdir:)
+    status.success?
   end
 
   # git log prints the bytes a commit holds whatever their encoding, and Ruby tags them with the
