@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'command_line'
 require_relative 'drift'
 require_relative 'git'
 require_relative 'outcome'
@@ -100,7 +101,7 @@ module Slipway
       def refused(step, error)
         reason = error.reason
         detail = [error.message.delete_prefix("#{error.path}: "), ADVICE[reason]].compact.join('; ')
-        command = Plan.git(step.project, 'status') unless reason == 'Busy'
+        command = CommandLine.git(step.project, 'status') unless reason == 'Busy'
         outcome(step.project, Outcome::SKIPPED, [detail, command, *declared(step.plan)], reason:)
       end
 

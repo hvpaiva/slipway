@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
+require_relative 'command_line'
 require_relative 'git'
 require_relative 'outcome'
 require_relative 'paths'
-require_relative 'plan'
 require_relative 'rollout'
 
 module Slipway
@@ -216,7 +216,7 @@ module Slipway
     def skipped(project, reason, detail)
       words = COMMANDS[reason]
       Outcome.new(project:, word: Outcome::SKIPPED, reason:,
-                  details: [detail, words && Plan.git(project, *words)].compact)
+                  details: [detail, words && CommandLine.git(project, *words)].compact)
     end
 
     def refuse(reason, **values) = raise(Refused.new(reason, values))

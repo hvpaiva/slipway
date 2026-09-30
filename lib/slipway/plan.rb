@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'shellwords'
+require_relative 'command_line'
 require_relative 'drift'
 require_relative 'git'
-require_relative 'paths'
 require_relative 'resources'
 
 module Slipway
@@ -25,19 +25,6 @@ module Slipway
     end
 
     def self.for(inspection) = Planner.new(inspection).result
-
-    # The git command line that runs `words` in `project`'s repository. Slipway prints it and
-    # never runs it.
-    def self.git(project, *words) = ['git', '-C', shell_path(project.path), *words].join(' ')
-
-    # The path as the manifest writes it, so the line matches what was registered. Only the part
-    # after ~ is quoted, since a shell does not expand a quoted ~.
-    def self.shell_path(path)
-      rest = path.sub(Paths::TILDE, '')
-      return Shellwords.escape(path) if rest == path
-
-      rest.empty? ? '~' : "~#{Shellwords.escape(rest)}"
-    end
 
     class Planner
       ABBREVIATION = Git::Porcelain::ABBREVIATION
@@ -166,7 +153,7 @@ module Slipway
 
       def missing(message, clone: true)
         url = @project.remote
-        command = "git clone -- #{Shellwords.escape(url)} #{shell_path}" if clone && url
+        command = "git clone -- #{Shellwords.escape(url)} #{CommandLine.path(@project.path)}" if clone && url
         Drift::Item.new(type: Drift::MISSING, message:, command:)
       end
 
@@ -233,9 +220,7 @@ module Slipway
 
       def reason(error) = error.message.delete_prefix("#{error.path}: ")
 
-      def git(*words) = Plan.git(@project, *words)
-
-      def shell_path = Plan.shell_path(@project.path)
+      def git(*words) = CommandLine.git(@project, *words)
     end
     private_constant :Planner
   end

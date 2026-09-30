@@ -12,7 +12,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Command layer | `cli.rb`, `cli/` | `Registry`, `Command`, `Glossary`, `Option`, `Positional` and `Example` (the data model), `Globals`, `Parser`, `Validator`, `Runner` (the front controller), `HelpRenderer`, `Manpage`, `Completer`, `CompletionScripts`, `Builtins`, `Context`, `Style`, `Theme` and `UsageError`. It knows nothing about projects or git. |
 | Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `schema.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Schema`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
 | Git adapter | `git.rb`, `git/`, `state.rb` | `Git::Runner`, `Git::Repository` with its `FastForwarding` and `RollingBack` parts, the answers (`Status` and `Porcelain`, `Commit`, `FetchResult`, `Reflog`, `Distance`, `FastForward`, `MoveBack`), `Url`, `BranchName`, the errors in `git/errors.rb`, `Git::Fake`, and `State`. |
-| Reconciliation | `drift.rb`, `plan.rb`, `rollout.rb` | `Drift`, `Plan` and `Rollout::History`. |
+| Reconciliation | `drift.rb`, `plan.rb`, `command_line.rb`, `rollout.rb` | `Drift`, `Plan`, `CommandLine` (the git command lines slipway prints and never runs) and `Rollout::History`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Explain`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
 | Views | `views.rb`, `views/` | `Views::Project` and `Views::Group`. |
 | Commands and runtime | `slipway.rb`, `commands.rb`, `commands/`, `runtime.rb`, `inspector.rb`, `fetcher.rb`, `outcome.rb`, `sync.rb`, `rollback.rb`, `pool.rb` | One class per verb, `Commands::Options`, `Scope`, `Results` and `Manual`, `Runtime`, `Inspector` and its `Inspection`, `Fetcher`, `Outcome` (the result of one project and the words several verbs print), `Sync::Executor`, `Rollback` and `Pool`. |
@@ -221,7 +221,8 @@ places keep those promises: `Git::Runner` spawns every git process and sets its 
 `Rollback` calls; `Manifest`, through `Git::Url` and `Git::BranchName`, checks each field that
 can reach git before a manifest enters the store; `Output.plain`, `CLI::Style.plain` and
 `Git::Url.redact` treat what is printed; and `Plan` and the git errors quote each word they put
-into a command printed for the user to run. A change there keeps every promise or updates
+into a command printed for the user to run. `CommandLine` quotes the path of such a command and
+joins the other words as its caller gives them. A change there keeps every promise or updates
 SECURITY.md in the same pull request. `test/unit/conventions_test.rb` keeps git's spawn in the
 runner and the warning line in its one place, and `test/unit/reset_rule_test.rb` keeps the reset
 to its one form and its one caller.
