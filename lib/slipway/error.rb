@@ -2,7 +2,7 @@
 
 module Slipway
   # Base class for every failure reported to the user. The front controller prints each of
-  # +problems+ on its own `error:` line.
+  # `problems` on its own `error:` line.
   class Error < StandardError
     # Ruby appends ` @ rb_sysopen - /path` to a SystemCallError; the user needs the path
     # they typed and the strerror text alone.

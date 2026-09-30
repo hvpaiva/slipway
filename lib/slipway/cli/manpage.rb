@@ -42,7 +42,7 @@ module Slipway
         ['.IP \(bu 2', text(value.sub(BULLET, ''))]
       end
 
-      # +indent+ is in ens.
+      # `indent` is in ens.
       def tagged(label, description, indent: nil) = [indent ? ".TP #{indent}" : '.TP', label, *paragraphs(description)]
 
       def reference(name) = ".BR #{text(name)} (1)"
@@ -51,7 +51,7 @@ module Slipway
     # The date is passed in so the output is reproducible.
     class Manpage
       SECTION = '1'
-      # +source+ fills the fourth .TH field. The root page's ENVIRONMENT, FILES, CONFIGURATION and
+      # `source` fills the fourth .TH field. The root page's ENVIRONMENT, FILES, CONFIGURATION and
       # EXIT STATUS sections come from the caller, each a Hash of a variable, a path, a config
       # file key or a status to its meaning, because what they describe belongs to the program; an
       # empty Hash leaves its section out.

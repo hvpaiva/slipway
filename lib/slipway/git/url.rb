@@ -41,7 +41,7 @@ module Slipway
              'without whitespace or control characters'
       CREDENTIALS = 'must not embed credentials; use a credential helper'
 
-      # +text+ is free text, such as a line of git's stderr: only scheme://userinfo@ URLs change,
+      # `text` is free text, such as a line of git's stderr: only scheme://userinfo@ URLs change,
       # so scp-like addresses (git@host:path) and e-mail addresses stay as they are.
       def self.redact(text)
         text.gsub(USERINFO) do

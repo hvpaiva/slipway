@@ -30,9 +30,9 @@ module Slipway
       'fd' => 'reads from file descriptors'
     }.freeze
 
-    # +parse+ reads the string an environment variable holds; what it cannot read comes back as
-    # nil and fails the check with the key's expectation, or with +variable_expectation+ when the
-    # variable is written in another form than the file's value. +refusal+ says why a value of the
+    # `parse` reads the string an environment variable holds; what it cannot read comes back as
+    # nil and fails the check with the key's expectation, or with `variable_expectation` when the
+    # variable is written in another form than the file's value. `refusal` says why a value of the
     # right form is still refused, or returns nil.
     Setting = Data.define(:key, :variable, :default, :description, :valid, :expectation, :parse,
                           :variable_expectation, :refusal) do

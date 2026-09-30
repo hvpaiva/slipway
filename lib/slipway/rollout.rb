@@ -13,13 +13,13 @@ module Slipway
     SYNC = 'sync'
     UNDO = 'rollout undo'
 
-    # A commit the branch pointed at just before or just after a move slipway made. +action+ names
+    # A commit the branch pointed at just before or just after a move slipway made. `action` names
     # that move ("sync", "rollout undo"), or is nil for where the branch stood before slipway moved
-    # it; +from+ is the commit the move started from, nil when the reflog no longer holds it.
+    # it; `from` is the commit the move started from, nil when the reflog no longer holds it.
     Revision = Data.define(:number, :sha, :time, :action, :from)
 
-    # The rollout command that acts on +project+. It names the project's group unless that is
-    # +group+, the one a command typed without -n selects.
+    # The rollout command that acts on `project`. It names the project's group unless that is
+    # `group`, the one a command typed without -n selects.
     def self.command(verb, project, group)
       command = "slipway rollout #{verb} #{Resources::PROJECTS.singular}/#{project.name}"
       project.group == group ? command : "#{command} -n #{project.group}"
@@ -28,7 +28,7 @@ module Slipway
     class History
       attr_reader :revisions
 
-      # +entries+ are Git::ReflogEntry values, newest first as git lists them. Revisions count from
+      # `entries` are Git::ReflogEntry values, newest first as git lists them. Revisions count from
       # the oldest entry git still keeps.
       def initialize(entries)
         @revisions = []
@@ -50,7 +50,7 @@ module Slipway
       # The revision an undo returned to: the newest earlier one at the same commit.
       def undone_to(revision) = revisions.first(revision.number - 1).reverse.find { it.sha == revision.sha }
 
-      # The newest revision at +sha+, the one spec.revision holds.
+      # The newest revision at `sha`, the one spec.revision holds.
       def pinned(sha) = revisions.reverse.find { it.sha == sha }
 
       private

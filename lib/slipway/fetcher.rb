@@ -8,7 +8,7 @@ module Slipway
   # Fetches one project and names the outcome in the words the verbs that fetch share. Several
   # workers call it at once.
   class Fetcher
-    # +details+ are printed under the result line as they are; the printer redacts them and
+    # `details` are printed under the result line as they are; the printer redacts them and
     # makes them plain. The verbs that move a branch name their failures in the same words.
     Outcome = Data.define(:project, :word, :reason, :details) do
       def initialize(project:, word:, reason: nil, details: []) = super
@@ -68,7 +68,7 @@ module Slipway
       fetch(project, inspection)
     end
 
-    # +inspection+ is the project's, read without an error. An error git reports becomes the
+    # `inspection` is the project's, read without an error. An error git reports becomes the
     # outcome; anything else is a bug and leaves through the caller.
     def fetch(project, inspection)
       return no_remote(project) if remoteless?(inspection)

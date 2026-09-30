@@ -72,7 +72,7 @@ module Slipway
       def initialize(path) = super(path, 'the current branch tracks a local branch, not a remote one')
     end
 
-    # The branch was left where it was. +reason+ names why in one word: a state in which a
+    # The branch was left where it was. `reason` names why in one word: a state in which a
     # fast-forward is never attempted or, for the subclasses, git's own refusal.
     class Blocked < Error
       attr_reader :reason
@@ -110,7 +110,7 @@ module Slipway
 
       attr_reader :protocol
 
-      # +source+ says where the transports are listed, worded for the hint.
+      # `source` says where the transports are listed, worded for the hint.
       def initialize(path, protocol:, source:)
         @protocol = protocol
         @source = source

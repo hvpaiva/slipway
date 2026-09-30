@@ -43,7 +43,7 @@ module Slipway
       # Painting is how slipway's own escape sequences reach a stream. Text from anywhere else is
       # made visible, so a commit subject, a git message or a manifest field can neither move the
       # cursor nor paint a STATUS of its own: C0 characters and DEL take caret notation
-      # (ESC is ^[, DEL is ^?), the rest the replacement character. +layout+ keeps line feeds and
+      # (ESC is ^[, DEL is ^?), the rest the replacement character. `layout` keeps line feeds and
       # tabs, for a message laid out on several lines such as "Did you mean this?". Under the C
       # locale Ruby hands ARGV, ENV and paths over as BINARY, which a UTF-8 pattern cannot match;
       # reading the bytes as UTF-8 keeps the valid ones and scrubs the rest.

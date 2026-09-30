@@ -192,7 +192,7 @@ module Slipway
     LIST_KIND = 'List'
     LIST_FIELDS = %w[kind items].freeze
 
-    # +hash+ must have string keys.
+    # `hash` must have string keys.
     def self.parse(hash, source:, default_group: 'default') = Reader.new(hash, source, default_group).resource
 
     def self.load_documents(text, source:)

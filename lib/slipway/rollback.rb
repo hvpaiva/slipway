@@ -11,7 +11,7 @@ module Slipway
   # with spec.revision, as kubectl rollout undo rewrites a Deployment's template to an earlier
   # revision. The manifest is written only once git has moved the branch.
   class Rollback
-    # Where the branch is and where the chosen revision is, as the checks saw them. +distance+
+    # Where the branch is and where the chosen revision is, as the checks saw them. `distance`
     # counts the commits the move drops (ahead) or gains (behind).
     Step = Data.define(:project, :status, :head, :revision, :distance) do
       def back? = distance.ahead.positive?
@@ -67,7 +67,7 @@ module Slipway
                  'Dirty' => %w[status], 'WouldLoseChanges' => %w[status],
                  'WouldOverwrite' => %w[status --ignored] }.freeze
 
-    # +group+ is the one a command without -n selects, so the unpin command can leave it out; nil
+    # `group` is the one a command without -n selects, so the unpin command can leave it out; nil
     # when -n was typed, so the unpin command names the group.
     def initialize(runtime, dry_run:, group:)
       @runtime = runtime
@@ -75,7 +75,7 @@ module Slipway
       @group = group
     end
 
-    # +number+ is a revision the history lists; nil or 0 is the one before the current one.
+    # `number` is a revision the history lists; nil or 0 is the one before the current one.
     def undo(project, number: nil)
       inspection = @runtime.inspector.examine(project)
       return Fetcher::Outcome.unreadable(project, inspection) if inspection.error

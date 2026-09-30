@@ -80,7 +80,8 @@ Each of these fails `rake check` or CI when it is broken.
   `require_relative`; a `require 'slipway/...'` line fails `test/unit/conventions_test.rb`.
 - Everything under `lib/`, `exe/`, `bin/`, `rakelib/` and the golden fixtures is ASCII.
 - No new runtime dependencies: the gemspec's `runtime_dependencies` must stay empty, and the
-  gem ships only `lib/`, `exe/`, `man/`, `README.md`, `CHANGELOG.md` and `LICENSE.txt`.
+  gem ships only `lib/`, `exe/`, `man/`, `README.md`, `CHANGELOG.md`, `LICENSE.txt` and
+  `.yardopts`, which rubydoc.info reads to render the API documentation.
 - Coverage stays above the line and branch minimums in the Rakefile, overall and per file.
 - Dependencies point one way: the command layer under `cli/` and the domain files never
   require commands, views, the runtime, the inspector or the pool, and `cli/` requires one file
@@ -108,6 +109,11 @@ No tool checks these; a reviewer does.
 
 - Comments explain why the code is the way it is, never what it does. A comment that restates
   the code is removed in review.
+- A class or method gets a comment above it when a caller cannot read its contract off the name
+  and the signature: what it returns, what it raises, whether it may run on several threads.
+  Most need none. YARD renders these comments as Markdown (`.yardopts`), so a parameter name, a
+  command, a path or a literal value is written in backticks, as in `` `group` ``, while the
+  names of classes, constants and methods are left bare.
 - Every change ships with tests. A bug fix starts with a test that fails; a new option or verb
   gets unit tests in `test/unit/commands` and, when it prints something, an exact-output
   assertion. The coverage minimums are the mechanical floor; review judges whether the tests

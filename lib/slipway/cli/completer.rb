@@ -42,7 +42,7 @@ module Slipway
 
       private
 
-      # +pending+ is an option still waiting for its value; +literal+ is set once `--` is seen.
+      # `pending` is an option still waiting for its value; `literal` is set once `--` is seen.
       State = Struct.new(:command, :args, :pending, :literal)
       private_constant :State
 

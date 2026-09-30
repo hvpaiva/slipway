@@ -6,7 +6,7 @@ module Slipway
   # The ways a project can differ from its manifest, and the blockers that keep sync from
   # resolving them. Plan decides which apply; this module holds the words and their sentences.
   module Drift
-    # +command+ is a git command line that shows or resolves the item; slipway prints it and never
+    # `command` is a git command line that shows or resolves the item; slipway prints it and never
     # runs it. Either can quote a URL git answered with, so both are redacted here, once for every
     # reader.
     Item = Data.define(:type, :message, :command, :blocker) do

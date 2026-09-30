@@ -145,7 +145,7 @@ module Slipway
       end
 
       # kubectl refuses a label or field selector or --all-namespaces next to explicit names.
-      # +across+ replaces kubectl's "retrieved" for a verb that acts on the projects it names.
+      # `across` replaces kubectl's "retrieved" for a verb that acts on the projects it names.
       def check_names(kind, across: NAMES_WITH_ALL_GROUPS)
         selectors = @opts.values_at(:selector, :field_selector)
         raise CLI::UsageError, NAMES_WITH_SELECTOR unless selectors.all? { it.to_s.strip.empty? }

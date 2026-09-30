@@ -5,16 +5,16 @@ require_relative 'error'
 module Slipway
   # Finds the git repositories at and under a directory.
   class Scanner
-    # +problems+ holds a Problem for each directory that could not be read.
+    # `problems` holds a Problem for each directory that could not be read.
     Result = Data.define(:repositories, :problems)
-    # +detail+ is the system's reason alone, so the caller names the path the way it shows paths.
+    # `detail` is the system's reason alone, so the caller names the path the way it shows paths.
     Problem = Data.define(:path, :detail)
 
     DEFAULT_DEPTH = 1
     MAX_DEPTH = 8
     GIT_ENTRY = '.git'
 
-    # +root+ is an absolute path; +depth+ counts the levels under it that are searched.
+    # `root` is an absolute path; `depth` counts the levels under it that are searched.
     def self.scan(root, depth: DEFAULT_DEPTH)
       raise Error, "#{root}: no such directory" unless File.directory?(root)
 

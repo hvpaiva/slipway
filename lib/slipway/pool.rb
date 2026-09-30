@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Slipway
-  # Runs one block per item on at most +workers+ threads; results come back in input order,
+  # Runs one block per item on at most `workers` threads; results come back in input order,
   # whatever order the items finish in.
   #
   # However a call ends early (an exception from an item, an interrupt, a consumer that raises),

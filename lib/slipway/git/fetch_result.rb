@@ -2,7 +2,7 @@
 
 module Slipway
   module Git
-    # +updates+ holds [ref, old, new] for each ref the fetch moved, or is nil when git fetched
+    # `updates` holds [ref, old, new] for each ref the fetch moved, or is nil when git fetched
     # without listing them (git before 2.41). The old id of a new ref and the new id of a pruned
     # one are git's all-zero id.
     FetchResult = Data.define(:updates) do

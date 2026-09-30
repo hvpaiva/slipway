@@ -32,7 +32,7 @@ module Slipway
           /^fatal: Not possible to fast-forward/ => NotFastForward
         }.freeze
 
-        # +onto+ is @{upstream} or a full object name its upstream holds. Raises Blocked, or a
+        # `onto` is @{upstream} or a full object name its upstream holds. Raises Blocked, or a
         # subclass for git's own refusal, and the branch then stays where it was. Raises
         # WriteTimeout when the deadline stops git partway through the checkout: the branch stays
         # too, but the files git had written stay in the working tree.
@@ -57,7 +57,7 @@ module Slipway
 
         private
 
-        # +clean+ refuses staged and unstaged changes; without it git alone decides whether the move
+        # `clean` refuses staged and unstaged changes; without it git alone decides whether the move
         # would overwrite them.
         def ready_status(directory, clean: true)
           status = status(directory)

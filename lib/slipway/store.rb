@@ -32,7 +32,7 @@ module Slipway
       kind.namespaced? ? resources.sort_by { [it.group, it.name] } : resources.sort_by(&:name)
     end
 
-    # A nil +group+ means the default group for projects.
+    # A nil `group` means the default group for projects.
     def find(kind, name, group: nil)
       file = path_for(kind, name, group)
       raise NotFound.of(kind, name) unless File.file?(file)
@@ -40,7 +40,7 @@ module Slipway
       read(kind, file)
     end
 
-    # A nil +group+ means the default group for projects.
+    # A nil `group` means the default group for projects.
     def exist?(kind, name, group: nil) = File.file?(path_for(kind, name, group))
 
     # Unique because project names repeat across groups; completion wants each once.
