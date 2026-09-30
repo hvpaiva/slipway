@@ -10,7 +10,7 @@ class CommandsRegistryTest < Minitest::Test
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
 
-    assert_equal %w[get describe create apply delete edit label fetch diff config help version completion man
+    assert_equal %w[get describe create apply delete edit label fetch diff sync config help version completion man
                     __complete],
                  registry.root.subcommands.map(&:name)
     assert_equal ['slipway', Slipway::VERSION, 'A kubectl-style registry for the git repositories on your machine'],
@@ -27,7 +27,7 @@ class CommandsRegistryTest < Minitest::Test
     assert_equal ['Basic Commands', 'Repository Commands', 'Settings Commands', 'Other Commands'],
                  registry.root.sections.map(&:first)
     assert_equal %w[get describe create apply delete edit label], sections.fetch('Basic Commands')
-    assert_equal %w[fetch diff], sections.fetch('Repository Commands')
+    assert_equal %w[fetch diff sync], sections.fetch('Repository Commands')
     assert_equal %w[config completion man], sections.fetch('Settings Commands')
     assert_equal %w[help version], sections.fetch('Other Commands')
   end

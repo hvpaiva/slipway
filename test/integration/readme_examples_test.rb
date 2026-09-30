@@ -12,8 +12,8 @@ class ReadmeExamplesIntegrationTest < Minitest::Test
   rescue ReadmeExamples::Error => e
     [[], e.message]
   end
-  # The story's remotes are local paths, which git reaches over the file transport. Only fetch
-  # is given it, so every other command runs with the settings a reader has.
+  # The story's remotes are local paths, which git reaches over the file transport. Only the
+  # commands that fetch are given it, so every other command runs with the settings a reader has.
   PROTOCOLS = { 'SLIPWAY_PROTOCOLS' => 'ssh:https:file' }.freeze
   SYNC_STDOUT = File.join(ROOT, 'test', 'support', 'preload', 'sync_stdout.rb')
 
@@ -24,7 +24,7 @@ class ReadmeExamplesIntegrationTest < Minitest::Test
   BLOCKS.each do |block|
     define_method("test_console_block_at_line_#{block.line}") do
       skip "README.md:#{block.line} is marked not run: #{block.not_run}" if block.not_run
-      skip_unless_fetch_lists_refs if block.commands.any? { fetch?(it) }
+      skip_unless_fetch_lists_refs if block.commands.any? { fetches?(it) }
 
       assert_prints_what_the_readme_shows(block)
     end
@@ -66,13 +66,13 @@ class ReadmeExamplesIntegrationTest < Minitest::Test
 
   # stdout and stderr share one pipe, so the lines interleave as a terminal shows them.
   def output(command, env)
-    env = env.merge(PROTOCOLS) if fetch?(command)
+    env = env.merge(PROTOCOLS) if fetches?(command)
     text, = Open3.capture2e(env, RbConfig.ruby, '-w', '-r', SYNC_STDOUT, '-I', LIB, EXE, *command.argv,
                             unsetenv_others: true)
     ReadmeExamples.normalize(text)
   end
 
-  def fetch?(command) = command.argv.first == 'fetch'
+  def fetches?(command) = %w[fetch sync].include?(command.argv.first)
 
   def mismatch(command, actual)
     expected = ReadmeExamples.normalize(command.expected)

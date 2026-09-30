@@ -15,6 +15,7 @@ class CompletionIntegrationTest < Minitest::Test
     label\tUpdate the labels on a resource
     fetch\tFetch from the remote of each project
     diff\tShow where projects differ from their manifests
+    sync\tFetch projects and fast-forward their branches
     config\tInspect the configuration in effect
     help\tHelp about any command
     version\tPrint the version of slipway
@@ -68,13 +69,13 @@ class CompletionIntegrationTest < Minitest::Test
     end
   end
 
-  def test_fetch_and_diff_complete_project_names_without_a_type_word
+  def test_the_repository_verbs_complete_project_names_without_a_type_word
     with_home do |env|
       seed(env, manifest('Group', 'work'),
            manifest('Project', 'clean', path: '~/dev/clean'),
            manifest('Project', 'api', group: 'work', path: '~/dev/api'))
 
-      %w[fetch diff].each do |verb|
+      %w[fetch diff sync].each do |verb|
         assert_equal [0, "api\nclean\n:4\n", ''], slipway('__complete', verb, '', env:)
         assert_equal [0, "api\n:4\n", ''], slipway('__complete', verb, 'clean', '', env:)
       end

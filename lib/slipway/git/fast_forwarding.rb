@@ -30,10 +30,10 @@ module Slipway
           /^fatal: Not possible to fast-forward/ => NotFastForward
         }.freeze
 
-        # +onto+ is @{upstream} or a full object name. Raises Blocked, or a subclass for git's own
-        # refusal, and the branch then stays where it was. Raises WriteTimeout when the deadline
-        # stops git partway through the checkout: the branch stays too, but the files git had
-        # written stay in the working tree.
+        # +onto+ is @{upstream} or a full object name its upstream holds. Raises Blocked, or a
+        # subclass for git's own refusal, and the branch then stays where it was. Raises
+        # WriteTimeout when the deadline stops git partway through the checkout: the branch stays
+        # too, but the files git had written stay in the working tree.
         def fast_forward(path, onto: UPSTREAM, reflog_action: REFLOG_ACTION)
           unless onto == UPSTREAM || OBJECT_NAME.match?(onto)
             raise ArgumentError, "onto must be #{UPSTREAM} or a full object name, not #{onto.inspect}"
@@ -48,6 +48,7 @@ module Slipway
           target = onto == UPSTREAM ? status.upstream : to[0, Porcelain::ABBREVIATION]
           raise Blocked.new(directory, 'Diverged', "#{ahead} ahead, #{behind} behind #{target}") if ahead.positive?
 
+          along_upstream(directory, to, status.upstream) unless onto == UPSTREAM
           merge(directory, to, reflog_action)
           FastForward.new(from:, to:, count: behind)
         end
@@ -102,6 +103,16 @@ module Slipway
 
         def position(directory, from, to)
           run(directory, 'rev-list', '--left-right', '--count', "#{from}...#{to}").out.split.map { Integer(it) }
+        end
+
+        # A commit the upstream lacks could come from any branch or fork the repository has
+        # fetched, so a named commit is reached only along the upstream.
+        def along_upstream(directory, commit, upstream)
+          lacks = ->(failed) { failed.status == 1 }
+          return if run(directory, 'merge-base', '--is-ancestor', commit, UPSTREAM, accept: lacks).success?
+
+          short = commit[0, Porcelain::ABBREVIATION]
+          raise Blocked.new(directory, 'OffUpstream', "commit #{short} is not on #{upstream}")
         end
 
         # A partial clone fetches the blobs a checkout needs, so the merge runs as a network command:

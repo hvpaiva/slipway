@@ -38,16 +38,17 @@ module CommandsHelper
 
   # +status: nil+ leaves the directory out, so the project shows as Missing. +remote+ is the origin
   # git answers with; +spec+ holds the fields the manifest declares, such as its own remote. +fetch+
-  # is what a fetch of the project returns or raises, as Git::Fake#add takes it.
+  # and +fast_forward+ are what a fetch and a fast-forward of the project return or raise, and
+  # +distance+ how far HEAD is from any revision, as Git::Fake#add takes them.
   def register(runtime, name, group: 'default', labels: {}, description: nil, status: CLEAN, commit: COMMIT,
                remote: nil, remotes: nil, fetched_at: nil, fetch: Slipway::Git::Fake::NOTHING_FETCHED, operation: nil,
-               paused: false, spec: {})
+               fast_forward: nil, distance: nil, paused: false, spec: {})
     path = "~/dev/#{name}"
     directory = Slipway::Paths.expand(path, home: runtime.paths.home)
     if status
       FileUtils.mkdir_p(directory)
       runtime.git.add(directory, status:, commit: status.unborn? ? nil : commit, remote:, remotes:, fetched_at:, fetch:,
-                                 operation:)
+                                 operation:, fast_forward:, distance:)
     end
     runtime.store.create(Slipway::Project.new(name:, group:, labels:, path:, description:, paused:, **spec))
   end

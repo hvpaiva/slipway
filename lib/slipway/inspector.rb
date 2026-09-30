@@ -10,9 +10,19 @@ module Slipway
   # +status+, +commit+ and +remote+ are nil when git could not answer; +error+ then holds the
   # Git error and +state+ its word. +fetched_at+ is nil then too, and for a repository no fetch
   # has reached. +operation+ is the merge, rebase or other operation in progress, asked only of a
-  # project the plan would fast-forward.
-  Inspection = Data.define(:project, :status, :commit, :remote, :fetched_at, :state, :error, :operation) do
-    def initialize(operation: nil, **) = super
+  # project the plan would fast-forward. +pin+ is how far HEAD is from spec.revision, a
+  # Git::Distance or nil when the repository lacks that commit, asked only of a pinned project
+  # whose HEAD is elsewhere.
+  Inspection = Data.define(:project, :status, :commit, :remote, :fetched_at, :state, :error, :operation, :pin) do
+    def initialize(operation: nil, pin: nil, **) = super
+
+    # A pin may name an annotated tag, which git peels to the commit it tags, so HEAD is also at
+    # the pin when git counts no commit between them.
+    def at_pin?
+      return false if commit.nil? || project.revision.nil?
+
+      commit.sha == project.revision || (!pin.nil? && pin.ahead.zero? && pin.behind.zero?)
+    end
 
     def self.failed(project, error)
       new(project:, status: nil, commit: nil, remote: nil, fetched_at: nil, state: State.for_error(error), error:)
@@ -46,7 +56,7 @@ module Slipway
       return Inspection.failed(project, Git::RelativePath.new(path)) unless File.absolute_path?(path)
       return Inspection.failed(project, Git::MissingPath.new(path)) unless File.directory?(path)
 
-      with_operation(Inspection.new(project:, **query(path), error: nil), path)
+      with_operation(with_pin(Inspection.new(project:, **query(path), error: nil), path), path)
     rescue Git::Error => e
       Inspection.failed(project, e)
     rescue StandardError => e
@@ -65,6 +75,16 @@ module Slipway
       commit = status.unborn? ? nil : @git.last_commit(path)
       { status:, commit:, remote: @git.remote_url(path), fetched_at: @git.fetched_at(path),
         state: State.derive(status) }
+    end
+
+    # One more spawn, paid only by a pinned project whose HEAD is not the pinned commit, and a
+    # second when HEAD is behind the pin on a branch whose upstream exists.
+    def with_pin(inspection, path)
+      revision = inspection.project.revision
+      sha = inspection.commit&.sha
+      return inspection if revision.nil? || sha.nil? || sha == revision
+
+      inspection.with(pin: @git.distance(path, revision, tracking: inspection.status.tracking?))
     end
 
     # One more spawn, paid only by a project that would otherwise be fast-forwarded.

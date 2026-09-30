@@ -80,6 +80,47 @@ class DiffIntegrationTest < Minitest::Test
     end
   end
 
+  def test_a_pinned_project_is_compared_with_its_pin_and_never_moved_back_to_it
+    with_home do |env|
+      ahead = repo(env, 'ahead', 'ahead')
+      dir = File.join(env['HOME'], 'dev', 'ahead')
+      base, head = %w[HEAD~1 HEAD].map { git!(dir, 'rev-parse', it).chomp }
+      seed(env, manifest('Project', 'ahead', path: ahead, revision: base),
+           manifest('Project', 'lost', path: repo(env, 'lost', 'synced'), revision: 'f' * 40))
+
+      assert_equal [3, <<~TEXT, ''], slipway('diff', env:)
+        project/ahead
+          Revision: HEAD is at #{head[0, 7]}, manifest pins #{base[0, 7]}
+          PastRevision: main is past the pinned revision; sync never moves a branch back
+            git -C ~/dev/ahead log --oneline #{base[0, 7]}..HEAD
+        project/lost
+          Revision: HEAD is at #{GetRegistry::HEAD}, manifest pins fffffff
+          RevisionNotFound: spec.revision fffffff is not in this repository; fetch it or unpin
+      TEXT
+    end
+  end
+
+  # git peels a pin that names an annotated tag to the commit it tags. A pushed side branch holds a
+  # commit that descends from HEAD, and sync never follows it there.
+  def test_a_pin_on_a_tag_of_head_matches_and_one_the_upstream_lacks_is_blocked
+    with_home do |env|
+      side = build_repo(File.join(env['HOME'], 'dev', 'side'), 'stale')
+      tagged = build_repo(File.join(env['HOME'], 'dev', 'tagged'), 'synced')
+      pin = side_commit(side)
+      seed(env, manifest('Project', 'side', path: '~/dev/side', revision: pin),
+           manifest('Project', 'tagged', path: '~/dev/tagged', revision: annotated_tag(tagged)))
+      head = git!(side, 'rev-parse', 'HEAD')[0, 7]
+      pin = pin[0, 7]
+
+      assert_equal [3, <<~TEXT, ''], slipway('diff', env:)
+        project/side
+          Revision: HEAD is at #{head}, manifest pins #{pin}
+          OffUpstream: spec.revision #{pin} is not on origin/main; sync moves a branch only along its upstream
+            git -C ~/dev/side log --oneline @{upstream}..#{pin}
+      TEXT
+    end
+  end
+
   def test_an_unreadable_manifest_is_warned_about_and_exits_one_even_when_another_project_differs
     with_home do |env|
       seed(env, manifest('Project', 'hldr', path: repo(env, 'hldr', 'synced')))
@@ -114,6 +155,19 @@ class DiffIntegrationTest < Minitest::Test
   end
 
   private
+
+  def annotated_tag(dir)
+    git!(dir, 'tag', '-a', '-m', 'v1', 'v1')
+    git!(dir, 'rev-parse', 'v1').chomp
+  end
+
+  def side_commit(dir)
+    git!("#{dir}-other", 'checkout', '-q', '-b', 'side')
+    git!("#{dir}-other", 'commit', '-q', '--allow-empty', '-m', 'side work')
+    git!("#{dir}-other", 'push', '-q', 'origin', 'side')
+    git!(dir, 'fetch', '-q')
+    git!(dir, 'rev-parse', 'origin/side').chomp
+  end
 
   def snapshot(dir)
     [git!(dir, 'for-each-ref'), git!(dir, 'status', '--porcelain=v2', '--branch'),

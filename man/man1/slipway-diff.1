@@ -12,7 +12,7 @@ Show where each selected project differs from its manifest.
 .PP
 Compares every project of the current group, the projects named, the ones a label selector matches, or with \-\-all\-groups every project, with its manifest. Each project that differs prints its name and one line per difference: Missing, Remote, Branch, Revision or Behind, then the blocker that keeps sync from fast\-forwarding the branch, if any. A line is followed by the git command that shows or resolves it when there is one; slipway never runs it. A project that matches its manifest prints nothing.
 .PP
-The repositories are read as they are on disk: diff contacts no remote and writes nothing, so Behind is as of the last fetch, which slipway fetch refreshes. A project pinned by spec.revision is compared with that commit instead of its upstream. A pinned, paused or FetchOnly project shows a blocker only when git cannot read its repository.
+The repositories are read as they are on disk: diff contacts no remote and writes nothing, so Behind is as of the last fetch, which slipway fetch refreshes. A project pinned by spec.revision is compared with that commit instead of its upstream, and is blocked when the repository lacks the commit, HEAD is past it or its upstream does not hold it. A paused or FetchOnly project shows a blocker only when git cannot read its repository.
 .SH OPTIONS
 .TP
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR

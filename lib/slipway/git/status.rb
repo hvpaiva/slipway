@@ -18,6 +18,8 @@ module Slipway
 
       def upstream_gone? = upstream_gone
 
+      def tracking? = !detached? && !upstream.nil? && !upstream_gone?
+
       # Stashes do not count.
       def clean? = staged.zero? && unstaged.zero? && untracked.zero? && conflicted.zero?
     end

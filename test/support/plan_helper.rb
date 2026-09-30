@@ -21,13 +21,19 @@ module PlanHelper
     FileUtils.remove_entry(@home)
   end
 
-  # +origin+ is the remote git answers with, and +spec+ the fields the manifest declares. +error+
-  # makes git fail with it; +absent+ leaves the directory out.
-  def plan(status = CLEAN, commit: COMMIT, origin: nil, operation: nil, error: nil, absent: false, path: PATH, **spec)
+  # +origin+ is the remote git answers with, +pin+ how far HEAD is from spec.revision, and +spec+
+  # the fields the manifest declares. +error+ makes git fail with it; +absent+ leaves the
+  # directory out.
+  def plan(status = CLEAN, commit: COMMIT, origin: nil, operation: nil, pin: nil, error: nil, absent: false, path: PATH,
+           **spec)
     directory = Slipway::Paths.expand(path, home: @home)
     unless absent
       FileUtils.mkdir_p(directory)
-      error ? @git.fail(directory, error) : @git.add(directory, status:, commit:, remote: origin, operation:)
+      if error
+        @git.fail(directory, error)
+      else
+        @git.add(directory, status:, commit:, remote: origin, operation:, distance: pin)
+      end
     end
     Slipway::Plan.for(@inspector.examine(Slipway::Project.new(name: 'hldr', path:, **spec)))
   end

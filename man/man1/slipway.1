@@ -46,6 +46,9 @@ Fetch from the remote of each project
 .TP 12
 \fBdiff\fR
 Show where projects differ from their manifests
+.TP 12
+\fBsync\fR
+Fetch projects and fast\-forward their branches
 .SS "Settings Commands"
 .TP 12
 \fBconfig\fR
@@ -190,7 +193,8 @@ Usage error: unknown command, unknown flag or invalid argument.
 Interrupted by SIGINT.
 .PP
 The pages of these commands list their own statuses:
-.BR slipway\-diff (1)
+.BR slipway\-diff (1),
+.BR slipway\-sync (1)
 .SH "SEE ALSO"
 .BR slipway\-get (1),
 .BR slipway\-describe (1),
@@ -201,6 +205,7 @@ The pages of these commands list their own statuses:
 .BR slipway\-label (1),
 .BR slipway\-fetch (1),
 .BR slipway\-diff (1),
+.BR slipway\-sync (1),
 .BR slipway\-config (1),
 .BR slipway\-config\-view (1),
 .BR slipway\-config\-path (1),

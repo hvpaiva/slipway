@@ -10,9 +10,10 @@ class SeamsTest < Minitest::Test
   # Universal variables every program reads; the man page does not list them.
   UNDOCUMENTED = %w[HOME PATH].freeze
   # Set for the git child process, to bound repository discovery and the transports a network
-  # command may use and to name slipway in the reflog, never read from the user.
+  # command may use, to name slipway in the reflog and to keep a read offline, never read from
+  # the user.
   CHILD_ONLY = [Slipway::Git::Runner::CEILING_VARIABLE, Slipway::Git::Runner::PROTOCOL_VARIABLE,
-                Slipway::Git::Repository::REFLOG_VARIABLE].freeze
+                Slipway::Git::Repository::REFLOG_VARIABLE, Slipway::Git::Repository::LAZY_FETCH_VARIABLE].freeze
   # Upper case, with the odd lower-case suffix such as LESS_TERMCAP_md.
   NAME = /[A-Z][A-Za-z0-9_]+/
   # env['X'], @env.fetch('X'), env.fetch 'X', ENV.key?('X'), context.env['X'], ...
@@ -30,9 +31,11 @@ class SeamsTest < Minitest::Test
     end
   end
 
-  def test_every_result_role_fetch_paints_exists_in_both_themes
+  def test_every_result_role_fetch_and_sync_paint_exists_in_both_themes
     Slipway::CLI::Theme::PRESETS.each do |name, roles|
-      Slipway::Commands::Fetch::ROLES.each_value { assert_includes roles.keys, it, name }
+      [Slipway::Commands::Fetch, Slipway::Commands::SyncCommand].each do |verb|
+        verb::ROLES.each_value { assert_includes roles.keys, it, "#{name} #{verb}" }
+      end
     end
   end
 

@@ -4,10 +4,11 @@ require 'fileutils'
 require_relative 'git_env'
 
 # The repositories the README's examples register, as the first example finds them: hldr is
-# clean and was fetched five hours ago; augur has a modified and an untracked file and no
-# remote; notes has a commit to push, and its remote has a commit pushed from another clone
-# after the fetch two days ago, so only the next fetch shows it. Remotes are bare repositories
-# under ~/remotes. hldr's origin is the URL its manifest declares, so it shows no Remote drift,
+# clean and was fetched five hours ago, and its remote has three commits pushed from another
+# clone since, which sync can fast-forward once a fetch shows them; augur has a modified and an
+# untracked file and no remote; notes has a commit to push, and its remote has a commit pushed
+# from another clone after the fetch two days ago, so only the next fetch shows it. Remotes are
+# bare repositories under ~/remotes. hldr's origin is the URL its manifest declares, so it shows no Remote drift,
 # and git rewrites that URL to the bare repository with url.<base>.insteadOf.
 class ReadmeStory
   include GitEnv
@@ -37,6 +38,13 @@ class ReadmeStory
     commit(dir, 'index.html', "<h1>hvpaiva.dev</h1>\n", 'feat: list posts by year', hours_ago: 32)
     git!(dir, 'push', '-q', '-u', 'origin', 'main')
     fetch(dir, hours_ago: 5)
+
+    elsewhere = clone_elsewhere('hldr')
+    commit(elsewhere, 'feed.xml', "<rss/>\n", 'feat: publish an RSS feed', hours_ago: 4)
+    commit(elsewhere, 'about.html', "<h1>About</h1>\n", 'feat: add an about page', hours_ago: 3)
+    commit(elsewhere, 'index.html', "<h1>hvpaiva.dev</h1>\n<a href=\"feed.xml\">RSS</a>\n",
+           'feat: link the feed from the index', hours_ago: 2)
+    git!(elsewhere, 'push', '-q', 'origin', 'main')
   end
 
   def augur
@@ -53,8 +61,7 @@ class ReadmeStory
     fetch(dir, hours_ago: 48)
     commit(dir, 'ruby.md', "# ruby\n", 'docs: start the ruby notes', hours_ago: 20)
 
-    elsewhere = File.join(@home, 'laptop', 'notes')
-    git!(@home, 'clone', '-q', '--', remote_path('notes'), elsewhere)
+    elsewhere = clone_elsewhere('notes')
     commit(elsewhere, 'shell.md', "# shell\n", 'docs: start the shell notes', hours_ago: 3)
     git!(elsewhere, 'push', '-q', 'origin', 'main')
   end
@@ -71,6 +78,12 @@ class ReadmeStory
     url = remote == true ? bare : remote
     git!(dir, 'remote', 'add', 'origin', url)
     git!(dir, 'config', "url.#{bare}.insteadOf", url) unless url == bare
+    dir
+  end
+
+  def clone_elsewhere(name)
+    dir = File.join(@home, 'laptop', name)
+    git!(@home, 'clone', '-q', '--', remote_path(name), dir)
     dir
   end
 

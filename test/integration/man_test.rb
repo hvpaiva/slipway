@@ -11,7 +11,7 @@ class ManIntegrationTest < Minitest::Test
   def test_path_prints_the_bundled_page_directory
     with_home do |env|
       assert_equal [0, "#{MAN_DIR}\n", ''], slipway('man', '--path', env:)
-      assert_equal 17, PAGES.size
+      assert_equal 18, PAGES.size
     end
   end
 

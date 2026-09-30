@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'fast_forwarding'
+require_relative 'runner'
 
 module Slipway
   module Git
@@ -60,6 +61,12 @@ module Slipway
       # pseudoref, and git names it by the first command left in the sequencer's todo.
       SEQUENCER_TODO = 'sequencer/todo'
       SEQUENCER_COMMANDS = { 'pick' => 'cherry-pick', 'revert' => 'revert' }.freeze
+      LAZY_FETCH_VARIABLE = 'GIT_NO_LAZY_FETCH'
+      # A partial clone fetches an object it lacks from its remote, even for a read. --missing
+      # stops that on every supported git; GIT_NO_LAZY_FETCH, which git honors from 2.44, and an
+      # empty GIT_ALLOW_PROTOCOL, which refuses every transport before it connects, stand behind it.
+      OFFLINE_REV_LIST = %w[rev-list --missing=allow-any].freeze
+      OFFLINE_READ = { LAZY_FETCH_VARIABLE => '1', Runner::PROTOCOL_VARIABLE => '' }.freeze
 
       def initialize(runner: Runner.new, network_timeout: NETWORK_TIMEOUT, protocols: PROTOCOLS,
                      protocols_source: PROTOCOLS_SOURCE)
@@ -114,6 +121,22 @@ module Slipway
         operation(directory, git_paths(directory, *IN_PROGRESS.keys, SEQUENCER_TODO))
       end
 
+      # How far HEAD is from +revision+, a full object name, or nil when the repository holds no
+      # commit by that name. +tracking+ says the branch has an upstream that exists, and a HEAD
+      # behind the revision then also learns how many of its commits the upstream lacks.
+      def distance(path, revision, tracking: false)
+        unless OBJECT_NAME.match?(revision)
+          raise ArgumentError, "revision must be a full object name, not #{revision.inspect}"
+        end
+
+        ahead, behind = offline_count(path, "HEAD...#{revision}^{commit}", '--left-right')
+        return if ahead.nil?
+
+        counted = tracking && ahead.zero? && behind.positive?
+        off_upstream = offline_count(path, "#{UPSTREAM}..#{revision}^{commit}").first if counted
+        Distance.new(ahead:, behind:, off_upstream:)
+      end
+
       # nil for a repository that was never fetched or whose last fetch failed: git empties
       # FETCH_HEAD before it contacts the remote and writes a line for each ref it fetched.
       # Every worktree shares the remote-tracking refs, but git writes FETCH_HEAD in the worktree
@@ -145,6 +168,13 @@ module Slipway
         return result if result.success? || accept&.call(result)
 
         raise classify(directory, result, network:)
+      end
+
+      # The counts rev-list prints for +range+, or none when it names an object the repository lacks.
+      def offline_count(path, range, *options)
+        result = run(path, *OFFLINE_REV_LIST, *options, '--count', range,
+                     accept: ->(failed) { failed.err.include?(UNKNOWN_REVISION) }, env: OFFLINE_READ)
+        result.success? ? result.out.split.map { Integer(it) } : []
       end
 
       def network_fetch(path, *, accept: nil)
