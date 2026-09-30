@@ -118,4 +118,9 @@ class ReadmeExamplesTest < Minitest::Test
   def test_normalize_keeps_the_length_of_a_commit_id
     refute_equal ReadmeExamples.normalize("Hash:  #{'e' * 40}\n"), ReadmeExamples.normalize("Hash:  #{'e' * 7}\n")
   end
+
+  def test_normalize_treats_an_id_yaml_quoted_like_a_bare_one
+    assert_equal ReadmeExamples.normalize("head: 8f9cdbb\n"), ReadmeExamples.normalize("head: '1234567'\n")
+    assert_equal ReadmeExamples.normalize("oid: #{'a' * 40}\n"), ReadmeExamples.normalize("oid: '#{'1' * 40}'\n")
+  end
 end

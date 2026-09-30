@@ -32,11 +32,12 @@ module ReadmeExamples
   # What changes from one run to the next: times, commit ids and the seconds since the examples
   # registered a resource. The story dates its commits and fetches, so ages in hours and days
   # are compared as written. A commit id keeps its length, so a short id in place of a full one
-  # is a mismatch.
+  # is a mismatch. YAML quotes an id that reads as a number (all digits, or digits around one
+  # e), so a quoted id and a bare one are the same value.
   VOLATILE = {
     '<time>' => /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/,
-    '<commit>' => /\b[0-9a-f]{40}\b/,
-    '<sha>' => /\b[0-9a-f]{7}\b/,
+    '<commit>' => /'[0-9a-f]{40}'|\b[0-9a-f]{40}\b/,
+    '<sha>' => /'[0-9a-f]{7}'|\b[0-9a-f]{7}\b/,
     '<age>' => /\b\d+s\b/
   }.freeze
 
