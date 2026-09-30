@@ -382,6 +382,7 @@ with exactly these fields:
 
 | Field | Value |
 | --- | --- |
+| Gem name | `slipway` |
 | Repository owner | `hvpaiva` |
 | Repository name | `slipway` |
 | Workflow filename | `release.yml` |
