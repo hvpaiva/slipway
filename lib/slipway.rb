@@ -19,7 +19,7 @@ require_relative 'slipway/inspector'
 require_relative 'slipway/views'
 require_relative 'slipway/commands'
 
-# A kubectl-style registry for the git repositories on your machine.
+# A kubectl-style registry of the git repositories on your machine.
 module Slipway
   # Shared by exe/slipway and the tests, so it returns the exit status instead of exiting.
   # +runtime_factory+ is called only once a verb runs, with the context and the parsed options.

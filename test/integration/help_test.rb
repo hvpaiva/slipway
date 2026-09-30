@@ -16,7 +16,7 @@ class HelpIntegrationTest < Minitest::Test
       assert_equal [0, root, ''], slipway('--help', env:)
       assert_equal [0, root, ''], slipway('-h', env:)
       assert_equal [0, root, ''], slipway('help', env:)
-      assert_equal 'A kubectl-style registry for the git repositories on your machine.', root.lines.first.chomp
+      assert_equal 'A kubectl-style registry of the git repositories on your machine.', root.lines.first.chomp
     end
   end
 

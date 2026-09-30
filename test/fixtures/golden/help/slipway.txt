@@ -1,8 +1,15 @@
-A kubectl-style registry for the git repositories on your machine.
+A kubectl-style registry of the git repositories on your machine.
 
- A project is a registered git repository: its path, an optional description
- and labels. Projects live in groups the way pods live in namespaces; the group
- is "default" unless -n is given, and -A lists every group.
+ A project is a registered git repository. get and describe show where each one
+ stands, and fetch fetches them all without prompting. Its manifest can also
+ declare where the repository should be: the remote, the branch and a commit to
+ hold it at. diff shows where a repository differs from that, sync fast-forwards
+ the branches that can move without losing work, and rollout undo takes such a
+ move back.
+
+ Projects live in groups the way pods live in namespaces. The group is
+ "default", or the one SLIPWAY_GROUP or the group key sets, unless -n
+ is given, and -A covers every group.
 
  Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
 
