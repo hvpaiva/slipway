@@ -9,7 +9,7 @@ class ReleaseTasksTest < Minitest::Test
   # Unset, so the tasks run as on a maintainer's machine even when the suite runs in GitHub Actions.
   LOCAL = { 'GITHUB_ACTIONS' => nil, 'GITHUB_REF_TYPE' => nil, 'GITHUB_OUTPUT' => nil, 'TAG' => nil }.freeze
 
-  # In a child process: ReadmeTest already loaded the Rakefile, and loading it again would
+  # In a child process: ContributingTest already loaded the Rakefile, and loading it again would
   # redefine its constants.
   def rake(*)
     Open3.capture3(LOCAL, RbConfig.ruby, '-rrake', '-e', 'Rake.application.run', '--', *, chdir: ROOT)

@@ -180,30 +180,22 @@ Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (la
 single git spawner, YAML writer and warning writer, no direct stdout or stderr, no runtime
 dependencies, the files the gem ships, ASCII), `test/unit/reset_rule_test.rb` (`reset --keep` as
 the only reset and `Rollback` as its only caller), `test/unit/changelog_test.rb` (the shape of
-`CHANGELOG.md`) and `test/unit/readme_test.rb` (the README tables and configuration example
-against the code).
+`CHANGELOG.md`), `test/unit/readme_test.rb` (the README tables and configuration example
+against the code) and `test/unit/contributing_test.rb` (the task table in CONTRIBUTING against
+the tasks the Rakefile and `rakelib/` define).
 Tests for the development code live under `test/unit/dev`. The commit tests run git in
 temporary repositories; the release and GitHub tests never run git or `gh` and hand the code a
 fake command runner.
 
 ## Generated artifacts
 
-Two kinds of generated text are committed: the man pages under `man/man1` and the golden
-fixtures under `test/fixtures/golden` (the help page of every command and the three completion
-scripts) and `test/fixtures/man` (two pages of a test registry). One command refreshes both:
-`rake generate` renders the pages through `bin/generate-man`, lints them with groff, rewrites
-the fixtures from the current output, removes fixtures that no longer belong to a command, and
-prints `git status` for the three directories so the diff is reviewed before it is committed.
-
-The page date is the date of the newest `## [x.y.z] - YYYY-MM-DD` heading in `CHANGELOG.md` (a
-trailing ` [YANKED]` is allowed) and is empty while there is none, so a rebuild is
-byte-identical and only a release moves the date. The golden manpage test reads the date through
-`rakelib/support/changelog.rb`, the same rule `bin/generate-man` applies, so the test and the
-generator cannot disagree. `rake generate:check` renders into a temporary directory and fails
-when `man/man1` differs; CI runs it. `slipway man` reads the pages from the gem's own
-`man/man1`, so they must be committed and shipped, and `.gitattributes` marks them
-`linguist-generated`. The completion scripts are rendered at run time by `slipway completion`,
-and the `rake lint:shell` task runs ShellCheck over the bash one.
+The man pages under `man/man1` and the golden fixtures are generated and committed;
+[CONTRIBUTING.md](CONTRIBUTING.md#generated-files) says what each one holds, how
+`rake generate` refreshes them and what catches a stale one. `rake generate` renders the pages
+through `bin/generate-man`, and the golden manpage test reads the page date through
+`rakelib/support/changelog.rb`, the rule `bin/generate-man` applies, so the test and the
+generator cannot disagree. `slipway man` reads the pages from the gem's own `man/man1`, which is
+why they are committed and shipped; `.gitattributes` marks them `linguist-generated`.
 
 ## Development code
 
