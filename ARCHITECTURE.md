@@ -30,6 +30,8 @@ its methods to the repository's.
 description, default, rule and whether it is required. The reader in `Manifest` refuses any field
 `Schema` does not name and takes its defaults and the words of its refusals from there; `Names`,
 `Labels`, `Git::Url` and `Git::BranchName` check their fields with the rules `Schema` quotes.
+The README table of a project's spec gives the same meanings and defaults, which
+`test/unit/readme_test.rb` compares in both directions.
 
 `Plan.for` reads one `Inspection` into the drift sync would resolve, the drift it leaves alone
 and the blockers that stop it. It runs no git and reads no file, so `get -o wide`, `describe`,

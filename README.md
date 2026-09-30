@@ -684,27 +684,25 @@ characters) and labels follow the Kubernetes rules. `metadata.group` defaults to
 group and `creationTimestamp` is set on creation; written by hand, it must be a quoted string.
 Unknown fields are errors.
 
-`spec.path` must be absolute or start with `~/`. A `~` path is stored as written and expanded
-against `HOME` when used, so `~/dev/hldr` means the same thing on every machine that shares the
-registry. `create` resolves any other relative `--path`, `.` included, against the current
-directory and stores it absolute. The shell expands an unquoted `~` before slipway sees it, so
-quote it, as the examples here do, to keep the manifest portable. A manifest that holds a
-relative path is reported as `Missing`.
-
-The rest of a project's spec declares the state its repository is expected to be in. Every
-field is optional, and one at its default is not written:
+A project's spec says where its repository is and declares the state it is expected to be in.
+Only `spec.path` is required, and a field at its default is not written:
 
 | Field | Meaning | Default |
 | --- | --- | --- |
-| `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
-| `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
-| `spec.revision` | The commit the project is held at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. `rollout undo` writes it and `rollout unpin` removes it. | none |
-| `spec.syncPolicy` | `FastForward` allows `sync` to fast-forward the checked-out branch; `FetchOnly` allows fetching only. | `FastForward` |
-| `spec.paused` | `true` keeps `fetch` and `sync` away from the project, which prints `project/NAME paused` and runs no git command there. `rollout pause` sets it and `rollout resume` removes it. | `false` |
+| `spec.path` | The directory of the repository: an absolute path, or one starting with `~/`, which is expanded against `HOME` when used so that the manifest means the same on every machine. A relative path is reported as `Missing`. Must not be empty. | required |
+| `spec.description` | What the project is, in free text. | none |
+| `spec.remote` | The URL the `origin` remote is expected to have; `diff` reports another one as `Remote` drift, and no command changes a remote. A password, or any user name over http and https, where it often carries a token, is refused; use a credential helper. Must be `scheme://host/path` with scheme `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, dots and dashes starting with a letter or digit; at most 2048 characters, without whitespace or control characters. | none |
+| `spec.branch` | The branch expected to be checked out; `diff` reports another one as `Branch` drift, and no command switches branches. Must be letters, digits, ".", "_", "/" and "-", starting with a letter or digit, at most 255 characters, with no "..", no "//", no component that starts with "." or ends with ".lock", no trailing "/" or ".", and not `HEAD`. | none |
+| `spec.revision` | The commit the project is held at, named in full because an abbreviation can become ambiguous. `sync` fast-forwards the branch up to it instead of the upstream, never past it and never back to it. `rollout undo` writes it and `rollout unpin` removes it. Must be a full object name, 40 or 64 lowercase hexadecimal characters. | none |
+| `spec.syncPolicy` | What `sync` may do to the repository: `FastForward` lets it fast-forward the checked-out branch, and `FetchOnly` lets it fetch only. Must be `FastForward` or `FetchOnly`. | `FastForward` |
+| `spec.paused` | When `true`, `fetch` and `sync` leave the project alone: they report it as `paused` and run no git command there. `rollout pause` sets it and `rollout resume` removes it. | `false` |
+
+A `~` path is stored as written. `create` resolves any other relative `--path`, `.` included,
+against the current directory and stores it absolute. The shell expands an unquoted `~` before
+slipway sees it, so quote it, as the examples here do, to keep the manifest portable.
 
 `fetch` and `sync` leave a project with `spec.paused: true` alone, and `sync` follows
-`spec.syncPolicy` and `spec.revision`. No command changes a remote or switches a branch to match
-`spec.remote` or `spec.branch`, and STATUS does not take any of the fields into account; the
+`spec.syncPolicy` and `spec.revision`. STATUS does not take any of the fields into account; the
 repository is compared with them as [drift](#drift). The fields are checked whenever a manifest
 is read, and a value that breaks its rule is refused with that rule, so nothing that could reach
 git as an option or carry a control character is accepted. A file in the registry that cannot

@@ -6,6 +6,7 @@ class ReadmeTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
   README = File.join(ROOT, 'README.md')
   RESULTS = '| Result | Meaning |'
+  SPEC = '| Field | Meaning | Default |'
 
   def test_status_table_lists_every_state_in_order_with_the_meaning_help_gives
     assert_equal Slipway::State::ROLES.keys, first_cells('| STATUS | Meaning |')
@@ -17,6 +18,14 @@ class ReadmeTest < Minitest::Test
     assert_equal Slipway::Drift::BLOCKERS.keys, first_cells('| Blocker | Meaning |')
     assert_equal Slipway::Drift::TYPE_MEANINGS, meanings('| Drift | Reported when |')
     assert_equal Slipway::Drift::BLOCKER_MEANINGS, meanings('| Blocker | Meaning |')
+  end
+
+  def test_spec_table_lists_every_field_of_a_project_spec_in_order_with_its_meaning_and_default
+    fields = Slipway::Schema::PROJECT.field('spec').fields
+
+    assert_equal fields.map { "spec.#{it.name}" }, first_cells(SPEC)
+    assert_equal fields.to_h { ["spec.#{it.name}", it.meaning] }, meanings(SPEC)
+    assert_equal fields.map { default_word(it) }, cells(SPEC, 3)
   end
 
   def test_environment_table_lists_the_man_page_variables_in_order
@@ -60,10 +69,18 @@ class ReadmeTest < Minitest::Test
 
   def lines = @lines ||= File.readlines(README, chomp: true)
 
-  def first_cells(header) = rows(header).map { it.split('|')[1].strip.delete('`') }
+  def first_cells(header) = cells(header, 1)
 
-  # Help prints the same meanings as plain text, so the code spans lose their backticks.
+  def cells(header, column) = rows(header).map { it.split('|')[column].strip.delete('`') }
+
+  # Help and the schema give the same meanings as plain text, so the code spans lose their backticks.
   def meanings(header) = rows(header).to_h { it.split('|')[1, 2].map { it.strip.delete('`') } }
+
+  def default_word(field)
+    return 'required' if field.required
+
+    field.default.nil? ? 'none' : field.default.to_s
+  end
 
   # +after+ names the heading the table sits under, for a header several tables share.
   def rows(header, after: nil)

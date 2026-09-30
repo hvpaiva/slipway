@@ -8,7 +8,8 @@ require_relative 'git/url'
 
 module Slipway
   # The fields of each kind of manifest. The manifest reader takes its closed set of fields, their
-  # defaults and the words of its refusals from here.
+  # defaults and the words of its refusals from here, and the README table of a project's spec is
+  # held to it.
   module Schema
     STRING = 'string'
     BOOLEAN = 'boolean'
