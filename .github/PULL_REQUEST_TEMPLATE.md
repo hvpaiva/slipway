@@ -9,6 +9,7 @@
 ## Checklist
 
 - [ ] Tests added or updated for the change
+- [ ] Documentation updated where a reader would look for the change (README, the command's summary, description, option text and examples, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `SECURITY.md`), with README examples from a real run
 - [ ] `bundle exec rake check` is green
 - [ ] Generated files refreshed with `bundle exec rake generate` when a command, option or text changed
 - [ ] `CHANGELOG.md` has a line under `## [Unreleased]`, or the pull request carries `skip-changelog`
