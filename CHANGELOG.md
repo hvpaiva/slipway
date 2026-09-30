@@ -17,11 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - One-word repository STATUS per project: Missing, NotARepo, Unsafe, Conflicted, Detached, Unborn, Dirty, Gone, Diverged, Ahead, Behind, Clean and Unknown, read from `git status --porcelain=v2` on a bounded thread pool.
 - `fetch` verb that runs `git fetch` in every selected project on a bounded pool, without prompts, and reports each one as fetched, unchanged, skipped, denied or failed; a project with `spec.paused: true` is left alone and reported as paused.
 - FETCHED column with the time since each repository was last fetched, or `<never>`, also shown as `Last Fetch` in `describe` and as `status.lastFetch` in json and yaml output.
-- YAML manifests stored as plain files under `$XDG_DATA_HOME/slipway`, applied from files, directories or stdin with `apply -f`, and reported as created, configured or unchanged.
+- YAML manifests stored as plain files under `$XDG_DATA_HOME/slipway`, applied from files, directories or stdin with `apply -f`, one document or `kind: List` item at a time, and reported as created, configured or unchanged.
 - `spec.remote`, `spec.branch`, `spec.revision`, `spec.syncPolicy` and `spec.paused` in project manifests, validated when a manifest is read and shown by `describe`, `-o json` and `-o yaml`.
 - `create project --remote` and `--branch`, checked like the manifest fields they set.
 - `diff` verb printing where each project differs from its manifest and what blocks sync, with the git command that shows or resolves it, without writing anything or contacting a remote; it exits with 3 when anything differs, and its man page has an EXIT STATUS section.
 - Drift, where a repository differs from its manifest (Missing, Remote, Branch, Revision, Behind) and what blocks a fast-forward, in the DRIFT column of `-o wide`, in `status.drift` and in a Drift block of `describe`.
+- `create -o name|yaml|json` prints the created resource instead of the result line; with `--dry-run=client` it prints the manifest without writing it.
+- `create project --from-dir DIR` registers every git repository at or under a directory, to `--depth` levels, named after its directory and with its origin URL stripped of credentials; a path already registered reports unchanged.
 - `edit` through `SLIPWAY_EDITOR`, the `editor` config key, `VISUAL` or `EDITOR`, reopening the file with the failure as a comment when the result is invalid.
 - Configuration file at `$XDG_CONFIG_HOME/slipway/config.yaml` with the keys `color`, `editor`, `group`, `networkTimeout`, `parallel`, `protocols` and `theme`, `SLIPWAY_*` environment variables, and `config view` and `config path`.
 - Color per stream with `--color[=auto|always|never]`, `NO_COLOR`, `FORCE_COLOR` and `CLICOLOR_FORCE`, and `dark` and `light` themes following kubecolor.

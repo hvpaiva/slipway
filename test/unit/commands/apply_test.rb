@@ -79,6 +79,16 @@ class ApplyTest < Minitest::Test
     end
   end
 
+  def test_a_list_applies_each_item_and_names_a_failing_one_by_its_position
+    with_runtime do |runtime, home|
+      items = [WORK, API, "kind: Project\nmetadata:\n  name: x\n"].map { Psych.safe_load(it) }
+      file = write(home, 'list.yaml', Slipway::Yaml.dump({ 'kind' => 'List', 'items' => items }))
+
+      assert_equal [1, "group/work created\nproject/api created\n", "error: #{file}:3: \"spec.path\" is required\n"],
+                   run_apply('-f', file, runtime:)
+    end
+  end
+
   def test_errors_are_collected_and_printed_after_the_successes
     with_runtime do |runtime, home|
       broken = write(home, 'broken.yaml', "kind: Project\nmetadata:\n  name: x\n")

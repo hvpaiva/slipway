@@ -16,8 +16,9 @@ module Slipway
                     'unchanged otherwise. A directory applies every *.yaml and *.yml file it holds, sorted by ' \
                     'name and without descending into subdirectories. A project manifest without ' \
                     "metadata.group lands in the current group.\n\n" \
-                    'YAML is accepted, with several documents per file. Documents are applied in order, so a ' \
-                    'group may be created by the document before the projects that use it.'
+                    'YAML is accepted, with several documents per file, and a document of kind List stands ' \
+                    'for each of its items. Documents are applied in order, so a group may be created by the ' \
+                    'document before the projects that use it.'
       STDIN_FLAG = '-'
       NO_OBJECTS = 'no objects passed to apply'
 
@@ -108,7 +109,7 @@ module Slipway
         end
 
         def apply_stream(source, text, &)
-          documents = Manifest.load_documents(text, source:)
+          documents = Manifest.load_objects(text, source:)
           documents.each_with_index do |document, index|
             label = documents.size > 1 ? "#{source}:#{index + 1}" : source
             collect(label) { apply_resource(Manifest.parse(document, source: label, default_group: @default_group), &) }

@@ -4,8 +4,7 @@
 slipway\-create \- Create a resource by name
 .SH SYNOPSIS
 .SY "slipway create"
-.I TYPE\&
-.I NAME\&
+.I "(TYPE NAME | project \-\-from\-dir DIR)"\&
 .RI [ flags ]
 .YS
 .SH DESCRIPTION
@@ -13,13 +12,15 @@ Create a resource by name.
 .PP
 A project registers the git repository at \-\-path in the current group, which must exist unless it is the default group. A group is created empty and holds the projects you register with \-\-group later.
 .PP
-Use \-\-dry\-run=client to check the arguments without writing anything.
+With \-\-from\-dir DIR in place of NAME, create project registers every git repository at DIR or under it, down to \-\-depth levels. Each project is named after its directory, lowercased with each run of characters other than ASCII letters, digits and dashes made one dash, and records its path and the URL of its origin without any credentials; the checked\-out branch is not recorded. A path the group already holds is reported unchanged, so running it again adds only new clones.
+.PP
+Use \-\-dry\-run=client to check the arguments without writing anything, and \-o yaml with it to print the manifest instead, ready for apply \-f.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
 .SH OPTIONS
 .TP
 \fB\-\-path\fR \fIDIR\fR
-Directory of the git repository to register; required for projects. A relative directory is stored resolved against the current directory, a ~ path as written.
+Directory of the git repository to register; required for a project given by NAME. A relative directory is stored resolved against the current directory, a ~ path as written.
 .TP
 \fB\-\-description\fR \fITEXT\fR
 A short description of the resource.
@@ -33,8 +34,17 @@ The URL the origin remote is expected to have, written to spec.remote. A URL tha
 \fB\-\-branch\fR \fINAME\fR
 The branch the project is expected to have checked out, written to spec.branch.
 .TP
+\fB\-\-from\-dir\fR \fIDIR\fR
+Register every git repository at or under DIR as a project, in place of NAME.
+.TP
+\fB\-\-depth\fR \fIN\fR
+How many directory levels under \-\-from\-dir to search, from 1 to 8. The search stops at a repository and never follows a symbolic link under \-\-from\-dir. (default 1)
+.TP
 \fB\-\-dry\-run\fR \fISTRATEGY\fR
 Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIFORMAT\fR
+Output format; without it, each resource prints a result line such as project/hldr created. One of: json, yaml, name.
 .SH EXAMPLES
 .EX
 # Register the repository at ~/dev/hldr as a project in the current group
@@ -59,6 +69,21 @@ slipway create group work \-\-description "Projects for the day job"
 .EX
 # Check the arguments without writing the project
 slipway create project hldr \-\-path '~/dev/hldr' \-\-dry\-run=client
+.EE
+.PP
+.EX
+# Print the manifest of a project without registering it
+slipway create project hldr \-\-path '~/dev/hldr' \-\-dry\-run=client \-o yaml
+.EE
+.PP
+.EX
+# Register every repository in ~/dev/personal in the personal group
+slipway create project \-\-from\-dir ~/dev/personal \-n personal
+.EE
+.PP
+.EX
+# Write the manifests of the repositories two levels under ~/work to a file
+slipway create project \-\-from\-dir ~/work \-\-depth 2 \-\-dry\-run=client \-o yaml > work.yaml
 .EE
 .SH "SEE ALSO"
 .BR slipway (1)
