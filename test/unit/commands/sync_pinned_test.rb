@@ -86,5 +86,5 @@ class SyncPinnedTest < Minitest::Test
   # The upstream holds the pin unless a test says otherwise.
   def distance(ahead, behind) = Slipway::Git::Distance.new(ahead:, behind:, off_upstream: 0)
 
-  def run_sync(*, runtime:) = run_commands('sync', *, runtime:, commands: [Slipway::Commands::SyncCommand])
+  def run_sync(*, runtime:) = run_commands('sync', *, runtime:, commands: [Slipway::Commands::Sync])
 end

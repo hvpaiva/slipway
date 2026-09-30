@@ -33,7 +33,7 @@ class SeamsTest < Minitest::Test
 
   def test_every_result_role_fetch_sync_and_undo_paint_exists_in_both_themes
     Slipway::CLI::Theme::PRESETS.each do |name, roles|
-      [Slipway::Commands::Fetch, Slipway::Commands::SyncCommand, Slipway::Commands::RolloutCommand::Undo].each do |verb|
+      [Slipway::Commands::Fetch, Slipway::Commands::Sync, Slipway::Commands::Rollout::Undo].each do |verb|
         verb::ROLES.each_value { assert_includes roles.keys, it, "#{name} #{verb}" }
       end
     end

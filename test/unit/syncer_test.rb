@@ -220,5 +220,5 @@ class SyncerTest < Minitest::Test
 
   private
 
-  def run_sync(*, runtime:) = run_commands('sync', *, runtime:, commands: [Slipway::Commands::SyncCommand])
+  def run_sync(*, runtime:) = run_commands('sync', *, runtime:, commands: [Slipway::Commands::Sync])
 end

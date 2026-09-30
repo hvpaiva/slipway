@@ -156,7 +156,7 @@ class SyncTest < Minitest::Test
 
   private
 
-  def run_sync(*, runtime:) = run_commands('sync', *, runtime:, commands: [Slipway::Commands::SyncCommand])
+  def run_sync(*, runtime:) = run_commands('sync', *, runtime:, commands: [Slipway::Commands::Sync])
 
   def register_every_outcome(runtime, home)
     register(runtime, 'api', fetch: Slipway::Git::AuthRequired.new("#{home}/dev/api", 'Permission denied (publickey).'))

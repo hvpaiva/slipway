@@ -8,7 +8,7 @@ require_relative '../rollout_history'
 
 module Slipway
   module Commands
-    module RolloutCommand
+    module Rollout
       DESCRIPTION = "Manage the rollout of a project.\n\n" \
                     'Slipway records a revision each time it moves the checked-out branch of a project: every ' \
                     'fast-forward of slipway sync and every slipway rollout undo leaves an entry in the ' \

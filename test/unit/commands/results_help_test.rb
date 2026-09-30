@@ -18,11 +18,11 @@ class ResultsHelpTest < Minitest::Test
   end
 
   def test_sync_explains_every_result_and_reason
-    assert_explains Slipway::Commands::SyncCommand, SYNC
+    assert_explains Slipway::Commands::Sync, SYNC
   end
 
   def test_rollout_undo_explains_every_result_and_reason
-    assert_explains Slipway::Commands::RolloutCommand::Undo, UNDO
+    assert_explains Slipway::Commands::Rollout::Undo, UNDO
   end
 
   private

@@ -4,7 +4,7 @@ require_relative 'base'
 
 module Slipway
   module Commands
-    module RolloutCommand
+    module Rollout
       # Writes one spec field of each named project and prints what changed. No git command runs:
       # the next fetch or sync reads the field.
       class SpecChange < Base

@@ -45,6 +45,11 @@ resource, or an `Inspection`, into table rows, describe entries and the object h
 yaml print, and list in `FIELDS` the paths of that hash a field selector may name; they do no
 I/O. `Runtime` bundles the settings, paths, store, git, inspector and clock of one run.
 
+A verb's class under `Commands` takes the verb's name, as `Commands::Sync` does, and a class
+directly under `Slipway` that a verb drives is named for what it does or holds (`Fetcher`,
+`Syncer`, `Rollback`, `RolloutHistory`, `Settings`, `Plan`), so a bare `Sync` inside `Commands`
+always means the command.
+
 Dependencies point one way: commands use the runtime, views and output; views use the domain,
 the git values, the plan and output; output paints through the command layer's `Context`. The
 command layer and the domain (with the git adapter and reconciliation) sit at the bottom:
@@ -317,7 +322,7 @@ tables follow both. `Plan::Planner` decides when the action applies and which ob
 it; it reads only the inspection it is given, so its tests need no repository. Only
 `Syncer` performs the action, through a `Git::Repository` method, inside
 `Fetcher#exclusively` and with its own reflog action. The action reports a result word in
-`Commands::SyncCommand::ROLES` whose role exists in both themes, and the verb's Results
+`Commands::Sync::ROLES` whose role exists in both themes, and the verb's Results
 glossary explains it. It keeps every promise in [SECURITY.md](SECURITY.md#safety-promises), or
 updates that list in the same pull request.
 

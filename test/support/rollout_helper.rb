@@ -16,5 +16,5 @@ module RolloutHelper
   # How far HEAD is from OLD: one commit ahead, which a move back drops.
   BACK = Slipway::Git::Distance.new(ahead: 1, behind: 0)
 
-  def run_rollout(*, runtime:) = run_commands('rollout', *, runtime:, commands: [Slipway::Commands::RolloutCommand])
+  def run_rollout(*, runtime:) = run_commands('rollout', *, runtime:, commands: [Slipway::Commands::Rollout])
 end

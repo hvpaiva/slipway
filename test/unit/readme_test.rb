@@ -38,8 +38,8 @@ class ReadmeTest < Minitest::Test
 
   def test_result_tables_list_every_result_word_in_order
     assert_equal Slipway::Commands::Fetch::ROLES.keys, result_words('### Fetching')
-    assert_equal Slipway::Commands::SyncCommand::ROLES.keys, result_words('### Syncing')
-    assert_equal Slipway::Commands::RolloutCommand::Undo::ROLES.keys, result_words('### Rolling back')
+    assert_equal Slipway::Commands::Sync::ROLES.keys, result_words('### Syncing')
+    assert_equal Slipway::Commands::Rollout::Undo::ROLES.keys, result_words('### Rolling back')
   end
 
   # The words a fetch puts in parentheses: its own reasons and the states in which git could not

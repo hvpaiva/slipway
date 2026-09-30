@@ -10,7 +10,7 @@ require_relative '../syncer'
 
 module Slipway
   module Commands
-    class SyncCommand < Base
+    class Sync < Base
       # Raised once every line has printed: the lines already say what went wrong, so it adds no
       # error line, only exit status 1.
       class Failed < Error

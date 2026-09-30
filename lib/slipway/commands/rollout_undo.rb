@@ -8,7 +8,7 @@ require_relative '../rollback'
 
 module Slipway
   module Commands
-    module RolloutCommand
+    module Rollout
       class Undo < Base
         # Raised once the line has printed: it already says why, so this adds only exit status 1.
         class Failed < Error

@@ -5,7 +5,7 @@ require_relative '../yaml'
 
 module Slipway
   module Commands
-    module ConfigCommand
+    module Config
       DESCRIPTION = 'Inspect the configuration that slipway resolved from flags, environment variables and ' \
                     'the configuration file.'
       NOT_FOUND = ' (not found)'
