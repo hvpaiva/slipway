@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
+require_relative 'fast_forwarding'
+
 module Slipway
   module Git
     class Repository
+      include FastForwarding
+
       STATUS_ARGS = %w[status --porcelain=v2 --branch --show-stash -z --untracked-files=normal --no-renames].freeze
       # Six NUL separated fields in the order Commit.parse expects; -z terminates the record.
       LOG_ARGS = ['log', '-1', '-z', '--format=%H%x00%h%x00%ct%x00%an%x00%ae%x00%s'].freeze
@@ -44,6 +48,16 @@ module Slipway
       # followed by git's own message or ends in a signal (128 plus its number).
       PROTOCOL_REFUSED = /\Afatal: transport '(?<protocol>[a-z][a-z0-9+.-]*)' not allowed\n\z/
       DIE_STATUS = 128
+      # The paths git keeps in the git directory of a worktree while an operation waits for the
+      # user; the applying marker tells git am from a rebase.
+      IN_PROGRESS = { 'MERGE_HEAD' => 'merge', 'rebase-apply/applying' => 'am', 'rebase-apply' => 'rebase',
+                      'rebase-merge' => 'rebase', 'BISECT_LOG' => 'bisect' }.freeze
+      # The reftable backend keeps these in its ref store, where no path names them.
+      IN_PROGRESS_REFS = { 'CHERRY_PICK_HEAD' => 'cherry-pick', 'REVERT_HEAD' => 'revert' }.freeze
+      # A cherry-pick or revert of several commits is still under way after `git reset` drops its
+      # pseudoref, and git names it by the first command left in the sequencer's todo.
+      SEQUENCER_TODO = 'sequencer/todo'
+      SEQUENCER_COMMANDS = { 'pick' => 'cherry-pick', 'revert' => 'revert' }.freeze
 
       def initialize(runner: Runner.new, network_timeout: NETWORK_TIMEOUT, protocols: PROTOCOLS,
                      protocols_source: PROTOCOLS_SOURCE)
@@ -92,6 +106,12 @@ module Slipway
         run(path, *DEFAULT_REMOTE_ARGS, accept: method(:no_default_remote?)).success?
       end
 
+      # The operation git is in the middle of in this worktree, such as "rebase", or nil.
+      def in_progress(path)
+        directory = File.expand_path(path)
+        operation(directory, git_paths(directory, *IN_PROGRESS.keys, SEQUENCER_TODO))
+      end
+
       # nil for a repository that was never fetched or whose last fetch failed: git empties
       # FETCH_HEAD before it contacts the remote and writes a line for each ref it fetched.
       # Every worktree shares the remote-tracking refs, but git writes FETCH_HEAD in the worktree
@@ -135,6 +155,31 @@ module Slipway
         common = common_dir(directory)
         worktrees = File.join(common, 'worktrees')
         [File.join(common, FETCH_HEAD), *Dir.glob("*/#{FETCH_HEAD}", base: worktrees).map { File.join(worktrees, it) }]
+      end
+
+      def git_paths(directory, *names)
+        paths = run(directory, 'rev-parse', *names.flat_map { ['--git-path', it] }).out.lines(chomp: true)
+        paths.map { File.expand_path(it, directory) }
+      end
+
+      # +paths+ holds the path of each IN_PROGRESS marker, then of the sequencer's todo.
+      def operation(directory, paths)
+        *markers, todo = paths
+        IN_PROGRESS.values.zip(markers).find { |_, marker| File.exist?(marker) }&.first ||
+          IN_PROGRESS_REFS.find { |ref, _| ref?(directory, ref) }&.last ||
+          sequence(todo)
+      end
+
+      # rev-parse -q --verify exits 1 without a word for a ref that does not exist.
+      def ref?(directory, ref)
+        run(directory, 'rev-parse', '-q', '--verify', ref, accept: ->(failed) { failed.status == 1 }).success?
+      end
+
+      # The todo holds commit subjects, which need not be UTF-8.
+      def sequence(todo)
+        SEQUENCER_COMMANDS.fetch(File.binread(todo)[/\S+/], 'cherry-pick')
+      rescue Errno::ENOENT, Errno::ENOTDIR
+        nil
       end
 
       def unborn?(result) = result.err.include?(UNBORN_MESSAGE)
