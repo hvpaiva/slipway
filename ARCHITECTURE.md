@@ -10,7 +10,7 @@ Everything is under `lib/slipway`, loaded by `lib/slipway.rb`, with no runtime g
 | Layer | Files | What lives there |
 | --- | --- | --- |
 | Command layer | `cli.rb`, `cli/` | `Registry`, `Command`, `Glossary`, `Option`, `Positional` and `Example` (the data model), `Globals`, `Parser`, `Validator`, `Runner` (the front controller), `HelpRenderer`, `Manpage`, `Completer`, `CompletionScripts`, `Builtins`, `Context`, `Style`, `Theme` and `UsageError`. It knows nothing about projects or git. |
-| Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
+| Domain | `error.rb`, `version.rb`, `yaml.rb`, `resources.rb`, `schema.rb`, `manifest.rb`, `store.rb`, `names.rb`, `labels.rb`, `selector.rb`, `field_selector.rb`, `config.rb`, `paths.rb`, `editor.rb`, `scanner.rb` | `Slipway::Error`, `VERSION`, `Yaml`, `Project` and `Group`, `Schema`, `Manifest`, `Store`, `Names`, `Labels`, `Selector`, `FieldSelector`, `Config`, `Paths`, `Editor` and `Scanner` (the search behind `create project --from-dir`). |
 | Git adapter | `git.rb`, `git/`, `state.rb` | `Git::Runner`, `Git::Repository` with its `FastForwarding` and `RollingBack` parts, the answers (`Status` and `Porcelain`, `Commit`, `FetchResult`, `Reflog`, `Distance`, `FastForward`, `MoveBack`), `Url`, `BranchName`, the errors in `git/errors.rb`, `Git::Fake`, and `State`. |
 | Reconciliation | `drift.rb`, `plan.rb`, `rollout.rb` | `Drift`, `Plan` and `Rollout::History`. |
 | Output | `output.rb`, `output/` | `Output.plain` and `Output.warning`, `Table`, `Describe` and `Painted`, `Serializer` (json, and yaml through `Yaml`) and `Age`. |
@@ -25,6 +25,11 @@ reduces a status or an error to the one STATUS word. `Git::Fake` answers the sam
 canned entries for the command tests; it sits under `lib/` next to the class it stands in for,
 so the layering rule and the coverage gates apply to it, and `test/unit/git/fake_test.rb` holds
 its methods to the repository's.
+
+`Schema` is the manifest contract, written once: for each kind, every field with its type,
+description, default, rule and whether it is required. The reader in `Manifest` refuses any field
+`Schema` does not name and takes its defaults and the words of its refusals from there; `Names`,
+`Labels`, `Git::Url` and `Git::BranchName` check their fields with the rules `Schema` quotes.
 
 `Plan.for` reads one `Inspection` into the drift sync would resolve, the drift it leaves alone
 and the blockers that stop it. It runs no git and reads no file, so `get -o wide`, `describe`,
