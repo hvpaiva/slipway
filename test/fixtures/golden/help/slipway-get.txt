@@ -31,7 +31,7 @@ Examples:
 Options:
   -o, --output FORMAT         Output format. One of: table, wide, json, yaml, name. (default "table")
   -l, --selector EXPR         Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
-      --field-selector EXPR   Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. --field-selector key1=value1,key2=value2). Projects support metadata.name, metadata.group, spec.path, status.state, status.branch, status.lastFetch; groups support metadata.name. status.lastFetch is never for a project with no fetch on record.
+      --field-selector EXPR   Selector (field query) to filter on, supports '=', '==', and '!=' (e.g. --field-selector key1=value1,key2=value2). Projects support metadata.name, metadata.group, spec.path, status.state, status.branch, status.lastFetch; groups support metadata.name. Values compare exactly, case included, with the object -o json prints: spec.path as registered, status.lastFetch as an RFC 3339 time. A field the object leaves out compares as the empty value, except status.lastFetch, which compares as never. A backslash escapes a backslash, a comma or an equals sign in a value.
   -A, --all-groups            If present, list the requested object(s) across all groups. The group in the current configuration is ignored even if specified with --group.
       --no-headers            When using the default output format, don't print headers.
       --show-labels           When printing, show all labels as the last column.
