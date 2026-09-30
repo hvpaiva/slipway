@@ -38,8 +38,15 @@ tasks. What `rake check` leaves out is what one machine cannot cover: the Ruby 3
 entries of the test matrix, and the `completions` job, which fails when zsh or fish is missing
 (run it with `bundle exec rake test:shells`, see [Testing completions](#testing-completions)).
 CI also lints the commits of every pull request against its base branch, with its title and
-body, and runs the spelling, workflow and link checks listed under
-[Checked by tools](#checked-by-tools).
+body, checks that a change under `lib/`, `exe/` or `man/` comes with a changelog line
+([Pull requests](#pull-requests)), and runs the spelling, workflow and link checks, which you
+can run before pushing:
+
+```sh
+typos
+zizmor .github/workflows
+lychee --config lychee.toml './*.md' './.github/**/*.md'
+```
 
 Everything runs against temporary directories and repositories created for the test, never
 against your own registry. The tasks defined under `rakelib/` are development tasks and are not
