@@ -19,6 +19,8 @@ class SeamsTest < Minitest::Test
   READ = /\b(?:env|ENV)(?:\[|\.(?:fetch|key\?|include\?|has_key\?|member\?)\(?)\s*['"](#{NAME})['"]/
   # FOO_VARIABLE = 'X' or FOO_VARIABLES = %w[X Y], and the bare VARIABLE constant.
   NAMED = /^\s*(?:[A-Z0-9_]+_)?VARIABLES?\s*=\s*(?:['"](#{NAME})['"]|%w\[([^\]]*)\])/
+  PLAN = File.join(LIB, 'slipway', 'plan.rb')
+  BLOCKER_CALL = /Drift\.blocker\('([A-Za-z]+)'/
 
   def test_every_state_role_exists_in_both_themes
     Slipway::CLI::Theme::NAMES.each do |name|
@@ -32,6 +34,12 @@ class SeamsTest < Minitest::Test
     Slipway::CLI::Theme::PRESETS.each do |name, roles|
       Slipway::Commands::Fetch::ROLES.each_value { assert_includes roles.keys, it, name }
     end
+  end
+
+  def test_every_blocker_the_plan_names_has_a_sentence_and_every_sentence_is_named
+    named = File.read(PLAN).scan(BLOCKER_CALL).flatten.uniq
+
+    assert_equal Slipway::Drift::BLOCKERS.keys.sort, named.sort
   end
 
   def test_config_group_setting_applies_the_names_rule

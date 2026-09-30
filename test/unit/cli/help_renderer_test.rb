@@ -116,6 +116,16 @@ class HelpRendererTest < Minitest::Test
     assert_includes @plain.command(command, %w[x]), expected
   end
 
+  def test_exit_statuses_follow_the_description_aligned_on_the_widest_status
+    command = Slipway::CLI::Command.new(name: 'x', summary: 'X', description: 'Compare.',
+                                        exit_statuses: { '0' => 'Nothing differs.', '130' => 'Interrupted.' },
+                                        examples: [Slipway::CLI::Example.new(comment: 'Compare', command: 'x')])
+
+    assert_includes @plain.command(command, %w[x]),
+                    "Compare.\n\nExit Status:\n  0     Nothing differs.\n  130   Interrupted.\n\nExamples:\n"
+    refute_includes @plain.command(*@fixture.registry.resolve(%w[get])), 'Exit Status:'
+  end
+
   def test_color_paints_headers_flags_and_examples_but_keeps_alignment_padding_outside
     colored = renderer(Slipway::CLI::Style.for('always', tty: false, env: {}))
               .command(*@fixture.registry.resolve(%w[get]))

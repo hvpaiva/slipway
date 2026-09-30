@@ -6,6 +6,15 @@ class GetIntegrationTest < Minitest::Test
   include IntegrationHelper
   include GetRegistry
 
+  WIDE_LABELED_ROWS = [
+    ['default', 'clean', 'main', 'Clean', '<never>', :age, '~/dev/clean', HEAD, :age, 'NoUpstream', 'lang=rust'],
+    ['default', 'dirty', 'main', 'Dirty', '<never>', :age, '~/dev/dirty', HEAD, :age, 'NoUpstream', 'lang=go'],
+    ['default', 'gone', '<none>', 'Missing', '<none>', :age, '~/dev/gone', '<none>', '<none>', 'Missing', '<none>'],
+    ['default', 'plain', '<none>', 'NotARepo', '<none>', :age, '~/dev/plain', '<none>', '<none>', 'NotARepo', '<none>'],
+    ['work', 'ahead', 'main', 'Ahead', '<never>', :age, '~/dev/ahead', '0182104', :age, '<none>', 'lang=rust,tier=api'],
+    ['work', 'detached', '(detached)', 'Detached', '<never>', :age, '~/dev/detached', HEAD, :age, 'Detached', '<none>']
+  ].freeze
+
   def test_table_lists_the_current_group
     with_home do |env|
       registry(env)
@@ -20,17 +29,18 @@ class GetIntegrationTest < Minitest::Test
     end
   end
 
-  def test_wide_adds_path_head_and_last_commit
+  def test_wide_adds_path_head_last_commit_and_drift
     with_home do |env|
       registry(env)
       status, out, err = slipway('get', 'projects', '-o', 'wide', env:)
 
       assert_equal [0, ''], [status, err]
-      assert_table [%w[NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT],
-                    ['clean', 'main', 'Clean', '<never>', :age, '~/dev/clean', HEAD, :age],
-                    ['dirty', 'main', 'Dirty', '<never>', :age, '~/dev/dirty', HEAD, :age],
-                    ['gone', '<none>', 'Missing', '<none>', :age, '~/dev/gone', '<none>', '<none>'],
-                    ['plain', '<none>', 'NotARepo', '<none>', :age, '~/dev/plain', '<none>', '<none>']], out
+      assert_table [%w[NAME BRANCH STATUS FETCHED AGE PATH HEAD LAST-COMMIT DRIFT],
+                    ['clean', 'main', 'Clean', '<never>', :age, '~/dev/clean', HEAD, :age, 'NoUpstream'],
+                    ['dirty', 'main', 'Dirty', '<never>', :age, '~/dev/dirty', HEAD, :age, 'NoUpstream'],
+                    ['gone', '<none>', 'Missing', '<none>', :age, '~/dev/gone', '<none>', '<none>', 'Missing'],
+                    ['plain', '<none>', 'NotARepo', '<none>', :age, '~/dev/plain', '<none>', '<none>',
+                     'NotARepo']], out
     end
   end
 
@@ -80,17 +90,8 @@ class GetIntegrationTest < Minitest::Test
     with_home do |env|
       registry(env)
       _, out, = slipway('get', 'projects', '-A', '-o', 'wide', '--show-labels', '--no-headers', env:)
-      none = ['<none>'] * 3
 
-      assert_table [['default', 'clean', 'main', 'Clean', '<never>', :age, '~/dev/clean', HEAD, :age, 'lang=rust'],
-                    ['default', 'dirty', 'main', 'Dirty', '<never>', :age, '~/dev/dirty', HEAD, :age, 'lang=go'],
-                    ['default', 'gone', '<none>', 'Missing', '<none>', :age, '~/dev/gone', *none],
-                    ['default', 'plain', '<none>', 'NotARepo', '<none>', :age, '~/dev/plain', *none],
-                    ['work', 'ahead', 'main', 'Ahead', '<never>', :age, '~/dev/ahead', '0182104', :age,
-                     'lang=rust,tier=api'],
-                    ['work', 'detached', '(detached)', 'Detached', '<never>', :age, '~/dev/detached', HEAD, :age,
-                     '<none>']],
-                   out
+      assert_table WIDE_LABELED_ROWS, out
     end
   end
 

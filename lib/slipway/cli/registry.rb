@@ -73,13 +73,15 @@ module Slipway
     # +handler+ responds to call(context, args, opts). A +raw+ command receives argv untouched,
     # with no option parsing, which is what the completion endpoint needs. +usage+ replaces
     # the positional list in the Usage line when the accepted forms cannot be read off them.
+    # +exit_statuses+ maps each status to its meaning, for a command whose statuses differ from
+    # the ones every command shares.
     Command = Data.define(:name, :aliases, :summary, :description, :section, :examples,
-                          :positionals, :options, :subcommands, :hidden, :raw, :handler, :usage) do
+                          :positionals, :options, :subcommands, :hidden, :raw, :handler, :usage, :exit_statuses) do
       def initialize(name:, summary:, description: nil, aliases: [], section: 'Available Commands', examples: [],
                      positionals: [], options: [], subcommands: [], hidden: false, raw: false, handler: nil,
-                     usage: nil)
+                     usage: nil, exit_statuses: {})
         super(name:, summary:, description: description || summary, aliases:, section:, examples:,
-              positionals:, options:, subcommands:, hidden:, raw:, handler:, usage:)
+              positionals:, options:, subcommands:, hidden:, raw:, handler:, usage:, exit_statuses:)
       end
 
       def group? = !subcommands.empty?

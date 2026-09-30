@@ -66,7 +66,7 @@ class GitRepositoryWritePreconditionsTest < Minitest::Test
     assert_nil @repo.in_progress(build_repo(File.join(@root, 'clean'), 'clean'))
     assert_equal 'merge', @repo.in_progress(build_repo(File.join(@root, 'conflicted'), 'conflicted'))
     assert_equal 'rebase', @repo.in_progress(stopped_rebase)
-    assert_equal 'am', @repo.in_progress(stopped_am)
+    assert_equal 'git am session', @repo.in_progress(stopped_am)
   end
 
   # Git would check out the new tree and write the index before it found the lock.

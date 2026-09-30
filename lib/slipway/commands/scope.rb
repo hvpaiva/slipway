@@ -27,6 +27,7 @@ module Slipway
         @runtime = runtime
         @context = context
         @opts = opts
+        @skipped = false
       end
 
       def kind(word) = Resources.resolve(word)
@@ -71,6 +72,10 @@ module Slipway
         check_names(kind) unless names.empty?
         FieldSelector.parse(@opts[:field_selector], fields: kind.namespaced? ? Views::Project::FIELDS : Views::Group::FIELDS)
       end
+
+      # A verb whose exit status vouches for every project must not report success when a listing
+      # left a manifest out.
+      def skipped? = @skipped
 
       # As in kubectl, the resources that exist are shown before the names that do not are
       # reported, one `error:` line each.
@@ -120,7 +125,10 @@ module Slipway
       def listed(kind)
         matcher = selector
         scope_group = kind.namespaced? && !all_groups? ? group : nil
-        resources = @runtime.store.list(kind, group: scope_group) { Output.warning(@context, it.message) }
+        resources = @runtime.store.list(kind, group: scope_group) do |problem|
+          @skipped = true
+          Output.warning(@context, problem.message)
+        end
         resources.select { matcher.match?(it.labels) }
       end
 

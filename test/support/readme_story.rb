@@ -7,13 +7,15 @@ require_relative 'git_env'
 # clean and was fetched five hours ago; augur has a modified and an untracked file and no
 # remote; notes has a commit to push, and its remote has a commit pushed from another clone
 # after the fetch two days ago, so only the next fetch shows it. Remotes are bare repositories
-# under ~/remotes.
+# under ~/remotes. hldr's origin is the URL its manifest declares, so it shows no Remote drift,
+# and git rewrites that URL to the bare repository with url.<base>.insteadOf.
 class ReadmeStory
   include GitEnv
 
   HOUR = 3600
   NAME = 'Highlander'
   EMAIL = 'contact@hvpaiva.dev'
+  HLDR_REMOTE = 'git@github.com:hvpaiva/hldr.git'
   AUTHOR = { 'GIT_AUTHOR_NAME' => NAME, 'GIT_AUTHOR_EMAIL' => EMAIL,
              'GIT_COMMITTER_NAME' => NAME, 'GIT_COMMITTER_EMAIL' => EMAIL }.freeze
 
@@ -31,7 +33,7 @@ class ReadmeStory
   private
 
   def hldr
-    dir = repository('hldr', remote: true)
+    dir = repository('hldr', remote: HLDR_REMOTE)
     commit(dir, 'index.html', "<h1>hvpaiva.dev</h1>\n", 'feat: list posts by year', hours_ago: 32)
     git!(dir, 'push', '-q', '-u', 'origin', 'main')
     fetch(dir, hours_ago: 5)
@@ -66,7 +68,9 @@ class ReadmeStory
     bare = remote_path(name)
     FileUtils.mkdir_p(bare)
     git!(bare, 'init', '-q', '--bare')
-    git!(dir, 'remote', 'add', 'origin', bare)
+    url = remote == true ? bare : remote
+    git!(dir, 'remote', 'add', 'origin', url)
+    git!(dir, 'config', "url.#{bare}.insteadOf", url) unless url == bare
     dir
   end
 

@@ -10,8 +10,9 @@ module Slipway
                     'Prints a table of the most important information about the specified resources. ' \
                     'You can filter the list using a label selector and the --selector flag. Projects are ' \
                     "listed in the current group unless you pass --all-groups.\n\n" \
-                    'Use -o wide to add the path, the head commit and the age of the last commit of each ' \
-                    "project, and -o json or -o yaml for the full object with its status.\n\n" \
+                    'Use -o wide to add the path, the head commit, the age of the last commit and the drift of ' \
+                    'each project: the ways its repository differs from its manifest and what keeps sync from ' \
+                    "converging it. Use -o json or -o yaml for the full object with its status.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
       USAGE = '(TYPE [NAME...] | TYPE/NAME...)'
 

@@ -8,8 +8,8 @@ module Slipway
     class Describe < Base
       DESCRIPTION = "Show details of one or many resources.\n\n" \
                     'Print a detailed description of the selected resources, including the state of the ' \
-                    'repository at the registered path. You may select a single object by name, all objects ' \
-                    "of that type, or use a label selector.\n\n" \
+                    'repository at the registered path and where it differs from the manifest. You may select ' \
+                    "a single object by name, all objects of that type, or use a label selector.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
 
       def self.command(factory)

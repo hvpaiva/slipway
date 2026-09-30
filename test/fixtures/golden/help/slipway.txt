@@ -17,6 +17,7 @@ Basic Commands:
 
 Repository Commands:
   fetch           Fetch from the remote of each project
+  diff            Show where projects differ from their manifests
 
 Settings Commands:
   config          Inspect the configuration in effect

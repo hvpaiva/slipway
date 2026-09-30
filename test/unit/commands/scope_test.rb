@@ -98,6 +98,7 @@ class ScopeTest < Minitest::Test
       register(runtime, 'job', group: 'work', labels: { 'lang' => 'rust' })
 
       assert_equal %w[hldr], selected(scope, PROJECTS, []).map(&:name)
+      refute_predicate scope, :skipped?
     end
   end
 
@@ -169,6 +170,7 @@ class ScopeTest < Minitest::Test
       assert_equal %w[hldr], selected(scope, PROJECTS, []).map(&:name)
       assert_equal "warning: #{stray}: describes project \"other\", which does not belong at this path\n",
                    context.err.string
+      assert_predicate scope, :skipped?
     end
   end
 

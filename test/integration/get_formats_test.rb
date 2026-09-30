@@ -30,6 +30,13 @@ class GetFormatsIntegrationTest < Minitest::Test
         "conflicted": 0,
         "stashes": 0,
         "state": "Clean",
+        "drift": [
+          {
+            "type": "NoUpstream",
+            "message": "main tracks no upstream; sync fast-forwards only a tracking branch",
+            "blocker": true
+          }
+        ],
         "lastCommit": {
           "hash": "#{SHA}",
           "author": "Fixture",
@@ -63,6 +70,10 @@ class GetFormatsIntegrationTest < Minitest::Test
         conflicted: 0
         stashes: 0
         state: Clean
+        drift:
+        - type: NoUpstream
+          message: main tracks no upstream; sync fast-forwards only a tracking branch
+          blocker: true
         lastCommit:
           hash: #{SHA}
           author: Fixture
@@ -79,6 +90,10 @@ class GetFormatsIntegrationTest < Minitest::Test
         path: "~/dev/plain"
       status:
         state: NotARepo
+        drift:
+        - type: NotARepo
+          message: "~/dev/plain holds files but no repository; sync clones only into an absent directory"
+          blocker: true
   TEXT
 
   WORK_JSON = <<~TEXT.freeze

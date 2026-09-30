@@ -22,11 +22,18 @@ class GitFakeTest < Minitest::Test
     assert_equal 'git@github.com:hvpaiva/hldr.git', @fake.remote_url('/srv/hldr')
   end
 
-  def test_commit_and_remote_default_to_nil
+  def test_commit_remote_and_operation_default_to_nil
     @fake.add('/srv/unborn', status: STATUS)
 
     assert_nil @fake.last_commit('/srv/unborn')
     assert_nil @fake.remote_url('/srv/unborn')
+    assert_nil @fake.in_progress('/srv/unborn')
+  end
+
+  def test_add_registers_the_operation_in_progress
+    @fake.add('/srv/rebasing', status: STATUS, operation: 'rebase')
+
+    assert_equal 'rebase', @fake.in_progress('/srv/rebasing')
   end
 
   def test_paths_are_matched_after_expansion

@@ -8,7 +8,7 @@ class GetFormatsTest < Minitest::Test
 
   CLEAN_STATUS = { 'branch' => 'main', 'head' => 'a1b2c3d', 'upstream' => 'origin/main', 'ahead' => 0, 'behind' => 0,
                    'staged' => 0, 'unstaged' => 0, 'untracked' => 0, 'conflicted' => 0, 'stashes' => 0,
-                   'state' => 'Clean',
+                   'state' => 'Clean', 'drift' => [],
                    'lastCommit' => { 'hash' => SHA, 'author' => 'Ada Lovelace', 'email' => 'ada@example.com',
                                      'date' => '2026-09-29T11:15:00Z', 'subject' => 'initial commit' } }.freeze
   MISSING_YAML = <<~YAML
@@ -22,6 +22,10 @@ class GetFormatsTest < Minitest::Test
       path: "~/dev/gone"
     status:
       state: Missing
+      drift:
+      - type: Missing
+        message: no directory at ~/dev/gone
+        blocker: false
   YAML
   GROUP_YAML = <<~YAML
     kind: Group
