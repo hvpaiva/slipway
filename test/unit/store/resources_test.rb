@@ -16,6 +16,14 @@ class ResourcesTest < Minitest::Test
     assert_equal 'Project', project.kind
   end
 
+  def test_project_spec_defaults
+    project = Slipway::Project.new(name: 'hldr', path: '~/dev/hldr')
+
+    assert_equal [nil, nil, nil, Slipway::SyncPolicy::FAST_FORWARD, false],
+                 [project.remote, project.branch, project.revision, project.sync_policy, project.paused]
+    assert_equal %w[FastForward FetchOnly], Slipway::SyncPolicy::ALL
+  end
+
   def test_group_defaults
     group = Slipway::Group.new(name: 'work')
 
@@ -43,6 +51,18 @@ class ResourcesTest < Minitest::Test
     assert_equal %w[name group labels], manifest['metadata'].keys
     assert_empty manifest['metadata']['labels']
     assert_equal({ 'path' => '/p' }, manifest['spec'])
+  end
+
+  def test_project_manifest_writes_the_spec_fields_in_file_order_and_leaves_out_their_defaults
+    project = Slipway::Project.new(name: 'hldr', path: '/p', description: 'd', remote: 'git@h:o/r.git', branch: 'main',
+                                   revision: 'a' * 40, sync_policy: 'FetchOnly', paused: true)
+    defaults = project.with(remote: nil, branch: nil, revision: nil, sync_policy: 'FastForward', paused: false)
+
+    assert_equal({ 'path' => '/p', 'description' => 'd', 'remote' => 'git@h:o/r.git', 'branch' => 'main',
+                   'revision' => 'a' * 40, 'syncPolicy' => 'FetchOnly', 'paused' => true },
+                 project.to_manifest['spec'])
+    assert_equal %w[path description remote branch revision syncPolicy paused], project.to_manifest['spec'].keys
+    assert_equal({ 'path' => '/p', 'description' => 'd' }, defaults.to_manifest['spec'])
   end
 
   def test_group_manifest_layout

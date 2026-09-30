@@ -22,6 +22,11 @@ class DescribeIntegrationTest < Minitest::Test
     Age:          <age>
     Path:         ~/dev/clean
     Description:  A clean one
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       Clean
     Repository:
       Branch:      main
@@ -47,6 +52,11 @@ class DescribeIntegrationTest < Minitest::Test
     Age:          <age>
     Path:         ~/dev/gone
     Description:  <none>
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       Missing
     Repository:   no such directory
     Last Commit:  <none>
@@ -58,6 +68,11 @@ class DescribeIntegrationTest < Minitest::Test
     Age:          <age>
     Path:         ~/dev/plain
     Description:  <none>
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       NotARepo
     Repository:   not a git repository
     Last Commit:  <none>
@@ -69,6 +84,11 @@ class DescribeIntegrationTest < Minitest::Test
     Age:          <age>
     Path:         ~/dev/unborn
     Description:  <none>
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       Unborn
     Repository:
       Branch:      main
@@ -94,6 +114,11 @@ class DescribeIntegrationTest < Minitest::Test
     Age:          <age>
     Path:         ~/dev/behind
     Description:  <none>
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       Behind
     Repository:
       Branch:      main

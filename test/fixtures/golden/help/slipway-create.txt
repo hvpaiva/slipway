@@ -13,6 +13,9 @@ Examples:
   # Register a project in the work group with two labels
   slipway create project api --path '~/work/api' -n work --label lang=go --label tier=api
 
+  # Register a project with the remote and the branch it is expected to have
+  slipway create project hldr --path '~/dev/hldr' --remote git@github.com:hvpaiva/hldr.git --branch main
+
   # Create a group with a description
   slipway create group work --description "Projects for the day job"
 
@@ -23,6 +26,8 @@ Options:
       --path DIR           Directory of the git repository to register; required for projects. A relative directory is stored resolved against the current directory, a ~ path as written.
       --description TEXT   A short description of the resource.
       --label KEY=VALUE    A label to set on the new resource; may be repeated.
+      --remote URL         The URL the origin remote is expected to have, written to spec.remote. A URL that embeds credentials is refused; use a credential helper.
+      --branch NAME        The branch the project is expected to have checked out, written to spec.branch.
       --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
 
 Usage:

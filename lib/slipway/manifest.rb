@@ -3,6 +3,8 @@
 require 'psych'
 require 'time'
 require_relative 'error'
+require_relative 'git/branch_name'
+require_relative 'git/url'
 require_relative 'names'
 require_relative 'labels'
 require_relative 'resources'
@@ -23,11 +25,13 @@ module Slipway
     class Reader
       FIELDS = {
         'Project' => { root: %w[kind metadata spec], metadata: %w[name group labels creationTimestamp],
-                       spec: %w[path description] },
+                       spec: %w[path description remote branch revision syncPolicy paused] },
         'Group' => { root: %w[kind metadata spec], metadata: %w[name labels creationTimestamp],
                      spec: %w[description] }
       }.freeze
       TIMESTAMP = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
+      # SHA-1 or SHA-256; an abbreviation can become ambiguous as the repository grows.
+      REVISION = /\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/
 
       def initialize(document, source, default_group)
         @document = document
@@ -56,13 +60,11 @@ module Slipway
       end
 
       def project
-        Project.new(name:, group: group_name, labels:, created_at:, path:,
-                    description: string(@spec, 'spec', 'description'))
+        Project.new(name:, group: group_name, labels:, created_at:, path:, description:, remote:, branch:, revision:,
+                    sync_policy:, paused:)
       end
 
-      def group
-        Group.new(name:, labels:, created_at:, description: string(@spec, 'spec', 'description'))
-      end
+      def group = Group.new(name:, labels:, created_at:, description:)
 
       def name
         checked do
@@ -79,6 +81,44 @@ module Slipway
         value = string(@spec, 'spec', 'path', required: true)
         invalid('"spec.path" must not be empty') if value.strip.empty?
         value
+      end
+
+      def description = string(@spec, 'spec', 'description')
+
+      def remote
+        url = string(@spec, 'spec', 'remote')
+        url && checked { Git::Url.validate!(url, field: '"spec.remote"') }
+      end
+
+      def branch
+        name = string(@spec, 'spec', 'branch')
+        name && checked { Git::BranchName.validate!(name) }
+      end
+
+      def revision
+        case @spec['revision']
+        in nil then nil
+        in String => sha if REVISION.match?(sha) then sha
+        else invalid('"spec.revision" must be a full object name, 40 or 64 lowercase hexadecimal characters')
+        end
+      end
+
+      def sync_policy
+        case @spec['syncPolicy']
+        in nil then SyncPolicy::FAST_FORWARD
+        in String => policy if SyncPolicy::ALL.include?(policy) then policy
+        in String => other
+          invalid("\"spec.syncPolicy\" must be #{SyncPolicy::ALL.join(' or ')}, not #{other.inspect}")
+        else invalid('"spec.syncPolicy" must be a string')
+        end
+      end
+
+      def paused
+        case @spec['paused']
+        in nil | false then false
+        in true then true
+        else invalid('"spec.paused" must be a boolean')
+        end
       end
 
       def labels
@@ -138,7 +178,7 @@ module Slipway
 
       def checked
         yield
-      rescue Names::Invalid, Labels::Invalid => e
+      rescue Names::Invalid, Labels::Invalid, Git::Url::Invalid, Git::BranchName::Invalid => e
         invalid(e.message)
       end
 

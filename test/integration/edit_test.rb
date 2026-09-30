@@ -33,6 +33,17 @@ class EditIntegrationTest < Minitest::Test
     fi
   SH
 
+  # The first save sets an invalid branch; the second, seeing the reopened file, sets a valid one.
+  BRANCH_TWO_STEP = <<~SH.freeze
+    echo "---- round" >> "<log>"
+    cat "$1" >> "<log>"
+    if grep -q 'was not valid:' "$1"; then
+      #{EditorScripts.rewrite('$_.sub!(/^  branch: .*/, %q(  branch: release/1.x))')}
+    else
+      #{EditorScripts.rewrite('$_.sub!(/^  branch: .*/, %q(  branch: --track))')}
+    fi
+  SH
+
   def seed_clean(env)
     seed(env, manifest('Project', 'clean', path: repo(env, 'clean'), labels: { 'lang' => 'rust' }))
   end
@@ -98,6 +109,25 @@ class EditIntegrationTest < Minitest::Test
                    "# projects \"clean\" was not valid:\n# * \"spec.path\" must be a string\n#\nkind: Project\n",
                    rounds.last.lines[2..7].join
       assert_equal '~/dev/moved', table(slipway!('get', 'projects', '-o', 'wide', env:)).last[5]
+    end
+  end
+
+  def test_declared_fields_reach_the_editor_and_a_bad_branch_reopens_the_file
+    with_home do |env|
+      seed(env, manifest('Project', 'clean', path: repo(env, 'clean'), remote: 'git@github.com:hvpaiva/clean.git',
+                                             branch: 'main', paused: true))
+      log = File.join(env['HOME'], 'rounds')
+      editor = editor_script(env, 'branch.sh', BRANCH_TWO_STEP.gsub('<log>', log))
+      status, out, err = slipway('edit', 'project', 'clean', env: env.merge('EDITOR' => editor))
+      first, last = File.read(log).split("---- round\n").drop(1)
+
+      assert_equal [0, "project/clean edited\n", ''], [status, out, err]
+      assert_includes first, "spec:\n  path: \"~/dev/clean\"\n  remote: git@github.com:hvpaiva/clean.git\n  " \
+                             "branch: main\n  paused: true\n"
+      assert_includes last, "# * \"--track\" is not a valid branch name: #{Slipway::Git::BranchName::RULE}\n"
+      assert_equal({ 'path' => '~/dev/clean', 'remote' => 'git@github.com:hvpaiva/clean.git', 'branch' => 'release/1.x',
+                     'paused' => true },
+                   Psych.safe_load(slipway!('get', 'project', 'clean', '-o', 'yaml', env:)).fetch('spec'))
     end
   end
 

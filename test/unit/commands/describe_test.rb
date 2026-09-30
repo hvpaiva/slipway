@@ -13,6 +13,11 @@ class DescribeTest < Minitest::Test
     Age:          3h
     Path:         ~/dev/hldr
     Description:  Site and CLI
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
     Status:       Dirty
     Repository:
       Branch:      main
@@ -33,6 +38,23 @@ class DescribeTest < Minitest::Test
       Date:     2026-09-29T11:15:00Z
       Subject:  initial commit
   TEXT
+  MISSING = <<~TEXT
+    Name:         gone
+    Group:        default
+    Labels:       <none>
+    Created:      2026-09-29T09:00:00Z
+    Age:          3h
+    Path:         ~/dev/gone
+    Description:  <none>
+    Remote:       <none>
+    Branch:       <none>
+    Revision:     <none>
+    Sync Policy:  FastForward
+    Paused:       false
+    Status:       Missing
+    Repository:   no such directory
+    Last Commit:  <none>
+  TEXT
 
   def test_a_project_with_a_full_status_lists_every_section
     with_runtime do |runtime|
@@ -46,20 +68,8 @@ class DescribeTest < Minitest::Test
   def test_a_missing_project_shows_the_reason_in_place_of_the_repository
     with_runtime do |runtime|
       register(runtime, 'gone', status: nil)
-      expected = <<~TEXT
-        Name:         gone
-        Group:        default
-        Labels:       <none>
-        Created:      2026-09-29T09:00:00Z
-        Age:          3h
-        Path:         ~/dev/gone
-        Description:  <none>
-        Status:       Missing
-        Repository:   no such directory
-        Last Commit:  <none>
-      TEXT
 
-      assert_equal [0, expected, ''], run_commands('describe', 'projects', 'gone', runtime:)
+      assert_equal [0, MISSING, ''], run_commands('describe', 'projects', 'gone', runtime:)
     end
   end
 

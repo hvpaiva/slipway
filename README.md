@@ -18,7 +18,7 @@ ships with: help, man pages, shell completion, a config file, and colors that re
 $ slipway create group personal --description "Personal projects"
 group/personal created
 
-$ slipway create project hldr --path '~/dev/hldr' -n personal --label lang=rust --description "Site and CLI for hvpaiva.dev"
+$ slipway create project hldr --path '~/dev/hldr' -n personal --label lang=rust --description "Site and CLI for hvpaiva.dev" --remote git@github.com:hvpaiva/hldr.git --branch main
 project/hldr created
 
 $ slipway create project augur --path '~/dev/augur' -n personal --label lang=bash
@@ -46,6 +46,11 @@ Created:      2026-09-29T07:15:35Z
 Age:          1s
 Path:         ~/dev/augur
 Description:  <none>
+Remote:       <none>
+Branch:       <none>
+Revision:     <none>
+Sync Policy:  FastForward
+Paused:       false
 Status:       Dirty
 Repository:
   Branch:      main
@@ -91,12 +96,12 @@ bundle exec rake install
 | --- | --- |
 | `get TYPE [NAME...]` | List resources as a table, or as wide, json, yaml or name output. |
 | `describe TYPE [NAME...]` | Print every field of the selected resources, including the repository state. |
-| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`) or create a group. |
+| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group. |
 | `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
 | `delete TYPE NAME...` | Remove registrations; deleting a group removes the registrations of its projects. |
 | `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
 | `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
-| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `denied` or `failed`. |
+| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
 | `completion SHELL` | Print the completion script for bash, zsh or fish. |
 | `man [COMMAND]` | Open the bundled manual page of a command. |
@@ -223,6 +228,7 @@ projects are listed, as soon as it and every project before it are done:
 | `fetched` | The remote moved refs. Up to five follow, as `origin/main a1b2c3d..e4f5a6b`, then `and N more`. |
 | `unchanged` | The remote answered and had nothing new. |
 | `skipped (Reason)` | No fetch ran: git could not read the repository (`Missing`, `NotARepo`, `Unsafe`, `Unknown`), git has no remote to pick because there is no upstream, no origin and either no remote or more than one (`NoRemote`), or its branch tracks a local branch (`LocalUpstream`). |
+| `paused` | The manifest sets `spec.paused: true`, so no git command ran in the project. |
 | `denied (AuthRequired)` | Git needed a password, a passphrase or a host key. Run the `git -C PATH fetch` printed below it once in a terminal to see what git needs. |
 | `failed (Reason)` | The fetch ran past `networkTimeout` (`Timeout`), used a transport `protocols` leaves out (`ProtocolNotAllowed`), or git failed for another reason (`Unknown`). |
 
@@ -255,6 +261,8 @@ metadata:
 spec:
   path: "~/dev/hldr"
   description: Site and CLI for hvpaiva.dev
+  remote: git@github.com:hvpaiva/hldr.git
+  branch: main
 ```
 
 ```yaml
@@ -272,6 +280,23 @@ characters) and labels follow the Kubernetes rules. `spec.path` is stored as wri
 expanded against `HOME` when used, so `~/dev/hldr` means the same thing on every machine that
 syncs the registry; quote it on the command line so the shell does not expand it first.
 `metadata.group` defaults to the current group and `creationTimestamp` is set on creation.
+
+The rest of a project's spec declares the state its repository is expected to be in. Every
+field is optional, and one at its default is not written:
+
+| Field | Meaning | Default |
+| --- | --- | --- |
+| `spec.remote` | The URL the `origin` remote is expected to have: `scheme://host/path` with `ssh`, `https`, `http`, `git` or `file`, or `[user@]host:path`, where the host is letters, digits, `.` and `-`, starting with a letter or digit. A password in the URL, or any user name over http and https, where it often carries a token, is refused; use a credential helper. | none |
+| `spec.branch` | The branch expected to be checked out: letters, digits, `.`, `_`, `/` and `-`, starting with a letter or digit. | none |
+| `spec.revision` | The commit the project is expected to be at, as a full object name of 40 or 64 lowercase hexadecimal characters; an abbreviation is refused because it can become ambiguous. | none |
+| `spec.syncPolicy` | `FastForward` allows the checked-out branch to be fast-forwarded onto its upstream; `FetchOnly` allows fetching only. | `FastForward` |
+| `spec.paused` | `true` keeps `fetch` away from the project, which prints `project/NAME paused` and runs no git command there. | `false` |
+
+Only `fetch` acts on one of these fields: it leaves a project with `spec.paused: true` alone. No
+command compares a repository with the other four or changes it to match them, and STATUS does
+not take them into account. The fields are checked whenever a manifest is read, and a value
+that breaks its rule is refused with that rule, so nothing that could reach git as an option or
+carry a control character is accepted. `describe`, `-o json` and `-o yaml` show them.
 
 `slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
 and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
