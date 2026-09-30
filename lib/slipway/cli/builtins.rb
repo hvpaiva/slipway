@@ -70,7 +70,8 @@ module Slipway
         Command.new(
           name: 'man', section: 'Settings Commands', summary: 'Show the manual page of a command',
           description: "Show the manual page of #{program} or of one of its commands with man(1).\n" \
-                       'The pages ship with the gem; --install copies them where man-db looks for user pages.',
+                       'The pages ship with the gem; --install copies them into a man1 directory and ' \
+                       'says how man(1) finds them.',
           examples: man_examples,
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
                                        completer: ->(given) { subcommand_names(resolve.call, given) })],
@@ -128,6 +129,13 @@ module Slipway
         USER_PAGER_VARIABLES = %w[LESS_TERMCAP_md MANPAGER MANROFFOPT GROFF_NO_SGR].freeze
         RESET = "\e[0m"
         NO_DEFAULT_DIR = 'no default install directory is configured; pass --install=DIR'
+        # man(1) looks for section 1 pages in the man1 directory of each MANPATH entry, so the
+        # MANPATH line printed for any other directory would find nothing.
+        SECTION_DIR = 'man1'
+        NOT_A_SECTION_DIR = "invalid argument %s for --install: must be a #{SECTION_DIR} directory, " \
+                            "such as ~/.local/share/man/#{SECTION_DIR}".freeze
+        # An empty DIR would expand to the working directory.
+        INSTALL_EMPTY = 'flag --install must not be empty'
 
         def initialize(resolve, man_dir:, exec:, paths:)
           @resolve = resolve
@@ -137,6 +145,7 @@ module Slipway
         end
 
         def call(context, args, opts)
+          refuse_arguments(args, opts) if opts[:path] || opts[:install]
           return context.puts(@man_dir) if opts[:path]
           return install(context, opts[:install]) if opts[:install]
 
@@ -146,6 +155,15 @@ module Slipway
         private
 
         def registry = @resolve.call
+
+        # --path and --install ignore COMMAND, and since DIR is optional, a DIR given after a
+        # space arrives as one.
+        def refuse_arguments(args, opts)
+          return if args.empty?
+
+          hint = '; pass the directory as --install=DIR' if opts[:install] == true
+          raise UsageError, "unexpected argument #{args.first.inspect}#{hint}"
+        end
 
         def show(context, words)
           _, path = registry.resolve(words)
@@ -182,9 +200,7 @@ module Slipway
 
         def install(context, target)
           paths = @paths&.call(context.env)
-          raise Slipway::Error, NO_DEFAULT_DIR if target == true && paths.nil?
-
-          dir = target == true ? paths.man_install_dir : File.expand_path(target)
+          dir = target == true ? default_install_dir(paths) : named_install_dir(target)
           pages = Dir[File.join(@man_dir, '*.1')]
           raise Slipway::Error, "no manual pages found in #{@man_dir}" if pages.empty?
 
@@ -194,6 +210,21 @@ module Slipway
             context.puts("installed #{File.join(dir, File.basename(page))}")
           end
           context.puts(install_note(paths, dir))
+        end
+
+        def default_install_dir(paths)
+          raise Slipway::Error, NO_DEFAULT_DIR if paths.nil?
+
+          paths.man_install_dir
+        end
+
+        def named_install_dir(target)
+          raise UsageError, INSTALL_EMPTY if target.strip.empty?
+
+          dir = File.expand_path(target)
+          raise UsageError, format(NOT_A_SECTION_DIR, target.inspect) unless File.basename(dir) == SECTION_DIR
+
+          dir
         end
 
         # man-db adds ~/.local/share/man on its own only when ~/.local/bin is on PATH.
