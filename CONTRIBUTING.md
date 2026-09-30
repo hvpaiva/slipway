@@ -184,9 +184,10 @@ story lacks, extend the story. A `$` line runs slipway without a shell, so a pip
 redirection, a variable, or an unquoted `~` or `!` fails with the line number; quote paths as
 the README does, and a `!key` selector as `'!kind'`, since bash expands `!kind` from its history.
 A block that cannot run in the sandbox, such as one that needs a real remote, goes right under a
-`<!-- not run: REASON -->` line, and its test is skipped with that reason; a block that runs
-`fetch` is skipped with git older than 2.41, which fetches without listing the refs that moved.
-`sh` blocks hold commands without their output and are not run.
+`<!-- not run: REASON -->` line, and its test is skipped with that reason. A block that runs
+`fetch` or `sync` is skipped with git before 2.41, which cannot tell unchanged from fetched, so
+every fetch that succeeds reads fetched, without the refs that moved. `sh` blocks hold commands
+without their output and are not run.
 
 ## Testing completions
 
