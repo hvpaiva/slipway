@@ -1,4 +1,4 @@
-# slipway
+<h1 align="center"><img src=".github/logo.png" alt="slipway" width="200"></h1>
 
 A kubectl-style registry of the git repositories on your machine: it shows where each one stands
 against its upstream and its manifest, and fast-forwards the ones that can move safely.
