@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'command_line'
+require_relative 'drift'
 require_relative 'git'
 require_relative 'outcome'
 require_relative 'paths'
@@ -37,14 +38,15 @@ module Slipway
     ABBREV = Git::Porcelain::ABBREVIATION
     HELD = 'held there by spec.revision'
     NOT_PINNED = 'NotPinned'
-    # Each leaves the branch and the manifest as they were.
+    # Each leaves the branch and the manifest as they were. A conflict and an operation in progress
+    # stop sync too, and read as diff and sync word them.
     REFUSALS = {
-      'Conflicted' => '%<paths>s; finish or abort the merge first',
+      'Conflicted' => Drift::BLOCKERS.fetch('Conflicted'),
       'Detached' => 'HEAD is detached at %<head>s; undo moves only a checked-out branch',
       'Unborn' => 'no commits yet; nothing to roll back',
       'NoUpstream' => '%<branch>s tracks no upstream; undo drops only commits an upstream holds',
       'Gone' => 'upstream %<upstream>s no longer exists; undo drops only commits an upstream holds',
-      'InProgress' => 'a %<operation>s is in progress',
+      'InProgress' => Drift::BLOCKERS.fetch('InProgress'),
       'NoHistory' => 'no rollout history found for %<branch>s',
       'NoPrevious' => 'no last revision to roll back to',
       'UnknownRevision' => 'unable to find specified revision %<number>d in history',
