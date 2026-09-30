@@ -72,6 +72,8 @@ Each of these fails `rake check` or CI when it is broken.
   reads except `HOME` and `PATH`, the README tables for STATUS words, exit statuses and rake
   tasks match the code, and the README configuration example sets every config key and no
   other.
+- Every console example in the README prints what the executable prints
+  ([README examples](#readme-examples)).
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
   release, dated `YYYY-MM-DD` and ordered newest first by version and date, and a link
   reference for every heading and a heading for every link reference.
@@ -131,6 +133,38 @@ empty while the changelog has no release heading, so a plain change does not tou
 The completion scripts themselves are rendered at run time and never committed; the fixtures
 only freeze their text. `rake lint:shell` runs ShellCheck over the bash one as
 `slipway completion bash` prints it.
+
+## README examples
+
+The `console` blocks in `README.md` are transcripts that
+`test/integration/readme_examples_test.rb` runs against the real executable. A block opens with
+a `` ```console `` line that is not indented and has nothing after it; any other console fence,
+indented, titled, capitalized, longer or of tildes, fails the test rather than being skipped.
+Each `$ slipway ...` line is a command, and the lines under it, up to the next `$` line and
+without the blank lines that separate the two, are what it must print on stdout and stderr
+together, in the order a terminal shows them; the test makes slipway's stdout unbuffered so a
+pipe keeps that order. The blocks run from top to bottom in one temporary HOME, so each sees
+what the blocks above it created, and `test/support/readme_story.rb` first builds the
+repositories they name (`hldr`, `augur`, `notes` and their remotes), with commits and fetches
+dated hours or days back.
+
+Before the comparison, RFC 3339 times, commit ids and ages in seconds, such as the AGE column's
+`1s`, are replaced on both sides, keeping the column widths; a short commit id and a full one
+get different placeholders. Everything else must match, `<never>` included. That covers the
+hour and day ages the story sets, such as `5h` and `2d`, which come out the same as long as the
+blocks finish within a minute of the story being built, and paths, so `~/dev/augur` in an
+example is the path as registered, not an expanded one. A mismatch fails the block's test with
+the README line and a diff.
+
+Nothing regenerates the examples, because their values are chosen for the reader: when a change
+alters what an example prints, edit the README, and when an example needs a repository the
+story lacks, extend the story. A `$` line runs slipway without a shell, so a pipe, a
+redirection, a variable, or an unquoted `~` or `!` fails with the line number; quote paths as
+the README does, and a `!key` selector as `'!kind'`, since bash expands `!kind` from its history.
+A block that cannot run in the sandbox, such as one that needs a real remote, goes right under a
+`<!-- not run: REASON -->` line, and its test is skipped with that reason; a block that runs
+`fetch` is skipped with git older than 2.41, which fetches without listing the refs that moved.
+`sh` blocks hold commands without their output and are not run.
 
 ## Testing completions
 
