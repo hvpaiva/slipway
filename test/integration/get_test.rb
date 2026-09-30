@@ -47,6 +47,20 @@ class GetIntegrationTest < Minitest::Test
     end
   end
 
+  def test_show_labels_appends_the_labels_column_to_groups
+    with_home do |env|
+      seed(env, manifest('Group', 'work', labels: { 'team' => 'platform', 'app' => 'web' }, description: 'Day job'),
+           manifest('Group', 'play'))
+      _, out, = slipway('get', 'groups', '--show-labels', env:)
+      _, wide, = slipway('get', 'groups', '-o', 'wide', '--show-labels', env:)
+
+      assert_table [%w[NAME PROJECTS AGE LABELS], ['play', '0', :age, '<none>'],
+                    ['work', '0', :age, 'app=web,team=platform']], out
+      assert_table [%w[NAME PROJECTS AGE DESCRIPTION LABELS], ['play', '0', :age, '<none>', '<none>'],
+                    ['work', '0', :age, 'Day job', 'app=web,team=platform']], wide
+    end
+  end
+
   def test_all_groups_prepends_the_group_column
     with_home do |env|
       registry(env)

@@ -40,6 +40,11 @@ class GetFormatsTest < Minitest::Test
     default   2          3h    <none>
     work      1          3h    Day job
   TABLE
+  GROUPS_LABELED = <<~TABLE
+    NAME      PROJECTS   AGE   LABELS
+    default   1          3h    <none>
+    work      1          3h    app=web,team=core
+  TABLE
 
   def test_name_output_prints_type_slash_name_without_inspecting
     with_runtime do |runtime|
@@ -104,6 +109,18 @@ class GetFormatsTest < Minitest::Test
       assert_equal [0, GROUPS, ''], run_commands('get', 'groups', runtime:)
       assert_equal GROUPS_WIDE, run_commands('get', 'groups', '-o', 'wide', '-A', runtime:)[1]
       assert_equal "work   1   3h\n", run_commands('get', 'group', 'work', '--no-headers', runtime:)[1]
+    end
+  end
+
+  def test_show_labels_appends_the_labels_column_to_groups
+    with_runtime do |runtime|
+      register_group(runtime, 'work', labels: { 'team' => 'core', 'app' => 'web' }, description: 'Day job')
+      register(runtime, 'hldr')
+      register(runtime, 'job', group: 'work')
+
+      assert_equal [0, GROUPS_LABELED, ''], run_commands('get', 'groups', '--show-labels', runtime:)
+      assert_equal "work   1   3h   Day job   app=web,team=core\n",
+                   run_commands('get', 'group', 'work', '-o', 'wide', '--show-labels', '--no-headers', runtime:)[1]
     end
   end
 

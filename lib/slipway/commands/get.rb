@@ -99,15 +99,16 @@ module Slipway
         # The GROUP column -A prepends is left out of the color cycle, so the other columns
         # keep the colors they have without -A.
         def project_table(inspections)
-          columns = { wide: wide?, group: @group_column, labels: @opts[:show_labels] == true }
+          columns = { wide: wide?, group: @group_column, labels: labels? }
           now = @runtime.clock.call
           [Views::Project.headers(**columns), inspections.map { Views::Project.row(it, now:, **columns) },
            Views::Project::ROLES, @group_column ? 1 : 0]
         end
 
         def group_table(groups)
+          columns = { wide: wide?, labels: labels? }
           now = @runtime.clock.call
-          [Views::Group.headers(wide: wide?), groups.map { Views::Group.row(it, count: count(it), now:, wide: wide?) },
+          [Views::Group.headers(**columns), groups.map { Views::Group.row(it, count: count(it), now:, **columns) },
            nil, 0]
         end
 
@@ -118,6 +119,8 @@ module Slipway
         def count(group) = @runtime.store.project_count(group.name)
 
         def wide? = @opts[:output] == Output::WIDE
+
+        def labels? = @opts[:show_labels] == true
 
         def name? = @opts[:output] == Output::NAME
       end
