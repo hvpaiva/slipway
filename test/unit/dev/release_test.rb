@@ -68,7 +68,7 @@ class ReleaseTestCase < Minitest::Test
     "#{API}/environments/release/deployment-branch-policies" =>
       JSON.generate(branch_policies: [{ id: 1, name: 'v*', type: 'tag' }]),
     "#{API}/rulesets" => JSON.generate([{ id: 9, name: 'main' }]),
-    'gh pr create --base main --head release/v0.2.0 --title chore: release v0.2.0 --body ' \
+    'gh pr create --base main --head release/v0.2.0 --title chore: release v0.2.0 --assignee @me --body ' \
     "Releases slipway 0.2.0. Its tag goes on the merge commit.\n\n### Added\n\n- `get`.\n" => "#{URL}\n",
     "gh pr view #{URL} --json statusCheckRollup --jq .statusCheckRollup | length" => "11\n",
     "gh pr view #{URL} --json mergeCommit --jq .mergeCommit.oid" => "def456\n",
@@ -96,7 +96,7 @@ class ReleaseTestCase < Minitest::Test
     'git add -- lib/slipway/version.rb CHANGELOG.md Gemfile.lock man test/fixtures/golden',
     'git commit -S -m chore: release v0.2.0',
     'git push -u origin release/v0.2.0',
-    'gh pr create --base main --head release/v0.2.0 --title chore: release v0.2.0 --body ' \
+    'gh pr create --base main --head release/v0.2.0 --title chore: release v0.2.0 --assignee @me --body ' \
     "Releases slipway 0.2.0. Its tag goes on the merge commit.\n\n### Added\n\n- `get`.\n"
   ].freeze
 

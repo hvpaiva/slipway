@@ -364,8 +364,8 @@ empty `## [Unreleased]` above it, the `[Unreleased]` and `[X.Y.Z]` link referenc
 references kept), runs `bundle exec rake generate` so the man pages carry the date, runs
 `bundle exec rake check`, commits `chore: release vX.Y.Z` with a signature (the two files, the
 regenerated pages and fixtures, and `Gemfile.lock`, which records the new version), pushes the
-branch, opens the pull request with `gh pr create` and stops, printing what comes next. A
-failure in `rake check` leaves the edits in place for you to inspect.
+branch, opens the pull request with `gh pr create`, assigned to you, and stops, printing what comes
+next. A failure in `rake check` leaves the edits in place for you to inspect.
 
 With `--push` it continues once the pull request exists: waits for the checks with
 `gh pr checks --watch --fail-fast`, merges with `gh pr merge --merge --delete-branch`, fetches
