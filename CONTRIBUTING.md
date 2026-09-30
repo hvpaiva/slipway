@@ -10,7 +10,9 @@ With a git older than 2.41 the fetch tests and the README examples that run `fet
 are skipped, so run the whole suite with 2.41 or newer. `rake check` also needs `shellcheck`
 and `groff`. The other tools are optional: `zsh` and `fish` for the completion tests (or
 `docker`, which `rake test:shells` uses in their place), `gh` for the maintainer tasks, and
-`typos`, `zizmor` and `lychee`, which CI runs outside `rake check`.
+`typos`, `zizmor` and `lychee`, which CI runs outside `rake check`. `mise.toml` pins those three
+at the versions CI runs, so with [mise](https://mise.jdx.dev) `mise install typos zizmor lychee`
+installs them without root.
 
 ```sh
 git clone https://github.com/hvpaiva/slipway.git
