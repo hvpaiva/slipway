@@ -21,7 +21,7 @@ module Slipway
                     'records its path and the URL of its origin without any credentials; the checked-out branch ' \
                     'is not recorded. A path the group already holds is reported unchanged, so running it again ' \
                     "adds only new clones.\n\n" \
-                    'Use --dry-run=client to check the arguments without writing anything, and -o yaml with it ' \
+                    'Use --dry-run to check the arguments without writing anything, and -o yaml with it ' \
                     "to print the manifest instead, ready for apply -f.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
       PATH_MISSING = 'required flag(s) "--path" not set'
@@ -92,9 +92,9 @@ module Slipway
           CLI::Example.new(comment: 'Create a group with a description',
                            command: 'create group work --description "Projects for the day job"'),
           CLI::Example.new(comment: 'Check the arguments without writing the project',
-                           command: "create project hldr --path '~/dev/hldr' --dry-run=client"),
+                           command: "create project hldr --path '~/dev/hldr' --dry-run"),
           CLI::Example.new(comment: 'Print the manifest of a project without registering it',
-                           command: "create project hldr --path '~/dev/hldr' --dry-run=client -o yaml")
+                           command: "create project hldr --path '~/dev/hldr' --dry-run -o yaml")
         ]
       end
 
@@ -103,7 +103,7 @@ module Slipway
           CLI::Example.new(comment: 'Register every repository in ~/dev/personal in the personal group',
                            command: 'create project --from-dir ~/dev/personal -n personal'),
           CLI::Example.new(comment: 'Write the manifests of the repositories two levels under ~/work to a file',
-                           command: 'create project --from-dir ~/work --depth 2 --dry-run=client -o yaml > work.yaml')
+                           command: 'create project --from-dir ~/work --depth 2 --dry-run -o yaml > work.yaml')
         ]
       end
       private_class_method :examples, :named_examples, :directory_examples
@@ -122,7 +122,7 @@ module Slipway
 
       private
 
-      def dry_run?(opts) = opts[:dry_run] == 'client'
+      def dry_run?(opts) = opts[:dry_run] == true
 
       # NAME and --from-dir are the two ways to say which project to register; a group has only NAME.
       def from_dir?(kind, names, opts)

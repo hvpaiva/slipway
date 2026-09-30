@@ -20,7 +20,7 @@ Examples:
   slipway delete project hldr --ignore-not-found
 
 Options:
-      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+      --dry-run            Print what would change and write nothing.
       --ignore-not-found   Treat "resource not found" as a successful delete.
 
 Usage:

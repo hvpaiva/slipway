@@ -42,7 +42,7 @@ class RolloutUndoTest < Minitest::Test
       register(runtime, 'hldr', reflog: SYNCED, distance: BACK, roll_back: MOVED_BACK)
 
       assert_equal [0, ROLLED_BACK.sub("back\n", "back (dry run)\n"), ''],
-                   run_undo('hldr', '--dry-run=client', runtime:)
+                   run_undo('hldr', '--dry-run', runtime:)
       assert_nil pin(runtime)
       assert_empty(runtime.git.calls.map(&:first).uniq - READS)
     end

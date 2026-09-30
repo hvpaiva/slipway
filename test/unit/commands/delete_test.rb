@@ -81,7 +81,7 @@ class DeleteTest < Minitest::Test
       assert_equal [1, '', "error: the default group cannot be deleted\n"],
                    run_delete('groups', 'work', 'default', runtime:)
       assert_equal [1, '', "error: the default group cannot be deleted\n"],
-                   run_delete('groups', 'default', '--dry-run=client', runtime:)
+                   run_delete('groups', 'default', '--dry-run', runtime:)
       assert_equal %w[default work], runtime.store.names(GROUPS)
     end
   end
@@ -90,8 +90,8 @@ class DeleteTest < Minitest::Test
     with_runtime do |runtime|
       register_group(runtime, 'work')
       register(runtime, 'hldr')
-      plain = run_delete('projects', 'hldr', '--dry-run', 'client', runtime:)
-      painted = run_delete('group', 'work', '--dry-run=client', '--color', runtime:)
+      plain = run_delete('projects', 'hldr', '--dry-run', runtime:)
+      painted = run_delete('group', 'work', '--dry-run', '--color', runtime:)
 
       assert_equal [0, "project \"hldr\" deleted from default group (dry run)\n", ''], plain
       assert_equal [0, "group \"work\" \e[31mdeleted\e[0m \e[36m(dry run)\e[0m\n", ''], painted

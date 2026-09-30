@@ -16,7 +16,7 @@ A project whose spec.syncPolicy is FetchOnly is only fetched, and one whose spec
 .PP
 Each project prints one line, one of the results listed below, with a reason in parentheses and the details under it. The parallel setting caps how many projects fetch at once, fast\-forwards run one at a time, and the results print in the order the projects are listed.
 .PP
-With \-\-dry\-run=client nothing is fetched or written: the plan is made from the last fetch.
+With \-\-dry\-run nothing is fetched or written: the plan is made from the last fetch.
 .SH OPTIONS
 .TP
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR
@@ -28,10 +28,10 @@ If present, sync every project across all groups. The group in the current confi
 \fB\-\-prune\fR
 Before fetching, remove any remote\-tracking references that no longer exist on the remote.
 .TP
-\fB\-\-dry\-run\fR \fISTRATEGY\fR
-Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+\fB\-\-dry\-run\fR
+Print what would change and write nothing.
 .SH RESULTS
-When more than one project ran, a count of the results closes the run on stderr. With \-\-dry\-run=client every line and the count end in (dry run). Ctrl\-C stops the git processes slipway started and exits with status 130; a fast\-forward it stops ends as one stopped at the deadline.
+When more than one project ran, a count of the results closes the run on stderr. With \-\-dry\-run every line and the count end in (dry run). Ctrl\-C stops the git processes slipway started and exits with status 130; a fast\-forward it stops ends as one stopped at the deadline.
 .TP
 \fBfast\-forwarded\fR
 The branch moved. For a move onto the upstream, the detail names the commits it gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the move; a move up to a spec.revision pin ends in (to the pinned revision).
@@ -84,7 +84,7 @@ slipway sync api web \-n work
 .PP
 .EX
 # Show what sync would do from the last fetch, without contacting any remote
-slipway sync \-A \-\-dry\-run=client
+slipway sync \-A \-\-dry\-run
 .EE
 .SH "SEE ALSO"
 .BR slipway (1)

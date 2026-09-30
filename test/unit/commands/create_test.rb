@@ -78,7 +78,7 @@ class CreateTest < Minitest::Test
       assert_equal [2, '', "error: flag --remote must not embed credentials; use a credential helper\n#{HINT}"],
                    create.call('--remote=https://ci:s3cret@example.com/x.git')
       assert_equal [2, '', "error: \"--track\" is not a valid branch name: #{Slipway::Git::BranchName::RULE}\n#{HINT}"],
-                   create.call('--branch=--track', '--dry-run=client')
+                   create.call('--branch=--track', '--dry-run')
       assert_empty runtime.store.list(PROJECTS)
     end
   end
@@ -120,8 +120,8 @@ class CreateTest < Minitest::Test
 
   def test_dry_run_prints_the_result_and_writes_nothing
     with_runtime do |runtime|
-      plain = run_create('project', 'hldr', '--path', '~/dev/hldr', '--dry-run', 'client', runtime:)
-      painted = run_create('group', 'work', '--dry-run=client', '--color', runtime:)
+      plain = run_create('project', 'hldr', '--path', '~/dev/hldr', '--dry-run', runtime:)
+      painted = run_create('group', 'work', '--dry-run', '--color', runtime:)
 
       assert_equal [0, "project/hldr created (dry run)\n", ''], plain
       assert_equal [0, "group/work \e[32mcreated\e[0m \e[36m(dry run)\e[0m\n", ''], painted
@@ -133,7 +133,7 @@ class CreateTest < Minitest::Test
   def test_dry_run_still_checks_the_name_the_labels_and_the_group
     with_runtime do |runtime|
       register_group(runtime, 'work')
-      dry = %w[--dry-run=client]
+      dry = %w[--dry-run]
 
       assert_equal [0, "project/api created (dry run)\n", ''],
                    run_create('project', 'api', '--path', '~/x', '-n', 'work', *dry, runtime:)

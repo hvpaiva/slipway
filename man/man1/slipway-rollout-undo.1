@@ -16,14 +16,14 @@ A project whose HEAD is detached, whose branch has no commits or no upstream tha
 .PP
 The project prints one line, one of the results listed below, with a reason in parentheses and the details under it.
 .PP
-With \-\-dry\-run=client nothing is moved or written, and the line ends in (dry run).
+With \-\-dry\-run nothing is moved or written, and the line ends in (dry run).
 .SH OPTIONS
 .TP
 \fB\-\-to\-revision\fR \fIN\fR
 The revision to roll back to, as slipway rollout history numbers it. 0, the default, is the revision before the current one.
 .TP
-\fB\-\-dry\-run\fR \fISTRATEGY\fR
-Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+\fB\-\-dry\-run\fR
+Print what would change and write nothing.
 .SH RESULTS
 .TP
 \fBrolled back\fR
@@ -66,7 +66,7 @@ slipway rollout undo hldr \-\-to\-revision=3
 .PP
 .EX
 # Show where undo would move project hldr, without moving or writing anything
-slipway rollout undo hldr \-\-dry\-run=client
+slipway rollout undo hldr \-\-dry\-run
 .EE
 .SH "SEE ALSO"
 .BR slipway (1),

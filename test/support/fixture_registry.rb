@@ -86,8 +86,8 @@ class FixtureRegistry
       Slipway::CLI::Option.new(long: 'path', argument: 'DIR', required: true,
                                description: 'Directory of the repository.'),
       Slipway::CLI::Option.new(long: 'label', argument: 'KEY=VALUE', repeatable: true, description: 'Label to set.'),
-      Slipway::CLI::Option.new(long: 'dry-run', argument: 'MODE', enum: %w[none client], default: 'none',
-                               description: 'Only print the object that would be sent.')
+      Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', enum: %w[table yaml json], default: 'table',
+                               description: 'Output format.')
     ]
   end
 

@@ -142,7 +142,7 @@ OpenSSH 8.4 or newer; an older ssh may still ask on the terminal.
 Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`), and
 type words are case-insensitive. A project is named bare (`hldr`) or as `project/hldr`, the form
 `get -o name` prints. `create`, `apply`, `delete`, `label`, `fetch`, `sync` and `rollout undo`
-accept `--dry-run=client`, which fetches and writes nothing and ends each result line with
+accept `--dry-run`, which fetches and writes nothing and ends each result line with
 `(dry run)`. `slipway VERB --help` describes each verb, `-h` prints help and `-V` the version.
 
 ### Groups
@@ -188,7 +188,7 @@ want it.
 A path the group already holds prints `project/NAME unchanged`, whatever its name, so running
 the command again registers only the new clones. A derived name that another path already has
 is reported after the other lines, as `error: ~/dev/foo: project "foo" already exists at
-~/dev/Foo`, with exit status 1. `--dry-run=client -o yaml` prints the projects as one
+~/dev/Foo`, with exit status 1. `--dry-run -o yaml` prints the projects as one
 `kind: List` without writing anything, ready for `slipway apply -f` on another machine.
 
 ### Describing
@@ -380,7 +380,7 @@ Up to `parallel` projects fetch at once, while fast-forwards run one at a time; 
 in the order the projects are listed, and a count of the results closes the run on stderr. Each
 fast-forward leaves `slipway sync: Fast-forward` in the branch's reflog. The exit status is 1
 when a fetch or a fast-forward was denied or failed, once every line has printed; a skipped
-project never changes it, so a dirty tree does not fail the run. With `--dry-run=client`, sync
+project never changes it, so a dirty tree does not fail the run. With `--dry-run`, sync
 plans from the last fetch and warns about the projects no fetch has reached.
 
 ### Rolling back

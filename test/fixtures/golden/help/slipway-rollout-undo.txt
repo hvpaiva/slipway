@@ -6,7 +6,7 @@ A project whose HEAD is detached, whose branch has no commits or no upstream tha
 
 The project prints one line, one of the results listed below, with a reason in parentheses and the details under it.
 
-With --dry-run=client nothing is moved or written, and the line ends in (dry run).
+With --dry-run nothing is moved or written, and the line ends in (dry run).
 
 Results:
   rolled back        The branch moved, or it already stood at the revision and only spec.revision changed. The detail names the commits it crossed and the command that lets sync follow the upstream again.
@@ -29,11 +29,11 @@ Examples:
   slipway rollout undo hldr --to-revision=3
 
   # Show where undo would move project hldr, without moving or writing anything
-  slipway rollout undo hldr --dry-run=client
+  slipway rollout undo hldr --dry-run
 
 Options:
-      --to-revision N      The revision to roll back to, as slipway rollout history numbers it. 0, the default, is the revision before the current one.
-      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+      --to-revision N   The revision to roll back to, as slipway rollout history numbers it. 0, the default, is the revision before the current one.
+      --dry-run         Print what would change and write nothing.
 
 Usage:
   slipway rollout undo (NAME | project/NAME) [flags]

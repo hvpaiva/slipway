@@ -93,7 +93,7 @@ the directory.
 bin/sandbox          # a subshell; exit or Ctrl-D leaves it
 bin/sandbox --keep   # the same, keeping the directory and printing where it is
 bin/sandbox --home   # HOME and the XDG directories in the sandbox too
-bin/sandbox slipway create project hldr --path '~/dev/hldr' --dry-run=client
+bin/sandbox slipway create project hldr --path '~/dev/hldr' --dry-run
 ```
 
 Given a command, as in the last line, it runs only that command in the same environment and

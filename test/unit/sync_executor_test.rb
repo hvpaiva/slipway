@@ -150,7 +150,7 @@ class SyncExecutorTest < Minitest::Test
                                   spec: { revision: NEW })
       register(runtime, 'tool', status: BEHIND, spec: { sync_policy: 'FetchOnly' })
 
-      status, out, = run_sync('--dry-run=client', runtime:)
+      status, out, = run_sync('--dry-run', runtime:)
 
       assert_equal 0, status
       assert_equal(%w[skipped fast-forwarded fast-forwarded fetched], out.lines.grep(/\Aproject/).map { it.split[1] })

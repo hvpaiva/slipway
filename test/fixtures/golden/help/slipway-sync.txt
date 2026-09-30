@@ -6,10 +6,10 @@ A project whose spec.syncPolicy is FetchOnly is only fetched, and one whose spec
 
 Each project prints one line, one of the results listed below, with a reason in parentheses and the details under it. The parallel setting caps how many projects fetch at once, fast-forwards run one at a time, and the results print in the order the projects are listed.
 
-With --dry-run=client nothing is fetched or written: the plan is made from the last fetch.
+With --dry-run nothing is fetched or written: the plan is made from the last fetch.
 
 Results:
-  When more than one project ran, a count of the results closes the run on stderr. With --dry-run=client every line and the count end in (dry run). Ctrl-C stops the git processes slipway started and exits with status 130; a fast-forward it stops ends as one stopped at the deadline.
+  When more than one project ran, a count of the results closes the run on stderr. With --dry-run every line and the count end in (dry run). Ctrl-C stops the git processes slipway started and exits with status 130; a fast-forward it stops ends as one stopped at the deadline.
 
   fast-forwarded     The branch moved. For a move onto the upstream, the detail names the commits it gained, as main a1b2c3d..e4f5a6b (3 commits), and the command that undoes the move; a move up to a spec.revision pin ends in (to the pinned revision).
   fetched            The fetch of a FetchOnly project moved refs; the refs follow as in slipway fetch.
@@ -36,13 +36,13 @@ Examples:
   slipway sync api web -n work
 
   # Show what sync would do from the last fetch, without contacting any remote
-  slipway sync -A --dry-run=client
+  slipway sync -A --dry-run
 
 Options:
-  -l, --selector EXPR      Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
-  -A, --all-groups         If present, sync every project across all groups. The group in the current configuration is ignored even if specified with --group.
-      --prune              Before fetching, remove any remote-tracking references that no longer exist on the remote.
-      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+  -l, --selector EXPR   Selector (label query) to filter on, supports '=', '==', '!=', 'in', 'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). Matching objects must satisfy all of the specified label constraints.
+  -A, --all-groups      If present, sync every project across all groups. The group in the current configuration is ignored even if specified with --group.
+      --prune           Before fetching, remove any remote-tracking references that no longer exist on the remote.
+      --dry-run         Print what would change and write nothing.
 
 Usage:
   slipway sync [NAME... | project/NAME...] [flags]

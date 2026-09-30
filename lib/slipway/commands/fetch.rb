@@ -42,7 +42,7 @@ module Slipway
       RESULTS = CLI::Glossary.new(
         title: 'Results',
         intro: 'When more than one project ran, a count of the results closes the run on stderr. With ' \
-               '--dry-run=client no remote is contacted: a project that would be fetched reads fetched, and every ' \
+               '--dry-run no remote is contacted: a project that would be fetched reads fetched, and every ' \
                'line and the count end in (dry run). Ctrl-C stops the git processes slipway started and exits with ' \
                'status 130.',
         entries: {
@@ -87,7 +87,7 @@ module Slipway
           CLI::Example.new(comment: 'Fetch the projects labeled lang=rust and prune deleted branches',
                            command: 'fetch -l lang=rust --prune'),
           CLI::Example.new(comment: 'List the projects a fetch would reach, without contacting any remote',
-                           command: 'fetch -A --dry-run=client')
+                           command: 'fetch -A --dry-run')
         ]
       end
       private_class_method :examples
@@ -95,7 +95,7 @@ module Slipway
       def run(runtime, context, args, opts)
         scope = scope(runtime, context, opts)
         names = scope.project_targets(args, verb: 'fetch')
-        dry_run = opts[:dry_run] == 'client'
+        dry_run = opts[:dry_run] == true
         fetcher = Fetcher.new(runtime, prune: opts[:prune] == true, dry_run:)
         results = Results.new(context, ROLES, dry_run:)
         scope.select(Resources::PROJECTS, names) do |projects|

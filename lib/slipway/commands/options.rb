@@ -33,10 +33,7 @@ module Slipway
                                    description: "When using the default output format, don't print headers.")
       SHOW_LABELS = CLI::Option.new(long: 'show-labels',
                                     description: 'When printing, show all labels as the last column.')
-      # Help appends the enum and the default after this sentence, in kubectl's "Must be" role.
-      DRY_RUN = CLI::Option.new(long: 'dry-run', argument: 'STRATEGY', enum: %w[none client], default: 'none',
-                                description: 'Only print what would change, without writing anything, when the ' \
-                                             'strategy is client.')
+      DRY_RUN = CLI::Option.new(long: 'dry-run', description: 'Print what would change and write nothing.')
 
       TYPE_DESCRIPTIONS = {
         'projects' => 'Registered git repositories',

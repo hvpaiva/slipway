@@ -99,7 +99,7 @@ class ColorIntegrationTest < Minitest::Test
       assert_equal "\e[31merror:\e[0m projects \"nothere\" not found\n", always
       assert_equal "error: projects \"nothere\" not found\n", auto
       assert_equal "project/clean \e[32mlabeled\e[0m \e[36m(dry run)\e[0m\n",
-                   slipway!('label', 'project', 'clean', 'a=b', '--color=always', '--dry-run=client', env:)
+                   slipway!('label', 'project', 'clean', 'a=b', '--color=always', '--dry-run', env:)
     end
   end
 

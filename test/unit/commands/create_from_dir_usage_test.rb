@@ -50,7 +50,7 @@ class CreateFromDirUsageTest < Minitest::Test
                              "#{HINT}"], run_create('project', '--from-dir', '~/dev', '--depth', depth, runtime:)
       end
       assert_equal [0, "project/deep created (dry run)\n", ''],
-                   run_create('project', '--from-dir', '~/dev', '--depth=4', '--dry-run=client', runtime:)
+                   run_create('project', '--from-dir', '~/dev', '--depth=4', '--dry-run', runtime:)
     end
   end
 
@@ -70,10 +70,10 @@ class CreateFromDirUsageTest < Minitest::Test
       clone_at(runtime, File.join(home, 'dev', 'hldr'), remote: 'git@github.com:hvpaiva/hldr.git')
       clone_at(runtime, File.join(home, 'dev', 'notes'))
       runtime.store.create(Slipway::Project.new(name: 'notes', path: '~/dev/notes', labels: { 'kind' => 'docs' }))
-      status, out, err = run_create('project', '--from-dir', '~/dev', '--dry-run=client', '-o', 'yaml', runtime:)
+      status, out, err = run_create('project', '--from-dir', '~/dev', '--dry-run', '-o', 'yaml', runtime:)
 
       assert_equal [0, "project/hldr\nproject/notes\n", ''],
-                   run_create('project', '--from-dir', '~/dev', '--dry-run=client', '-o', 'name', runtime:)
+                   run_create('project', '--from-dir', '~/dev', '--dry-run', '-o', 'name', runtime:)
       assert_equal [0, ''], [status, err]
       assert_equal([['hldr', 'git@github.com:hvpaiva/hldr.git', {}], ['notes', nil, { 'kind' => 'docs' }]],
                    summary(Slipway::Manifest.load_objects(out, source: 'out')))

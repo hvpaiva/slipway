@@ -46,7 +46,7 @@ class LabelIntegrationTest < Minitest::Test
   def test_dry_run_reports_without_writing
     with_home do |env|
       seed_clean(env)
-      status, out, err = slipway('label', 'project', 'clean', 'a=b', '--dry-run=client', env:)
+      status, out, err = slipway('label', 'project', 'clean', 'a=b', '--dry-run', env:)
 
       assert_equal [0, "project/clean labeled (dry run)\n", ''], [status, out, err]
       assert_equal "lang=rust\n", slipway!('label', 'project', 'clean', '--list', env:)

@@ -32,7 +32,7 @@ class CreateOutputTest < Minitest::Test
   def test_a_dry_run_prints_a_manifest_apply_takes_and_writes_nothing
     with_runtime do |runtime|
       status, out, err = run_create('project', 'hldr', '--path', '~/dev/hldr', '--remote', 'git@h:o/r.git',
-                                    '--dry-run=client', '-o', 'json', runtime:)
+                                    '--dry-run', '-o', 'json', runtime:)
 
       assert_equal [0, ''], [status, err]
       assert_equal({ 'kind' => 'Project', 'metadata' => { 'name' => 'hldr', 'group' => 'default', 'labels' => {} },

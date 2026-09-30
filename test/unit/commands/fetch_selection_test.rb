@@ -114,7 +114,7 @@ class FetchSelectionTest < Minitest::Test
                  "no upstream, no origin and no single remote to fetch from\n"
 
       assert_equal [0, expected, "4 projects: 2 fetched, 2 skipped (dry run)\n"],
-                   run_fetch('--dry-run=client', runtime:)
+                   run_fetch('--dry-run', runtime:)
       assert_empty(runtime.git.calls.select { it.first == :fetch })
     end
   end
@@ -162,7 +162,7 @@ class FetchSelectionTest < Minitest::Test
 
       assert_equal 0, status
       assert_includes out, "Usage:\n  slipway fetch [NAME... | project/NAME...] [flags]\n"
-      assert_includes out, '      --prune              Before fetching, remove any remote-tracking references'
+      assert_includes out, '      --prune           Before fetching, remove any remote-tracking references'
     end
   end
 

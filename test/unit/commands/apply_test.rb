@@ -146,9 +146,9 @@ class ApplyTest < Minitest::Test
       hldr = write(home, 'hldr.yaml', "#{HLDR}  description: Old\n")
 
       assert_equal [0, "group/work created (dry run)\nproject/api created (dry run)\n" \
-                       "project/hldr configured (dry run)\n", ''], run_apply('-f', file, '--dry-run=client', runtime:)
+                       "project/hldr configured (dry run)\n", ''], run_apply('-f', file, '--dry-run', runtime:)
       assert_equal [0, "project/hldr \e[35munchanged\e[0m \e[36m(dry run)\e[0m\n", ''],
-                   run_apply('-f', hldr, '--dry-run', 'client', '--color', runtime:)
+                   run_apply('-f', hldr, '--dry-run', '--color', runtime:)
       assert_equal 'Old', runtime.store.find(PROJECTS, 'hldr', group: nil).description
       assert_equal %w[default], runtime.store.names(GROUPS)
       assert_equal %w[hldr], runtime.store.names(PROJECTS)
@@ -160,10 +160,10 @@ class ApplyTest < Minitest::Test
       file = write(home, 'api.yaml', API)
 
       assert_equal [1, '', "error: #{file}: groups \"work\" not found\n"],
-                   run_apply('-f', file, '--dry-run=client', runtime:)
+                   run_apply('-f', file, '--dry-run', runtime:)
       register_group(runtime, 'work')
 
-      assert_equal [0, "project/api created (dry run)\n", ''], run_apply('-f', file, '--dry-run=client', runtime:)
+      assert_equal [0, "project/api created (dry run)\n", ''], run_apply('-f', file, '--dry-run', runtime:)
       assert_empty runtime.store.names(PROJECTS)
     end
   end

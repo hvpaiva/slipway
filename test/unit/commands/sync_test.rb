@@ -102,7 +102,7 @@ class SyncTest < Minitest::Test
                 "for an up-to-date plan\n"
 
       assert_equal [0, DRY_RUN, "#{warning}3 projects: 1 fast-forwarded, 1 unchanged, 1 skipped (dry run)\n"],
-                   run_sync('hldr', 'dirty', 'same', '--dry-run=client', runtime:)
+                   run_sync('hldr', 'dirty', 'same', '--dry-run', runtime:)
     end
   end
 
@@ -114,7 +114,7 @@ class SyncTest < Minitest::Test
       register(runtime, 'old', status: nil)
 
       assert_match(/\Awarning: 2 projects were never fetched and a dry run does not fetch;/,
-                   run_sync('--dry-run=client', runtime:).last)
+                   run_sync('--dry-run', runtime:).last)
     end
   end
 
@@ -125,7 +125,7 @@ class SyncTest < Minitest::Test
       register(runtime, 'hldr', status: BEHIND, fast_forward: MOVE)
 
       assert_equal 0, run_sync(runtime:).first
-      assert_equal 0, run_sync('--dry-run=client', runtime:).first
+      assert_equal 0, run_sync('--dry-run', runtime:).first
       assert_equal(%w[hldr], runtime.git.calls.map { File.basename(it[1]) }.uniq)
     end
   end

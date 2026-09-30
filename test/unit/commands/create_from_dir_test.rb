@@ -111,7 +111,7 @@ class CreateFromDirTest < Minitest::Test
     with_runtime do |runtime, home|
       %w[a-b a_b].each { clone_at(runtime, File.join(home, 'dev', it)) }
 
-      result = run_create('project', '--from-dir', '~/dev', '--dry-run=client', runtime:)
+      result = run_create('project', '--from-dir', '~/dev', '--dry-run', runtime:)
 
       assert_equal [1, "project/a-b created (dry run)\n",
                     "error: ~/dev/a_b: project \"a-b\" already exists at ~/dev/a-b\n"], result
@@ -129,7 +129,7 @@ class CreateFromDirTest < Minitest::Test
                    run_create('project', '--from-dir', '~/dev', '-n', 'personal', '--label', 'lang=rust', runtime:)
       assert_equal([{ 'lang' => 'rust' }] * 2, runtime.store.list(PROJECTS, group: 'personal').map(&:labels))
       assert_equal [1, '', "error: groups \"work\" not found\n"],
-                   run_create('project', '--from-dir', '~/dev', '-n', 'work', '--dry-run=client', runtime:)
+                   run_create('project', '--from-dir', '~/dev', '-n', 'work', '--dry-run', runtime:)
     end
   end
 

@@ -21,9 +21,9 @@ Examples:
   slipway label group work --list
 
 Options:
-      --overwrite          If true, allow labels to be overwritten, otherwise reject label updates that overwrite existing labels.
-      --list               If true, display the labels for a given resource instead of writing them.
-      --dry-run STRATEGY   Only print what would change, without writing anything, when the strategy is client. One of: none, client. (default "none")
+      --overwrite   If true, allow labels to be overwritten, otherwise reject label updates that overwrite existing labels.
+      --list        If true, display the labels for a given resource instead of writing them.
+      --dry-run     Print what would change and write nothing.
 
 Usage:
   slipway label (TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY-...] [flags]

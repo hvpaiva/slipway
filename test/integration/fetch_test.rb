@@ -97,7 +97,7 @@ class FetchIntegrationTest < Minitest::Test
       env = env.merge(PROTOCOLS)
       seed(env, manifest('Project', 'stale', path: repo(env, 'stale', 'stale')))
 
-      assert_equal [0, "project/stale fetched (dry run)\n", ''], slipway('fetch', '--dry-run=client', env:)
+      assert_equal [0, "project/stale fetched (dry run)\n", ''], slipway('fetch', '--dry-run', env:)
       refute_path_exists File.join(env['HOME'], 'dev', 'stale', '.git', 'FETCH_HEAD')
       assert_equal %w[stale main Clean <never>], table(slipway!('get', 'projects', env:)).last.first(4)
     end

@@ -52,7 +52,7 @@ class ValidatorTest < Minitest::Test
   end
 
   def test_valid_input_passes
-    validate('create', %w[projects alpha], { path: '/x', dry_run: 'client', color: 'auto' })
+    validate('create', %w[projects alpha], { path: '/x', output: 'yaml', color: 'auto' })
     validate('get', %w[groups], { output: 'json' })
     pass
   end

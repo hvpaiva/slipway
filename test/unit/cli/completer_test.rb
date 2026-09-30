@@ -101,7 +101,8 @@ class CompleterTest < Minitest::Test
   def test_hash_completer_supplies_descriptions
     completer = Slipway::CLI::Completer.new(files_registry)
 
-    assert_equal [[%w[none Nothing], %w[client Local]], 4], completer.complete(['apply', '--dry-run', ''])
+    assert_equal [[['yaml', 'One YAML document'], ['json', 'One JSON object']], 4],
+                 completer.complete(['apply', '--output', ''])
   end
 
   def test_call_prints_candidates_then_the_directive
@@ -135,8 +136,8 @@ class CompleterTest < Minitest::Test
       options: [
         Slipway::CLI::Option.new(long: 'filename', short: 'f', argument: 'FILE', description: 'Manifest.',
                                  completer: ->(_) { Slipway::CLI::Completer::FILES }),
-        Slipway::CLI::Option.new(long: 'dry-run', argument: 'MODE', description: 'Dry run.',
-                                 completer: ->(_) { { 'none' => 'Nothing', 'client' => 'Local' } })
+        Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', description: 'Output format.',
+                                 completer: ->(_) { { 'yaml' => 'One YAML document', 'json' => 'One JSON object' } })
       ],
       handler: ->(*) {}
     )
