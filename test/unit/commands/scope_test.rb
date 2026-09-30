@@ -59,6 +59,20 @@ class ScopeTest < Minitest::Test
     end
   end
 
+  def test_project_targets_refuse_names_across_all_groups_in_the_words_of_the_verb
+    with_scope(all_groups: true) do |scope|
+      error = assert_raises(Slipway::CLI::UsageError) { scope.project_targets(%w[hldr], verb: 'fetch') }
+
+      assert_equal 'cannot fetch a project by name across all groups', error.message
+      assert_empty scope.project_targets([], verb: 'fetch')
+    end
+    with_scope(all_groups: true, selector: 'lang=rust') do |scope|
+      error = assert_raises(Slipway::CLI::UsageError) { scope.project_targets(%w[hldr], verb: 'sync') }
+
+      assert_equal 'name cannot be provided when a selector is specified', error.message
+    end
+  end
+
   def test_target_wants_exactly_one_name
     with_scope do |scope|
       assert_equal [GROUPS, 'work'], scope.target(%w[group work])

@@ -71,8 +71,10 @@ class FetchSelectionTest < Minitest::Test
 
       assert_equal [2, '', "error: name cannot be provided when a selector is specified\n#{HINT}"],
                    run_fetch('hldr', '-l', 'a=b', runtime:)
-      assert_equal [2, '', "error: a resource cannot be retrieved by name across all groups\n#{HINT}"],
+      assert_equal [2, '', "error: cannot fetch a project by name across all groups\n#{HINT}"],
                    run_fetch('hldr', '-A', runtime:)
+      assert_equal [2, '', "error: name cannot be provided when a selector is specified\n#{HINT}"],
+                   run_fetch('hldr', '-A', '-l', 'a=b', runtime:)
     end
   end
 
