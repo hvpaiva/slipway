@@ -22,7 +22,8 @@ module Slipway
         DESCRIPTION = "Display the configuration in effect.\n\n" \
                       'Prints every setting as YAML after applying the precedence flag, then SLIPWAY_* ' \
                       'environment variable, then configuration file, then built-in default. The first line ' \
-                      'names the configuration file that was consulted and says so when it does not exist.'
+                      'names the configuration file that was consulted, and says (not found) when the default ' \
+                      'file does not exist. A file named by --config or SLIPWAY_CONFIG must exist.'
 
         def self.command(factory)
           CLI::Command.new(
@@ -47,9 +48,10 @@ module Slipway
 
       class Path < Base
         DESCRIPTION = "Display the path of the configuration file.\n\n" \
-                      'Prints the file that slipway reads, or would read if it existed: --config, then ' \
-                      'SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml. When the file does not exist, a ' \
-                      'note on stderr says so.'
+                      'Prints the file that slipway reads: --config, then SLIPWAY_CONFIG, then ' \
+                      '$XDG_CONFIG_HOME/slipway/config.yaml. When the default file does not exist, its path is ' \
+                      'still printed and a note on stderr says so; a file named by --config or SLIPWAY_CONFIG ' \
+                      'must exist.'
         MISSING = 'The file does not exist; slipway uses its defaults.'
 
         def self.command(factory)

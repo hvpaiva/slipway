@@ -1,6 +1,6 @@
 Display the path of the configuration file.
 
-Prints the file that slipway reads, or would read if it existed: --config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml. When the file does not exist, a note on stderr says so.
+Prints the file that slipway reads: --config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml. When the default file does not exist, its path is still printed and a note on stderr says so; a file named by --config or SLIPWAY_CONFIG must exist.
 
 Examples:
   # Print the path of the configuration file
