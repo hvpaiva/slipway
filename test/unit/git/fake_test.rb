@@ -7,6 +7,8 @@ class GitFakeTest < Minitest::Test
   STATUS = Slipway::Git::Status.new(head: 'abc1234', untracked: 1)
   COMMIT = Slipway::Git::Commit.new(sha: 'a' * 40, short: 'aaaaaaa', time: Time.at(0).utc,
                                     author: 'Fixture', email: 'fixture@example.com', subject: 'initial commit')
+  FETCHED = Slipway::Git::FetchResult.new(updates: [['refs/remotes/origin/main', 'a' * 40, 'b' * 40]])
+  FETCHED_AT = Time.utc(2026, 9, 29, 11, 0, 0)
 
   def setup
     @fake = Slipway::Git::Fake.new
@@ -81,6 +83,63 @@ class GitFakeTest < Minitest::Test
     @fake.fail('/srv/hldr', Slipway::Git::UnsafeRepository)
 
     assert_raises(Slipway::Git::UnsafeRepository) { @fake.status('/srv/hldr') }
+  end
+
+  def test_fetch_returns_the_canned_result_and_fetched_at_the_canned_time
+    @fake.add('/srv/hldr', status: STATUS, fetch: FETCHED, fetched_at: FETCHED_AT)
+
+    assert_same FETCHED, @fake.fetch('/srv/hldr', prune: false)
+    assert_equal FETCHED_AT, @fake.fetched_at('/srv/hldr')
+  end
+
+  def test_by_default_a_fetch_brings_nothing_and_the_path_was_never_fetched
+    @fake.add('/srv/hldr', status: STATUS)
+
+    assert_empty @fake.fetch('/srv/hldr', prune: true).updates
+    assert_nil @fake.fetched_at('/srv/hldr')
+  end
+
+  def test_a_canned_fetch_error_is_raised_as_fail_raises_it
+    denied = Slipway::Git::ProtocolNotAllowed.new('/srv/b', protocol: 'ext', source: 'SLIPWAY_PROTOCOLS')
+    @fake.add('/srv/a', status: STATUS, fetch: Slipway::Git::AuthRequired)
+    @fake.add('/srv/b', status: STATUS, fetch: denied)
+
+    error = assert_raises(Slipway::Git::AuthRequired) { @fake.fetch('/srv/x/../a', prune: false) }
+
+    assert_equal '/srv/a: authentication required and prompts are disabled', error.message
+    assert_same denied, assert_raises(Slipway::Git::ProtocolNotAllowed) { @fake.fetch('/srv/b', prune: false) }
+    assert_equal STATUS, @fake.status('/srv/a')
+  end
+
+  def test_fetch_of_a_failing_or_unknown_path_raises_like_the_other_questions
+    @fake.fail('/srv/plain', Slipway::Git::NotARepository)
+
+    assert_raises(Slipway::Git::NotARepository) { @fake.fetch('/srv/plain', prune: false) }
+    assert_raises(Slipway::Git::NotARepository) { @fake.fetched_at('/srv/plain') }
+    assert_raises(Slipway::Git::MissingPath) { @fake.fetch('/srv/nothing', prune: false) }
+    assert_raises(Slipway::Git::MissingPath) { @fake.fetched_at('/srv/nothing') }
+  end
+
+  def test_calls_lists_every_question_with_the_expanded_path_in_order
+    @fake.add('/srv/hldr', status: STATUS)
+    @fake.status('/srv/hldr/')
+    @fake.last_commit('/srv/hldr')
+    @fake.remote_url('/srv/hldr')
+    @fake.fetch('/srv/a/../hldr', prune: true)
+    @fake.fetched_at('/srv/hldr')
+    assert_raises(Slipway::Git::MissingPath) { @fake.fetch('/srv/nothing', prune: false) }
+
+    assert_equal [[:status, '/srv/hldr'], [:last_commit, '/srv/hldr'], [:remote_url, '/srv/hldr'],
+                  [:fetch, '/srv/hldr', { prune: true }], [:fetched_at, '/srv/hldr'],
+                  [:fetch, '/srv/nothing', { prune: false }]], @fake.calls
+  end
+
+  def test_calls_is_a_copy
+    @fake.add('/srv/hldr', status: STATUS)
+    @fake.status('/srv/hldr')
+    @fake.calls.clear
+
+    assert_equal [[:status, '/srv/hldr']], @fake.calls
   end
 
   def test_add_and_fail_return_the_fake_for_chaining

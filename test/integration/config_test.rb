@@ -5,12 +5,15 @@ require 'test_helper'
 class ConfigIntegrationTest < Minitest::Test
   include IntegrationHelper
 
+  NETWORK = "networkTimeout: 60\nprotocols:\n- ssh\n- https\n"
+
   def test_view_shows_the_defaults_and_says_the_file_is_missing
     with_home do |env|
       status, out, err = slipway('config', 'view', env:)
 
       assert_equal [0, ''], [status, err]
-      assert_equal "# #{config_file(env)} (not found)\ncolor: auto\neditor:\ngroup: default\ntheme: dark\n", out
+      assert_equal "# #{config_file(env)} (not found)\ncolor: auto\neditor:\ngroup: default\n#{NETWORK}" \
+                   "theme: dark\n", out
     end
   end
 
@@ -33,9 +36,9 @@ class ConfigIntegrationTest < Minitest::Test
     with_home do |env|
       path = write_config(env, "color: always\ntheme: light\ngroup: work\neditor: nano\n")
 
-      assert_equal "\e[90;3m# #{path}\e[0m\ncolor: always\neditor: nano\ngroup: work\ntheme: light\n",
+      assert_equal "\e[90;3m# #{path}\e[0m\ncolor: always\neditor: nano\ngroup: work\n#{NETWORK}theme: light\n",
                    slipway!('config', 'view', env:)
-      assert_equal "# #{path}\ncolor: never\neditor: nano\ngroup: home\ntheme: light\n",
+      assert_equal "# #{path}\ncolor: never\neditor: nano\ngroup: home\n#{NETWORK}theme: light\n",
                    slipway!('config', 'view', '--color=never', '-n', 'home', env:)
     end
   end
@@ -46,7 +49,8 @@ class ConfigIntegrationTest < Minitest::Test
       env = env.merge('SLIPWAY_COLOR' => 'never', 'SLIPWAY_THEME' => 'dark', 'SLIPWAY_GROUP' => 'work',
                       'SLIPWAY_EDITOR' => 'vim')
 
-      assert_equal "# #{path}\ncolor: never\neditor: vim\ngroup: work\ntheme: dark\n", slipway!('config', 'view', env:)
+      assert_equal "# #{path}\ncolor: never\neditor: vim\ngroup: work\n#{NETWORK}theme: dark\n",
+                   slipway!('config', 'view', env:)
     end
   end
 
@@ -63,12 +67,31 @@ class ConfigIntegrationTest < Minitest::Test
     end
   end
 
+  def test_network_settings_come_from_the_file_and_their_variables
+    with_home do |env|
+      path = write_config(env, "networkTimeout: 30\nprotocols: [ssh, https, file]\n")
+      varied = env.merge('SLIPWAY_NETWORK_TIMEOUT' => '5', 'SLIPWAY_PROTOCOLS' => 'https')
+      protocols = 'must be a list of lowercase git transport names, such as ssh, https or file'
+
+      assert_includes slipway!('config', 'view', env:),
+                      "networkTimeout: 30\nprotocols:\n- ssh\n- https\n- file\n"
+      assert_includes slipway!('config', 'view', env: varied), "networkTimeout: 5\nprotocols:\n- https\n"
+      assert_equal [1, '', 'error: SLIPWAY_PROTOCOLS: must be lowercase git transport names separated by colons, ' \
+                           "such as ssh:https\n"],
+                   slipway('config', 'view', env: env.merge('SLIPWAY_PROTOCOLS' => 'ssh,https'))
+
+      write_config(env, "protocols: ['ssh:ext']\n")
+
+      assert_equal [1, '', "error: #{path}: \"protocols\" #{protocols}\n"], slipway('get', 'projects', env:)
+    end
+  end
+
   def test_the_config_flag_and_slipway_config_name_another_file
     with_home do |env|
       other = File.join(env['HOME'], 'work.yaml')
       File.write(other, "group: work\n")
 
-      assert_equal "# #{other}\ncolor: auto\neditor:\ngroup: work\ntheme: dark\n",
+      assert_equal "# #{other}\ncolor: auto\neditor:\ngroup: work\n#{NETWORK}theme: dark\n",
                    slipway!('config', 'view', '--config', other, env:)
       assert_equal "#{other}\n", slipway!('config', 'path', "--config=#{other}", env:)
       assert_equal "#{other}\n", slipway!('config', 'path', env: env.merge('SLIPWAY_CONFIG' => other))
@@ -90,7 +113,8 @@ class ConfigIntegrationTest < Minitest::Test
   def test_a_broken_file_fails_every_command_with_its_path
     with_home do |env|
       path = write_config(env, "colour: always\n")
-      message = "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, theme)\n"
+      message = "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
+                "protocols, theme)\n"
 
       assert_equal [1, '', message], slipway('config', 'view', env:)
       assert_equal [1, '', message], slipway('get', 'projects', env:)

@@ -65,6 +65,8 @@ module Slipway
         'SLIPWAY_THEME' => 'Color theme (dark or light).',
         'SLIPWAY_EDITOR' => 'Editor used by edit; takes precedence over VISUAL and EDITOR.',
         'SLIPWAY_GROUP' => 'Default group scope; overridden by --group.',
+        'SLIPWAY_NETWORK_TIMEOUT' => 'Seconds a git network command may run before it is killed.',
+        'SLIPWAY_PROTOCOLS' => 'Transports git may use in network commands, separated by colons (ssh:https).',
         'SLIPWAY_DEBUG' => 'When non-empty, unexpected errors also print their class and backtrace.',
         'NO_COLOR' => 'When non-empty, disables color in auto mode.',
         'FORCE_COLOR' => 'When non-empty, enables color in auto mode even without a terminal.',

@@ -84,7 +84,8 @@ class CommandsRegistryTest < Minitest::Test
       status, out, err = run_cli('get', 'projects', env:)
 
       assert_equal [1, ''], [status, out]
-      assert_equal "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, theme)\n", err
+      assert_equal "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
+                   "protocols, theme)\n", err
     end
   end
 

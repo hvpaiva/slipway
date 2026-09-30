@@ -11,8 +11,8 @@ require 'yard'
 # Coverage gates for test:cov, two points under the measured 99.7% line and 98.0% branch coverage.
 MINIMUM_LINE_COVERAGE = 97
 MINIMUM_BRANCH_COVERAGE = 96
-# Per-file gates, at least two points under the least covered files: lib/slipway/git/repository.rb
-# at 97.1% of lines and lib/slipway/commands/create.rb at 87.5% of branches.
+# Per-file gates, at least two points under the least covered files: lib/slipway/editor.rb at
+# 97.4% of lines and lib/slipway/commands/create.rb at 87.5% of branches.
 MINIMUM_LINE_COVERAGE_BY_FILE = 93
 MINIMUM_BRANCH_COVERAGE_BY_FILE = 85
 

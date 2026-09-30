@@ -18,7 +18,9 @@ module Slipway
       paths = Paths.new(context.env, config: opts[:config])
       config = Config.load(paths, env: context.env, flags: opts.slice(:color, :group))
       clock = -> { Time.now.utc }
-      git = Git::Repository.new
+      # The variable outranks the file, so a transport added to the file would change nothing.
+      protocols_source = config.variables.fetch('protocols') { %("protocols" in #{config.path}) }
+      git = Git::Repository.new(network_timeout: config.network_timeout, protocols: config.protocols, protocols_source:)
       new(config:, paths:, store: Store.new(root: paths.data_home, clock:), git:,
           inspector: Inspector.new(git:, clock:, home: paths.home), clock:, env: context.env)
     end

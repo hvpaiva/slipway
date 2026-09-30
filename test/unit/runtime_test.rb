@@ -3,6 +3,7 @@
 require 'test_helper'
 
 class RuntimeTest < Minitest::Test
+  include GitFixtures
   include Sandbox
 
   def test_build_assembles_production_collaborators_from_the_context
@@ -57,8 +58,49 @@ class RuntimeTest < Minitest::Test
       file = write_config(env, "colour: always\n")
       error = assert_raises(Slipway::Config::Error) { Slipway::Runtime.build(context(env), opts(config: file)) }
 
-      assert_equal "#{file}: unknown key \"colour\" (known keys: color, editor, group, theme)", error.message
+      assert_equal "#{file}: unknown key \"colour\" (known keys: color, editor, group, networkTimeout, " \
+                   'protocols, theme)', error.message
       assert_equal 1, error.exit_status
+    end
+  end
+
+  def test_build_hands_the_network_settings_and_the_config_path_to_the_repository
+    with_sandbox do |env|
+      dir = build_repo(File.join(env['HOME'], 'stale'), 'stale')
+      file = write_config(env, "protocols: [ssh]\n")
+
+      with_env('GIT_CONFIG_GLOBAL' => '/dev/null', 'GIT_CONFIG_NOSYSTEM' => '1') do
+        error = assert_raises(Slipway::Git::ProtocolNotAllowed) { fetch(env, dir) }
+
+        assert_equal %(Add file to "protocols" in #{file} to allow it.), error.hint
+        assert_instance_of Slipway::Git::FetchResult, fetch(env.merge('SLIPWAY_PROTOCOLS' => 'file'), dir)
+      end
+    end
+  end
+
+  def test_a_refused_transport_names_slipway_protocols_when_that_variable_supplied_the_list
+    with_sandbox do |env|
+      dir = build_repo(File.join(env['HOME'], 'stale'), 'stale')
+      write_config(env, "protocols: [ssh, file]\n")
+
+      with_env('GIT_CONFIG_GLOBAL' => '/dev/null', 'GIT_CONFIG_NOSYSTEM' => '1') do
+        error = assert_raises(Slipway::Git::ProtocolNotAllowed) { fetch(env.merge('SLIPWAY_PROTOCOLS' => 'ssh'), dir) }
+
+        assert_equal 'Add file to SLIPWAY_PROTOCOLS to allow it.', error.hint
+      end
+    end
+  end
+
+  def test_build_gives_the_repository_the_network_timeout
+    with_sandbox do |env|
+      dir = build_repo(File.join(env['HOME'], 'stale'), 'stale')
+      bin = fake_git(env['HOME'], 'for arg; do [ "$arg" = fetch ] && exec sleep 30; done; exit 0')
+
+      with_env('PATH' => "#{bin}:#{ENV.fetch('PATH')}") do
+        error = assert_raises(Slipway::Git::Timeout) { fetch(env.merge('SLIPWAY_NETWORK_TIMEOUT' => '1'), dir) }
+
+        assert_equal "#{dir}: git did not finish within 1 second", error.message
+      end
     end
   end
 
@@ -105,6 +147,8 @@ class RuntimeTest < Minitest::Test
   private
 
   def context(env) = Slipway::CLI::Context.new(out: StringIO.new, err: StringIO.new, env:)
+
+  def fetch(env, dir) = Slipway::Runtime.build(context(env), opts).git.fetch(dir, prune: false)
 
   def opts(config: nil, group: nil, color: nil) = { config:, group:, color: }.freeze
 

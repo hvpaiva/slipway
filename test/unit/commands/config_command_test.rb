@@ -5,7 +5,8 @@ require 'test_helper'
 class ConfigCommandTest < Minitest::Test
   include CommandsHelper
 
-  DEFAULTS = "color: auto\neditor:\ngroup: default\ntheme: dark\n"
+  NETWORK = "networkTimeout: 60\nprotocols:\n- ssh\n- https\n"
+  DEFAULTS = "color: auto\neditor:\ngroup: default\n#{NETWORK}theme: dark\n".freeze
 
   def test_view_without_a_file_prints_the_defaults_under_a_not_found_comment
     with_sandbox do |env|
@@ -19,7 +20,7 @@ class ConfigCommandTest < Minitest::Test
     with_sandbox do |env|
       path = write_config(env, "color: never\ntheme: light\neditor: code --wait\ngroup: work\n")
 
-      assert_equal [0, "# #{path}\ncolor: never\neditor: code --wait\ngroup: work\ntheme: light\n", ''],
+      assert_equal [0, "# #{path}\ncolor: never\neditor: code --wait\ngroup: work\n#{NETWORK}theme: light\n", ''],
                    run_config('config', 'view', env:)
     end
   end
@@ -33,7 +34,7 @@ class ConfigCommandTest < Minitest::Test
       status, out, err = run_config('config', 'view', env:)
 
       assert_equal [0, ''], [status, err]
-      assert_equal "color: always\neditor: vim\ngroup: home\ntheme: dark\n", out.lines[1..].join
+      assert_equal "color: always\neditor: vim\ngroup: home\n#{NETWORK}theme: dark\n", out.lines[1..].join
       assert_includes out.lines.first, "# #{path}"
     end
   end
@@ -45,7 +46,7 @@ class ConfigCommandTest < Minitest::Test
 
       _, out, = run_config('config', 'view', '--color=never', '-n', 'lab', env:)
 
-      assert_equal "color: never\neditor:\ngroup: lab\ntheme: dark\n", out.lines[1..].join
+      assert_equal "color: never\neditor:\ngroup: lab\n#{NETWORK}theme: dark\n", out.lines[1..].join
     end
   end
 
@@ -54,7 +55,7 @@ class ConfigCommandTest < Minitest::Test
       other = File.join(env['HOME'], 'other.yaml')
       File.write(other, "theme: light\n")
 
-      assert_equal [0, "# #{other}\ncolor: auto\neditor:\ngroup: default\ntheme: light\n", ''],
+      assert_equal [0, "# #{other}\ncolor: auto\neditor:\ngroup: default\n#{NETWORK}theme: light\n", ''],
                    run_config('config', 'view', '--config', other, env:)
       assert_equal [0, "#{other}\n", ''], run_config('config', 'path', "--config=#{other}", env:)
     end
@@ -74,8 +75,8 @@ class ConfigCommandTest < Minitest::Test
     with_sandbox do |env|
       path = write_config(env, "colour: always\n")
 
-      assert_equal [1, '', "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, theme)\n"],
-                   run_config('config', 'view', env:)
+      assert_equal [1, '', "error: #{path}: unknown key \"colour\" (known keys: color, editor, group, " \
+                           "networkTimeout, protocols, theme)\n"], run_config('config', 'view', env:)
     end
   end
 
@@ -84,7 +85,7 @@ class ConfigCommandTest < Minitest::Test
       _, out, = run_config('config', 'view', '--color', env:)
 
       assert_equal "\e[90;3m# #{default_path(env)} (not found)\e[0m\ncolor: always\neditor:\ngroup: default\n" \
-                   "theme: dark\n", out
+                   "#{NETWORK}theme: dark\n", out
     end
   end
 

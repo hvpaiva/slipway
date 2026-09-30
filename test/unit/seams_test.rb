@@ -9,8 +9,9 @@ class SeamsTest < Minitest::Test
   LIB = File.expand_path('../../lib', __dir__)
   # Universal variables every program reads; the man page does not list them.
   UNDOCUMENTED = %w[HOME PATH].freeze
-  # Set for the git child process to bound repository discovery, never read from the user.
-  CHILD_ONLY = [Slipway::Git::Runner::CEILING_VARIABLE].freeze
+  # Set for the git child process, to bound repository discovery and the transports a network
+  # command may use, never read from the user.
+  CHILD_ONLY = [Slipway::Git::Runner::CEILING_VARIABLE, Slipway::Git::Runner::PROTOCOL_VARIABLE].freeze
   # Upper case, with the odd lower-case suffix such as LESS_TERMCAP_md.
   NAME = /[A-Z][A-Za-z0-9_]+/
   # env['X'], @env.fetch('X'), env.fetch 'X', ENV.key?('X'), context.env['X'], ...
@@ -61,6 +62,17 @@ class SeamsTest < Minitest::Test
     assert_equal variables.fetch('color'), Slipway::CLI::Runner::COLOR_VARIABLE
     assert_equal variables.fetch('theme'), Slipway::CLI::Runner::THEME_VARIABLE
     assert_equal variables.fetch('editor'), Slipway::Editor::VARIABLE
+  end
+
+  def test_the_repository_falls_back_to_the_network_defaults_of_the_config
+    defaults = Slipway::Config::SETTINGS.to_h { [it.key, it.default] }
+
+    assert_equal defaults.fetch('networkTimeout'), Slipway::Git::Repository::NETWORK_TIMEOUT
+    assert_equal defaults.fetch('protocols'), Slipway::Git::Repository::PROTOCOLS
+  end
+
+  def test_a_refused_transport_gets_no_hint_to_list_what_the_config_refuses
+    assert_equal Slipway::Config::UNSAFE_PROTOCOLS.keys, Slipway::Git::ProtocolNotAllowed::UNSAFE
   end
 
   def test_config_documentation_covers_every_key_and_reads_as_the_man_page_prints_it
