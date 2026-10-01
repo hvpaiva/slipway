@@ -13,7 +13,8 @@ module Slipway
       COLOR = Option.new(long: 'color', argument: 'WHEN', optional: true, implicit: 'always', enum: Style::MODES,
                          description: 'When to use color in the output; a bare --color means always.')
       GROUP = Option.new(long: 'group', short: 'n', argument: 'NAME', description: 'The group scope for this request.')
-      CONFIG = Option.new(long: 'config', argument: 'PATH', description: 'Path to the configuration file.')
+      CONFIG = Option.new(long: 'config', argument: 'PATH', completer: ->(_given, _current) { Completer::FILES },
+                          description: 'Path to the configuration file.')
       HELP = Option.new(long: 'help', short: 'h', description: 'Print help and exit.')
       VERSION = Option.new(long: 'version', short: 'V', description: 'Print the version and exit.')
 
