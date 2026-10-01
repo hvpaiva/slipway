@@ -31,7 +31,8 @@ module ShellHarness
     end
   end
 
-  # bash resets COMP_WORDBREAKS when it starts, so `wordbreaks:` is assigned inside the script.
+  # bash resets COMP_WORDBREAKS when it starts, so `wordbreaks:` is assigned inside the script,
+  # and COLUMNS is fixed so that a listing (`type: 63`) does not depend on the terminal.
   def bash_completions(dir, line, env, **) = bash_answer(dir, line, env, **).first
 
   # compopt changes nothing unless readline started the completion, so a function in its place
@@ -40,7 +41,7 @@ module ShellHarness
 
   # The replies, a line with `--`, then one line per compopt call.
   BASH_ANSWER = <<~'BASH'
-    [[ -n $3 ]] && COMP_WORDBREAKS=$3
+    [[ -n $3 ]] && COMP_WORDBREAKS=$3; [[ -n $4 ]] && COMP_TYPE=$4; COLUMNS=80
     source "$1/slipway.bash"
     asked=()
     compopt() { asked+=("$*"); builtin compopt "$@"; }
@@ -48,7 +49,7 @@ module ShellHarness
     [[ $2 == *" " ]] && COMP_WORDS+=("")
     COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
     COMP_LINE=$2 COMP_POINT=${#2}
-    _slipway "${COMP_WORDS[0]}" "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}"
+    __start_slipway "${COMP_WORDS[0]}" "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}"
     printf '%s\n' "${COMPREPLY[@]}"
     printf -- '--\n'
     for option in "${asked[@]}"; do printf '%s\n' "$option"; done
@@ -118,11 +119,11 @@ module ShellHarness
 
   private
 
-  def bash_answer(dir, line, env, bash_completion: false, wordbreaks: nil)
+  def bash_answer(dir, line, env, bash_completion: false, wordbreaks: nil, type: nil)
     script = bash_completion ? "source #{BASH_COMPLETION}\n#{BASH_ANSWER}" : BASH_ANSWER
-    lines = run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line, wordbreaks.to_s)
-    separator = lines.index('--')
-    [lines[0...separator], lines[(separator + 1)..]]
+    lines = run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line, wordbreaks.to_s,
+                      type.to_s)
+    [lines.take_while { it != '--' }, lines.drop_while { it != '--' }.drop(1)]
   end
 
   def write_stub(dir)

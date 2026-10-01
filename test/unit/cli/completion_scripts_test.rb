@@ -7,6 +7,17 @@ class CompletionScriptsTest < Minitest::Test
 
   SCRIPTS = Slipway::CLI::CompletionScripts
 
+  LISTING = [
+    'get         (Display one or many resources)',
+    'create      (Create a resource)',
+    'explain     (Describe the fields of a resource type)',
+    'config      (Modify the configuration)',
+    'help        (Help about any command)',
+    'version     (Print the version of slipway)',
+    'completion  (Output shell completion code for the specified shell (bash, zsh...)',
+    'man         (Show the manual page of a command)'
+  ].freeze
+
   def test_render_dispatches_on_the_shell_name
     assert_equal SCRIPTS::Bash.render('slipway'), SCRIPTS.render('bash', 'slipway')
     assert_equal SCRIPTS::Zsh.render('slipway'), SCRIPTS.render('zsh', 'slipway')
@@ -23,7 +34,7 @@ class CompletionScriptsTest < Minitest::Test
     assert_includes script, '_comp_initialize -n = -- "$@" || return'
     assert_includes script, '_init_completion -n = || return'
     assert_includes script, 'compopt -o default'
-    assert_equal 'complete -F _slipway slipway', script.lines.last.chomp
+    assert_equal 'complete -F __start_slipway slipway', script.lines.last.chomp
   end
 
   def test_zsh_names_its_install_path_and_falls_back_to_files
@@ -106,9 +117,15 @@ class CompletionScriptsTest < Minitest::Test
     end
   end
 
-  def test_bash_strips_descriptions
+  def test_bash_inserts_bare_values_and_shows_descriptions_only_in_a_listing
     with_completion_stub do |dir, env|
-      assert_equal %w[get create explain config help version completion man], bash_completions(dir, 'slipway ', env)
+      verbs = %w[get create explain config help version completion man]
+
+      assert_equal verbs, bash_completions(dir, 'slipway ', env)
+      assert_equal verbs, bash_completions(dir, 'slipway ', env, type: 37)
+      assert_equal ['explain'], bash_completions(dir, 'slipway ex', env, type: 63)
+      assert_equal %w[alpha beta], bash_completions(dir, 'slipway get projects ', env, type: 63)
+      assert_equal LISTING, bash_completions(dir, 'slipway ', env, type: 63)
     end
   end
 

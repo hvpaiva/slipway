@@ -949,7 +949,9 @@ slipway completion fish > ~/.config/fish/completions/slipway.fish
 
 Completion covers commands, flags, flag values (`-o js<TAB>` gives `json`), resource types, the
 names of your projects and groups and the field paths of `explain`, asked from the program
-itself each time you press TAB.
+itself each time you press TAB. zsh and fish describe each candidate; bash describes them when
+it lists them, on a second TAB, and so does the menu of
+[ble.sh](https://github.com/akinomyoga/ble.sh). What gets inserted is always the bare value.
 
 ## Manual pages
 

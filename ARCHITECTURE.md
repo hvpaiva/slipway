@@ -242,7 +242,8 @@ the columns or result words a verb prints), handler. The same object feeds
 - `slipway VERB --help` and `slipway help VERB` (`HelpRenderer`),
 - `man/man1/slipway-VERB.1` (`Manpage`, run by `bin/generate-man`),
 - shell completion (`Completer`, answering `slipway __complete WORDS...` with cobra's directive
-  protocol; the bash, zsh and fish scripts only relay that answer).
+  protocol; the bash, zsh and fish scripts only relay that answer, and the bash one keeps the
+  function and variable names of cobra's bash script, by which ble.sh finds the descriptions).
 
 Nothing about a verb is written twice. Help text, option descriptions and examples live in the
 verb's class (`DESCRIPTION`, `self.examples`, shared options in `Commands::Options`). What
@@ -378,7 +379,9 @@ Tests are Minitest, run with Ruby warnings on. `rake test` runs everything under
   `rake generate` refreshes all three after an intended change. `ShellHarness` also drives
   the completion scripts inside real shells (bash always; zsh and fish when installed, or
   unconditionally when `SLIPWAY_REQUIRE_SHELLS` is set, which the CI `completions` job does)
-  against a stub program that answers `__complete` from a `FixtureRegistry`.
+  against a stub program that answers `__complete` from a `FixtureRegistry`;
+  `test/unit/cli/completion_ble_test.rb` replays in plain bash what ble.sh does with the bash
+  script.
 
 Convention tests sit next to the unit tests: `test/unit/conventions_test.rb` (layering, the two
 files that spawn processes, the YAML writer, the warning writer, no direct stdout or stderr, no

@@ -12,14 +12,16 @@ module Slipway
       end
 
       # _comp_initialize is bash-completion 2.12+ and _init_completion the older name; without
-      # either, COMP_WORDS is read directly.
+      # either, COMP_WORDS is read directly. The function names and the words, cur and out
+      # variables follow cobra's bash script, so tools built around cobra's completion, such as
+      # ble.sh, show the descriptions.
       module Bash
         def self.render(program)
           <<~BASH
             # bash completion for #{program}                             -*- shell-script -*-
             # Install to ${XDG_DATA_HOME:-~/.local/share}/bash-completion/completions/#{program}
             # or load it with: eval "$(#{program} completion bash)"
-            _#{program}() {
+            __start_#{program}() {
                 # prev is filled by the bash-completion initializers; it stays local, not global.
                 # shellcheck disable=SC2034
                 local cur prev words cword
@@ -32,41 +34,88 @@ module Slipway
                 fi
 
                 local out directive
+                __#{program}_get_completion_results || return
+                (( directive & 2 )) && compopt -o nospace 2>/dev/null
+                COMPREPLY=()
+                if [[ -n $out ]]; then
+                    __#{program}_handle_completion_types
+                elif ! (( directive & 4 )); then
+                    __#{program}_complete_files
+                elif [[ -n ${BLE_ATTACHED-} ]]; then
+                    # ble.sh would fall back to its own candidates.
+                    compopt -o ble/no-default 2>/dev/null
+                fi
+            }
+
+            __#{program}_get_completion_results() {
                 out=$("${words[0]}" __complete "${words[@]:1:cword-1}" "$cur" 2>/dev/null) || return
                 directive=${out##*$'\\n':}
                 [[ $out == :* ]] && directive=${out#:}
                 out=${out%$'\\n'*}
                 [[ $out == :* ]] && out=""
+                return 0
+            }
 
-                COMPREPLY=()
-                local line
-                if [[ -n $out ]]; then
-                    while IFS= read -r line; do COMPREPLY+=("${line%%$'\\t'*}"); done <<<"$out"
-                fi
+            # As in cobra's script, out holds the lines as one string or as an array.
+            __#{program}_handle_completion_types() {
+                local chunk line
+                local -a cands=() descs=()
+                for chunk in "${out[@]}"; do
+                    while IFS= read -r line; do
+                        [[ -n $line ]] || continue
+                        cands+=("${line%%$'\\t'*}")
+                        if [[ $line == *$'\\t'* ]]; then descs+=("${line#*$'\\t'}"); else descs+=(""); fi
+                    done <<<"$chunk"
+                done
                 # readline still breaks the word at "=", so "--flag=" must leave the replies.
-                local i prefix=""
-                [[ $cur == -*=* ]] && prefix=${cur%%=*}=
-                if [[ -n $prefix && $COMP_WORDBREAKS == *=* ]]; then
-                    for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=${COMPREPLY[i]#"$prefix"}; done
+                local prefix=""
+                [[ $cur == -*=* && $COMP_WORDBREAKS == *=* ]] && prefix=${cur%%=*}=
+                # Only a listing (the second TAB, show-all-if-ambiguous, show-all-if-unmodified)
+                # shows descriptions, so what readline inserts is the bare value.
+                local listing=""
+                case ${COMP_TYPE-} in
+                    33|63|64) (( ${#cands[@]} > 1 )) && listing=1 ;;
+                esac
+                local cand
+                if [[ -z $listing ]]; then
+                    for cand in "${cands[@]}"; do COMPREPLY+=("${cand#"$prefix"}"); done
+                    return 0
                 fi
-                (( directive & 2 )) && compopt -o nospace 2>/dev/null
-                if (( ${#COMPREPLY[@]} == 0 )) && ! (( directive & 4 )); then
-                    # The file name is what follows "--flag=": the filedir helpers read cur.
-                    cur=${cur#"$prefix"}
-                    if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
-                        _comp_compgen_filedir
-                    elif declare -F _filedir >/dev/null 2>&1; then
-                        _filedir
-                    elif ! compopt -o default 2>/dev/null; then
-                        # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
-                        while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen -f -- "$cur")
+                local i desc width=0 room
+                for cand in "${cands[@]}"; do (( ${#cand} > width )) && width=${#cand}; done
+                width=$(( width - ${#prefix} ))
+                room=$(( ${COLUMNS:-80} - width - 4 ))
+                for i in "${!cands[@]}"; do
+                    cand=${cands[i]#"$prefix"} desc=${descs[i]}
+                    if [[ -z $desc ]] || (( room < 8 )); then
+                        COMPREPLY+=("$cand")
+                        continue
                     fi
-                    if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
-                        for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done
-                    fi
+                    (( ${#desc} > room )) && desc="${desc:0:room-3}..."
+                    printf -v line '%-*s  (%s)' "$width" "$cand" "$desc"
+                    COMPREPLY+=("$line")
+                done
+            }
+
+            # The file name is what follows "--flag=": the filedir helpers read cur.
+            __#{program}_complete_files() {
+                local i line prefix=""
+                [[ $cur == -*=* ]] && prefix=${cur%%=*}=
+                cur=${cur#"$prefix"}
+                if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
+                    _comp_compgen_filedir
+                elif declare -F _filedir >/dev/null 2>&1; then
+                    _filedir
+                elif ! compopt -o default 2>/dev/null; then
+                    # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
+                    while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen -f -- "$cur")
+                fi
+                if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
+                    for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done
                 fi
             }
-            complete -F _#{program} #{program}
+
+            complete -F __start_#{program} #{program}
           BASH
         end
       end
