@@ -25,7 +25,9 @@ _slipway() {
     if (( ${#candidates} )); then
         _describe -t values 'slipway' candidates "${describe_opts[@]}" && ret=0
     fi
-    if (( ret )) && ! (( directive & 4 )); then
+    if (( ret )) && (( directive & 16 )); then
+        _files -/ && ret=0
+    elif (( ret )) && ! (( directive & 4 )); then
         _files && ret=0
     fi
     return ret

@@ -6,7 +6,7 @@ class CommandsRegistryTest < Minitest::Test
   include CommandsHelper
 
   LIB = File.expand_path('../../../lib', __dir__)
-  PATH_ARGUMENTS = %w[DIR FILE PATH].freeze
+  PATH_DIRECTIVES = { 'DIR' => 16, 'FILE' => 0, 'PATH' => 0 }.freeze
 
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
@@ -54,14 +54,16 @@ class CommandsRegistryTest < Minitest::Test
     assert_equal({ 'apply' => every, 'view' => [], 'path' => [], 'api-resources' => [] }, kinds_by_name(bare))
   end
 
-  def test_every_option_that_takes_a_path_completes_file_names
+  def test_every_option_that_takes_a_path_completes_file_or_directory_names
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
     completer = Slipway::CLI::Completer.new(registry)
     requests = path_requests(registry.root, [], registry.globals)
 
-    assert_includes requests, ['create', '--path', '']
-    assert_includes requests, ['man', '--install=']
-    assert_empty(requests.reject { completer.complete(it) == [[], 0] }.map { it.join(' ') })
+    assert_includes requests, [['create', '--path', ''], 16]
+    assert_includes requests, [['man', '--install='], 16]
+    assert_includes requests, [['--config', ''], 0]
+    assert_empty(requests.reject { |words, directive| completer.complete(words) == [[], directive] }
+                         .map { |words, _| words.join(' ') })
   end
 
   def test_command_classes_reach_every_descendant_but_abstract_bases
@@ -142,10 +144,11 @@ class CommandsRegistryTest < Minitest::Test
   # The words that ask for the value of every option taking a path, separate and attached; an
   # optional-argument option takes its value only attached.
   def path_requests(command, path, globals)
-    options = (globals + command.options).select { PATH_ARGUMENTS.include?(it.argument) }
+    options = (globals + command.options).select { PATH_DIRECTIVES.key?(it.argument) }
     requests = options.flat_map do |option|
       attached = [*path, "--#{option.long}="]
-      option.optional ? [attached] : [[*path, "--#{option.long}", ''], attached]
+      words = option.optional ? [attached] : [[*path, "--#{option.long}", ''], attached]
+      words.map { [it, PATH_DIRECTIVES.fetch(option.argument)] }
     end
     requests + command.subcommands.flat_map { path_requests(it, [*path, it.name], globals) }
   end

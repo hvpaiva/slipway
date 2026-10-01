@@ -41,7 +41,7 @@ module Slipway
       Result = Data.define(:resource, :word, :role)
 
       PATH = CLI::Option.new(long: 'path', argument: 'DIR',
-                             completer: ->(_given, _current) { CLI::Completer::FILES },
+                             completer: ->(_given, _current) { CLI::Completer::DIRS },
                              description: 'Directory of the git repository to register; required for a project ' \
                                           'given by NAME. ' \
                                           'A relative directory is stored resolved against the current ' \
@@ -57,7 +57,7 @@ module Slipway
                                description: 'The branch the project is expected to have checked out, written to ' \
                                             'spec.branch.')
       FROM_DIR = CLI::Option.new(long: 'from-dir', argument: 'DIR',
-                                 completer: ->(_given, _current) { CLI::Completer::FILES },
+                                 completer: ->(_given, _current) { CLI::Completer::DIRS },
                                  description: 'Register every git repository at or under DIR as a project, in ' \
                                               'place of NAME.')
       # No option default: one would hide whether --depth was typed without --from-dir.

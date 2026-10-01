@@ -71,6 +71,7 @@ class HelpRendererTest < Minitest::Test
   CREATE_OPTIONS = <<~HELP
     Options:
           --path DIR          Directory of the repository. (required)
+          --from-dir DIR      Directory to scan.
           --label KEY=VALUE   Label to set.
           --output FORMAT     Output format. One of: table, yaml, json. (default "table")
   HELP

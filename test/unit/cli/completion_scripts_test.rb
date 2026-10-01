@@ -33,7 +33,7 @@ class CompletionScriptsTest < Minitest::Test
                  script.lines[1].chomp
     assert_includes script, '_comp_initialize -n = -- "$@" || return'
     assert_includes script, '_init_completion -n = || return'
-    assert_includes script, 'compopt -o default'
+    assert_includes script, 'compopt -o "$readline"'
     assert_equal 'complete -F __start_slipway slipway', script.lines.last.chomp
   end
 
@@ -57,7 +57,7 @@ class CompletionScriptsTest < Minitest::Test
     assert_includes script, 'commandline -ct'
     assert_includes script, "complete -c slipway -n '__slipway_complete' -f -a '$__slipway_results'"
     assert_includes script, "complete -c slipway -n '__slipway_wants_files' -a '(__slipway_complete_path)'"
-    assert_includes script, '__fish_complete_path $token'
+    assert_includes script, 'set complete __fish_complete_directories'
   end
 
   def test_program_name_is_substituted_everywhere
