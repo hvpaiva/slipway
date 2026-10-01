@@ -91,6 +91,9 @@ class FixtureRegistry
       Slipway::CLI::Option.new(long: 'path', argument: 'DIR', required: true,
                                completer: ->(_given, _current) { Slipway::CLI::Completer::FILES },
                                description: 'Directory of the repository.'),
+      Slipway::CLI::Option.new(long: 'from-dir', argument: 'DIR',
+                               completer: ->(_given, _current) { Slipway::CLI::Completer::DIRS },
+                               description: 'Directory to scan.'),
       Slipway::CLI::Option.new(long: 'label', argument: 'KEY=VALUE', repeatable: true, description: 'Label to set.'),
       Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', enum: %w[table yaml json], default: 'table',
                                description: 'Output format.')

@@ -99,16 +99,18 @@ module Slipway
 
             # The file name is what follows "--flag=": the filedir helpers read cur.
             __#{program}_complete_files() {
-                local i line prefix=""
+                local i line prefix="" kind=-f readline=default
+                local -a filedir=()
+                (( directive & 16 )) && kind=-d readline=dirnames filedir=(-d)
                 [[ $cur == -*=* ]] && prefix=${cur%%=*}=
                 cur=${cur#"$prefix"}
                 if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
-                    _comp_compgen_filedir
+                    _comp_compgen_filedir "${filedir[@]}"
                 elif declare -F _filedir >/dev/null 2>&1; then
-                    _filedir
-                elif ! compopt -o default 2>/dev/null; then
+                    _filedir "${filedir[@]}"
+                elif ! compopt -o "$readline" 2>/dev/null; then
                     # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
-                    while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen -f -- "$cur")
+                    while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen "$kind" -- "$cur")
                 fi
                 if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
                     for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done
@@ -152,7 +154,9 @@ module Slipway
                 if (( ${#candidates} )); then
                     _describe -t values '#{program}' candidates "${describe_opts[@]}" && ret=0
                 fi
-                if (( ret )) && ! (( directive & 4 )); then
+                if (( ret )) && (( directive & 16 )); then
+                    _files -/ && ret=0
+                elif (( ret )) && ! (( directive & 4 )); then
                     _files && ret=0
                 fi
                 return ret
@@ -209,12 +213,16 @@ module Slipway
             # fish replaces the whole token, so a --flag= value has its path completed and the flag
             # put back in front of each one.
             function __#{program}_complete_path
+                set -l complete __fish_complete_path
+                if test (math "bitand($__#{program}_directive, 16)") -ne 0
+                    set complete __fish_complete_directories
+                end
                 set -l token (commandline -ct)
                 if string match -qr -- '^-[^=]*=' $token
                     set -l flag (string replace -r -- '=.*' '=' $token)
-                    __fish_complete_path (string replace -r -- '^[^=]*=' '' $token) | string replace -r -- '^' $flag
+                    $complete (string replace -r -- '^[^=]*=' '' $token) | string replace -r -- '^' $flag
                 else
-                    __fish_complete_path $token
+                    $complete $token
                 end
             end
 

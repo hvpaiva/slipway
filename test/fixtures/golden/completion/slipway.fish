@@ -34,12 +34,16 @@ end
 # fish replaces the whole token, so a --flag= value has its path completed and the flag
 # put back in front of each one.
 function __slipway_complete_path
+    set -l complete __fish_complete_path
+    if test (math "bitand($__slipway_directive, 16)") -ne 0
+        set complete __fish_complete_directories
+    end
     set -l token (commandline -ct)
     if string match -qr -- '^-[^=]*=' $token
         set -l flag (string replace -r -- '=.*' '=' $token)
-        __fish_complete_path (string replace -r -- '^[^=]*=' '' $token) | string replace -r -- '^' $flag
+        $complete (string replace -r -- '^[^=]*=' '' $token) | string replace -r -- '^' $flag
     else
-        __fish_complete_path $token
+        $complete $token
     end
 end
 

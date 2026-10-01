@@ -79,16 +79,18 @@ __slipway_handle_completion_types() {
 
 # The file name is what follows "--flag=": the filedir helpers read cur.
 __slipway_complete_files() {
-    local i line prefix=""
+    local i line prefix="" kind=-f readline=default
+    local -a filedir=()
+    (( directive & 16 )) && kind=-d readline=dirnames filedir=(-d)
     [[ $cur == -*=* ]] && prefix=${cur%%=*}=
     cur=${cur#"$prefix"}
     if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
-        _comp_compgen_filedir
+        _comp_compgen_filedir "${filedir[@]}"
     elif declare -F _filedir >/dev/null 2>&1; then
-        _filedir
-    elif ! compopt -o default 2>/dev/null; then
+        _filedir "${filedir[@]}"
+    elif ! compopt -o "$readline" 2>/dev/null; then
         # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
-        while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen -f -- "$cur")
+        while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen "$kind" -- "$cur")
     fi
     if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
         for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done

@@ -107,12 +107,12 @@ class CompletionIntegrationTest < Minitest::Test
     end
   end
 
-  def test_complete_hands_file_names_to_the_shell_for_apply_and_create_from_dir
+  def test_complete_hands_file_names_to_apply_and_directory_names_to_create_from_dir
     with_home do |env|
       assert_equal [0, ":0\n", ''], slipway('__complete', 'apply', '-f', '', env:)
       assert_equal [0, ":0\n", ''], slipway('__complete', 'apply', '--filename', 'a.yaml', '-f', 'b', env:)
-      assert_equal [0, ":0\n", ''], slipway('__complete', 'create', 'project', '--from-dir', '~/d', env:)
-      assert_equal [0, ":0\n", ''], slipway('__complete', 'create', 'project', '--from-dir=', env:)
+      assert_equal [0, ":16\n", ''], slipway('__complete', 'create', 'project', '--from-dir', '~/d', env:)
+      assert_equal [0, ":16\n", ''], slipway('__complete', 'create', 'project', '--from-dir=', env:)
     end
   end
 

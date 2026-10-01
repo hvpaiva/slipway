@@ -5,18 +5,21 @@ module Slipway
     # Speaks cobra's __complete protocol: one candidate per line, as `value` or
     # `value<TAB>description`, then a final `:N` line. N is a sum of cobra's directives: 4 when
     # the shell must not complete file names in place of the candidates, 2 when it must not add a
-    # space after the one it inserts, and 0 lets the shell complete file names.
+    # space after the one it inserts, 16 when it completes directory names only, and 0 lets the
+    # shell complete file names.
     #
     # A completer proc on an Option or Positional receives the positional words typed so far and
     # the word being completed, without a `--flag=` in front of it, and may return an Array of
-    # values, a Hash of value to description, either of them wrapped in NoSpace, or FILES to
-    # request file completion. The candidates are filtered by that word afterwards. Never raises:
-    # on any error only `:4` is printed.
+    # values, a Hash of value to description, either of them wrapped in NoSpace, FILES to
+    # request file completion or DIRS to request directory completion. The candidates are
+    # filtered by that word afterwards. Never raises: on any error only `:4` is printed.
     class Completer
       FILES = :files
+      DIRS = :dirs
       FILES_DIRECTIVE = 0
       NO_SPACE_DIRECTIVE = 2
       NO_FILES_DIRECTIVE = 4
+      DIRS_DIRECTIVE = 16
       # Candidates the user goes on typing after, such as a field path that continues after a
       # dot: the shell adds no space after the one it inserts. The directive covers the whole
       # answer, so a completer returns NoSpace only when a candidate that matches the word goes
@@ -45,6 +48,7 @@ module Slipway
 
         case candidates_for(state, current)
         in FILES then [[], FILES_DIRECTIVE]
+        in DIRS then [[], DIRS_DIRECTIVE]
         in NoSpace(candidates:) then [select(candidates, state, current), NO_FILES_DIRECTIVE | NO_SPACE_DIRECTIVE]
         in candidates then [select(candidates, state, current), NO_FILES_DIRECTIVE]
         end
@@ -128,10 +132,10 @@ module Slipway
         within(values) { |pairs| pairs.map { |value, description| ["#{flag}=#{value}", description] } }
       end
 
-      # Yields the candidates, unwrapped from a NoSpace and wrapped back; FILES passes through.
+      # Yields the candidates, unwrapped from a NoSpace and wrapped back; FILES and DIRS pass through.
       def within(values)
         case values
-        in FILES then FILES
+        in FILES | DIRS then values
         in NoSpace(candidates:) then NoSpace.new(yield(candidates))
         else yield(values)
         end

@@ -293,7 +293,8 @@ an `enum` is also its completion list.
 
 **A completer.** Give an `Option` or `Positional` a `completer:` proc. It receives the
 positional words typed so far and the word being completed, and returns an Array of values, a
-Hash of value to description, or `CLI::Completer::FILES` to hand the shell its file completion.
+Hash of value to description, `CLI::Completer::FILES` to hand the shell its file completion, or
+`CLI::Completer::DIRS` for directory names only.
 Values wrapped in `CLI::Completer::NoSpace` ask the shell to add no space after the one it
 inserts, for a value the user goes on typing, such as a path extended one segment at a time.
 The directive covers the whole answer, so such a completer filters by the word itself and wraps

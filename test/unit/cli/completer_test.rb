@@ -98,6 +98,13 @@ class CompleterTest < Minitest::Test
     assert_equal [[], 0], completer.complete(['apply', ''])
   end
 
+  def test_dirs_directive_from_a_completer_returning_dirs
+    completer = Slipway::CLI::Completer.new(files_registry)
+
+    assert_equal [[], 16], completer.complete(['apply', '--into', ''])
+    assert_equal [[], 16], completer.complete(%w[apply --into=])
+  end
+
   def test_a_no_space_answer_adds_the_no_space_directive
     assert_equal [%w[projects groups], 6], pairs(@completer.complete(['explain', '']))
     assert_equal [['projects'], 6], pairs(@completer.complete(%w[explain proj]))
@@ -172,6 +179,8 @@ class CompleterTest < Minitest::Test
     [
       Slipway::CLI::Option.new(long: 'filename', short: 'f', argument: 'FILE', description: 'Manifest.',
                                completer: ->(_given, _current) { Slipway::CLI::Completer::FILES }),
+      Slipway::CLI::Option.new(long: 'into', argument: 'DIR', description: 'Directory.',
+                               completer: ->(_given, _current) { Slipway::CLI::Completer::DIRS }),
       Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', description: 'Output format.',
                                completer: lambda do |_given, _current|
                                  { 'yaml' => 'One YAML document', 'json' => 'One JSON object' }
