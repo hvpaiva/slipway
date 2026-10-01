@@ -3,7 +3,9 @@
 A kubectl-style registry of the git repositories on your machine: it shows where each one stands
 against its upstream and its manifest, and fast-forwards the ones that can move safely.
 
+[![Gem](https://img.shields.io/gem/v/slipway)](https://rubygems.org/gems/slipway)
 [![CI](https://github.com/hvpaiva/slipway/actions/workflows/ci.yml/badge.svg)](https://github.com/hvpaiva/slipway/actions/workflows/ci.yml)
+[![Ruby](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Frubygems.org%2Fapi%2Fv1%2Fversions%2Fslipway.json&query=%24%5B0%5D.ruby_version&label=ruby)](#installation)
 
 `slipway get projects` shows in one table which of the git repositories you registered are clean,
 dirty, behind their upstream or missing from disk, and `slipway fetch` fetches them all without
