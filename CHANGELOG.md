@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - bash 3.2, the `/bin/bash` of macOS, completes file names without bash-completion; it completed none.
 - bash and fish 3 complete the file name in a `--flag=value` word, such as `apply --filename=man`; zsh and fish 4 already did.
 - `--config`, `create project --path` and `man --install=` complete file names; they offered nothing.
+- Under ble.sh, a word with nothing to complete, such as the value of `--selector`, no longer lists file names and options from the man page.
 
 ## [0.1.0] - 2026-09-30
 

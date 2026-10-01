@@ -21,6 +21,9 @@ __start_slipway() {
         __slipway_handle_completion_types
     elif ! (( directive & 4 )); then
         __slipway_complete_files
+    elif [[ -n ${BLE_ATTACHED-} ]]; then
+        # ble.sh would fall back to its own candidates.
+        compopt -o ble/no-default 2>/dev/null
     fi
 }
 

@@ -41,6 +41,9 @@ module Slipway
                     __#{program}_handle_completion_types
                 elif ! (( directive & 4 )); then
                     __#{program}_complete_files
+                elif [[ -n ${BLE_ATTACHED-} ]]; then
+                    # ble.sh would fall back to its own candidates.
+                    compopt -o ble/no-default 2>/dev/null
                 fi
             }
 

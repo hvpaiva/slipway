@@ -77,6 +77,12 @@ class CompletionBleTest < Minitest::Test
     end
   end
 
+  def test_an_empty_answer_without_files_turns_off_the_ble_sh_fallback
+    with_completion_stub do |dir, env|
+      assert_equal ['invoked', [], [], ['-o ble/no-default']], ble_answer(dir, 'slipway config bogus ', env)
+    end
+  end
+
   private
 
   # How the program was reached, the candidates ble.sh took, the replies, and the compopt calls.
