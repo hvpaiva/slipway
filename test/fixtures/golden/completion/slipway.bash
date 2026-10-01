@@ -26,18 +26,25 @@ _slipway() {
         while IFS= read -r line; do COMPREPLY+=("${line%%$'\t'*}"); done <<<"$out"
     fi
     # readline still breaks the word at "=", so "--flag=" must leave the replies.
-    if [[ $cur == -*=* && $COMP_WORDBREAKS == *=* ]]; then
-        local i prefix=${cur%%=*}=
+    local i prefix=""
+    [[ $cur == -*=* ]] && prefix=${cur%%=*}=
+    if [[ -n $prefix && $COMP_WORDBREAKS == *=* ]]; then
         for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=${COMPREPLY[i]#"$prefix"}; done
     fi
     (( directive & 2 )) && compopt -o nospace 2>/dev/null
     if (( ${#COMPREPLY[@]} == 0 )) && ! (( directive & 4 )); then
+        # The file name is what follows "--flag=": the filedir helpers read cur.
+        cur=${cur#"$prefix"}
         if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
             _comp_compgen_filedir
         elif declare -F _filedir >/dev/null 2>&1; then
             _filedir
         elif ! compopt -o default 2>/dev/null; then
-            mapfile -t COMPREPLY < <(compgen -f -- "$cur")
+            # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
+            while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen -f -- "$cur")
+        fi
+        if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
+            for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done
         fi
     fi
 }

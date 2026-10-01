@@ -6,6 +6,7 @@ class CommandsRegistryTest < Minitest::Test
   include CommandsHelper
 
   LIB = File.expand_path('../../../lib', __dir__)
+  PATH_ARGUMENTS = %w[DIR FILE PATH].freeze
 
   def test_registry_lists_the_verbs_in_order_before_the_builtins
     registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
@@ -51,6 +52,16 @@ class CommandsRegistryTest < Minitest::Test
     assert_equal %w[get describe create delete edit label explain].to_h { [it, every] }, kinds_by_name(typed)
     assert_equal %w[fetch diff sync history undo unpin pause resume].to_h { [it, %w[projects]] }, kinds_by_name(named)
     assert_equal({ 'apply' => every, 'view' => [], 'path' => [], 'api-resources' => [] }, kinds_by_name(bare))
+  end
+
+  def test_every_option_that_takes_a_path_completes_file_names
+    registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
+    completer = Slipway::CLI::Completer.new(registry)
+    requests = path_requests(registry.root, [], registry.globals)
+
+    assert_includes requests, ['create', '--path', '']
+    assert_includes requests, ['man', '--install=']
+    assert_empty(requests.reject { completer.complete(it) == [[], 0] }.map { it.join(' ') })
   end
 
   def test_command_classes_reach_every_descendant_but_abstract_bases
@@ -127,6 +138,17 @@ class CommandsRegistryTest < Minitest::Test
   def leaves(command) = command.group? ? command.subcommands.flat_map { leaves(it) } : [command]
 
   def kinds_by_name(commands) = commands.to_h { [it.name, it.handler.kinds.map(&:plural)] }
+
+  # The words that ask for the value of every option taking a path, separate and attached; an
+  # optional-argument option takes its value only attached.
+  def path_requests(command, path, globals)
+    options = (globals + command.options).select { PATH_ARGUMENTS.include?(it.argument) }
+    requests = options.flat_map do |option|
+      attached = [*path, "--#{option.long}="]
+      option.optional ? [attached] : [[*path, "--#{option.long}", ''], attached]
+    end
+    requests + command.subcommands.flat_map { path_requests(it, [*path, it.name], globals) }
+  end
 
   def write_config(env, text)
     path = File.join(env['XDG_CONFIG_HOME'], 'slipway', 'config.yaml')

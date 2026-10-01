@@ -31,7 +31,8 @@ module ShellHarness
     end
   end
 
-  def bash_completions(dir, line, env, bash_completion: false) = bash_answer(dir, line, env, bash_completion:).first
+  # bash resets COMP_WORDBREAKS when it starts, so `wordbreaks:` is assigned inside the script.
+  def bash_completions(dir, line, env, **) = bash_answer(dir, line, env, **).first
 
   # compopt changes nothing unless readline started the completion, so a function in its place
   # records what the completion function asked of it.
@@ -39,6 +40,7 @@ module ShellHarness
 
   # The replies, a line with `--`, then one line per compopt call.
   BASH_ANSWER = <<~'BASH'
+    [[ -n $3 ]] && COMP_WORDBREAKS=$3
     source "$1/slipway.bash"
     asked=()
     compopt() { asked+=("$*"); builtin compopt "$@"; }
@@ -68,11 +70,12 @@ module ShellHarness
     listing.join("\n")[/buffer:\[(.*)\]/, 1]
   end
 
-  # The harness directory travels in the environment so every line typed into the pty stays
-  # short of the 80 columns zsh assumes there. The keys in $3 are typed once the pty has gone
-  # quiet after the TAB, so they never arrive while the completion is still running. They are
-  # Ctrl-X Ctrl-B rather than a single control key, because a BSD terminal (macOS) takes Ctrl-T
-  # as its status character. The listing is read until the pty has been quiet for a second.
+  # The harness directory travels in the environment, and is the working directory of the zsh in
+  # the pty, so every line typed into it stays short of the 80 columns zsh assumes there. The
+  # keys in $3 are typed once the pty has gone quiet after the TAB, so they never arrive while
+  # the completion is still running. They are Ctrl-X Ctrl-B rather than a single control key,
+  # because a BSD terminal (macOS) takes Ctrl-T as its status character. The listing is read
+  # until the pty has been quiet for a second.
   ZSH_LISTING = <<~'ZSH'
     zmodload zsh/zpty
     mkdir -p "$1/zfunc" && cp "$1/slipway.zsh" "$1/zfunc/_slipway"
@@ -81,6 +84,7 @@ module ShellHarness
     zpty -w z 'fpath=($HARNESS_DIR/zfunc $fpath); autoload -Uz compinit; compinit -u -d $HARNESS_DIR/zcompdump'
     zpty -w z 'zstyle ":completion:*" force-list always; zstyle ":completion:*" menu no'
     zpty -w z 'show-buffer() { zle -M "buffer:[$BUFFER]" }; zle -N show-buffer; bindkey "^X^B" show-buffer'
+    zpty -w z 'cd $HARNESS_DIR'
     zpty -w z 'unsetopt listambiguous; setopt nolistbeep; PS1="% "; print $(( 6 * 7 ))'
     for i in {1..200}; do
       if zpty -r -t z line; then [[ ${line%%$'\r'*} == 42 ]] && break; else sleep 0.05; fi
@@ -114,9 +118,9 @@ module ShellHarness
 
   private
 
-  def bash_answer(dir, line, env, bash_completion: false)
+  def bash_answer(dir, line, env, bash_completion: false, wordbreaks: nil)
     script = bash_completion ? "source #{BASH_COMPLETION}\n#{BASH_ANSWER}" : BASH_ANSWER
-    lines = run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line)
+    lines = run_shell(env, 'bash', '--norc', '--noprofile', '-c', script, 'harness', dir, line, wordbreaks.to_s)
     separator = lines.index('--')
     [lines[0...separator], lines[(separator + 1)..]]
   end

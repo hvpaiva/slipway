@@ -31,6 +31,18 @@ function __slipway_wants_files
     and test (math "bitand($__slipway_directive, 4)") -eq 0
 end
 
+# fish replaces the whole token, so a --flag= value has its path completed and the flag
+# put back in front of each one.
+function __slipway_complete_path
+    set -l token (commandline -ct)
+    if string match -qr -- '^-[^=]*=' $token
+        set -l flag (string replace -r -- '=.*' '=' $token)
+        __fish_complete_path (string replace -r -- '^[^=]*=' '' $token) | string replace -r -- '^' $flag
+    else
+        __fish_complete_path $token
+    end
+end
+
 complete -c slipway -e
 complete -c slipway -n '__slipway_complete' -f -a '$__slipway_results'
-complete -c slipway -n '__slipway_wants_files' -a '(__fish_complete_path (commandline -ct))'
+complete -c slipway -n '__slipway_wants_files' -a '(__slipway_complete_path)'

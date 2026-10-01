@@ -89,6 +89,7 @@ class FixtureRegistry
   def create_options
     [
       Slipway::CLI::Option.new(long: 'path', argument: 'DIR', required: true,
+                               completer: ->(_given, _current) { Slipway::CLI::Completer::FILES },
                                description: 'Directory of the repository.'),
       Slipway::CLI::Option.new(long: 'label', argument: 'KEY=VALUE', repeatable: true, description: 'Label to set.'),
       Slipway::CLI::Option.new(long: 'output', argument: 'FORMAT', enum: %w[table yaml json], default: 'table',

@@ -92,6 +92,7 @@ module Slipway
         [
           Option.new(long: 'path', description: 'Print the directory of the bundled pages and exit.'),
           Option.new(long: 'install', argument: 'DIR', optional: true, implicit: true,
+                     completer: ->(_given, _current) { Completer::FILES },
                      description: 'Copy every page into DIR, a man1 directory, or into ' \
                                   '${XDG_DATA_HOME:-~/.local/share}/man/man1.')
         ]

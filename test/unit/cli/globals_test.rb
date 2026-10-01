@@ -14,7 +14,7 @@ class GlobalsTest < Minitest::Test
 
     assert_equal %w[default work], group.candidates([])
     assert_equal Slipway::CLI::Globals::ALL.map(&:long), globals.map(&:long)
-    assert_equal([group], globals.reject { it.completer.nil? })
+    assert_equal Slipway::CLI::Globals::ALL - [Slipway::CLI::Globals::GROUP], globals - [group]
     assert_predicate globals, :frozen?
   end
 

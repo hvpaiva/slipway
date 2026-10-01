@@ -41,6 +41,7 @@ module Slipway
       Result = Data.define(:resource, :word, :role)
 
       PATH = CLI::Option.new(long: 'path', argument: 'DIR',
+                             completer: ->(_given, _current) { CLI::Completer::FILES },
                              description: 'Directory of the git repository to register; required for a project ' \
                                           'given by NAME. ' \
                                           'A relative directory is stored resolved against the current ' \
