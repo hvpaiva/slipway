@@ -48,7 +48,7 @@ class BuiltinsTest < Minitest::Test
     _, zsh, = @fixture.run('completion', 'zsh')
     _, fish, = @fixture.run('completion', 'fish')
 
-    assert_includes bash, 'complete -F _slipway slipway'
+    assert_includes bash, 'complete -F __start_slipway slipway'
     assert_includes bash, '__complete "${words[@]:1:cword-1}" "$cur"'
     assert_equal '#compdef slipway', zsh.lines.first.chomp
     assert_includes fish, "complete -c slipway -n '__slipway_complete' -f -a '$__slipway_results'"

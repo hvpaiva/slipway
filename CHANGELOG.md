@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- bash lists each candidate with its description on a second TAB, and ble.sh shows the descriptions in its menu; the value inserted stays bare.
+
 ### Fixed
 
 - bash 3.2, the `/bin/bash` of macOS, completes file names without bash-completion; it completed none.
