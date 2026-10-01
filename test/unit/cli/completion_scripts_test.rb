@@ -45,7 +45,8 @@ class CompletionScriptsTest < Minitest::Test
     assert_includes script, 'commandline -opc'
     assert_includes script, 'commandline -ct'
     assert_includes script, "complete -c slipway -n '__slipway_complete' -f -a '$__slipway_results'"
-    assert_includes script, '__fish_complete_path (commandline -ct)'
+    assert_includes script, "complete -c slipway -n '__slipway_wants_files' -a '(__slipway_complete_path)'"
+    assert_includes script, '__fish_complete_path $token'
   end
 
   def test_program_name_is_substituted_everywhere
@@ -79,6 +80,21 @@ class CompletionScriptsTest < Minitest::Test
         assert_equal %w[view path], bash_completions(dir, 'slipway config ', env, bash_completion:)
         assert_equal ['get'], bash_completions(dir, 'slipway ge', env, bash_completion:)
       end
+    end
+  end
+
+  def test_bash_completes_the_file_name_after_a_flag_and_its_equals_sign
+    modes = [false]
+    modes << true if File.exist?(ShellHarness::BASH_COMPLETION)
+    with_completion_stub do |dir, env|
+      file = File.join(dir, 'manifest.yaml')
+      File.write(file, '')
+      modes.each do |bash_completion|
+        assert_equal [file], bash_completions(dir, "slipway create projects x --path=#{dir}/man", env, bash_completion:)
+        assert_equal [file], bash_completions(dir, "slipway create projects x --path #{dir}/man", env, bash_completion:)
+      end
+      assert_equal ["--path=#{file}"],
+                   bash_completions(dir, "slipway create projects x --path=#{dir}/man", env, wordbreaks: ' ')
     end
   end
 
@@ -117,6 +133,17 @@ class CompletionScriptsTest < Minitest::Test
     end
   end
 
+  def test_zsh_completes_the_file_name_after_a_flag_and_its_equals_sign
+    skip 'zsh is not installed' unless shell_installed?('zsh')
+
+    with_completion_stub do |dir, env|
+      File.write(File.join(dir, 'manifest.yaml'), '')
+
+      assert_equal 'slipway create projects x --path=manifest.yaml ',
+                   zsh_buffer(dir, 'slipway create projects x --path=man', env)
+    end
+  end
+
   def test_fish_lists_candidates_with_descriptions
     skip 'fish is not installed' unless shell_installed?('fish')
 
@@ -136,6 +163,19 @@ class CompletionScriptsTest < Minitest::Test
       assert_equal %w[projects projects.], fish_completions(dir, 'slipway explain proj', env)
       assert_equal %w[projects.kind projects.spec], fish_completions(dir, 'slipway explain projects.', env)
       assert_equal %w[projects.kind], fish_completions(dir, 'slipway explain projects.k', env)
+    end
+  end
+
+  def test_fish_completes_the_file_name_after_a_flag_and_its_equals_sign
+    skip 'fish is not installed' unless shell_installed?('fish')
+
+    with_completion_stub do |dir, env|
+      file = File.join(dir, 'manifest.yaml')
+      File.write(file, '')
+      values = ->(line) { fish_completions(dir, line, env).map { it.split("\t").first } }
+
+      assert_equal ["--path=#{file}"], values.call("slipway create projects x --path=#{dir}/man")
+      assert_equal [file], values.call("slipway create projects x --path #{dir}/man")
     end
   end
 

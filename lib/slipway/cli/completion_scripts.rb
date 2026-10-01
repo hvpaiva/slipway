@@ -44,18 +44,25 @@ module Slipway
                     while IFS= read -r line; do COMPREPLY+=("${line%%$'\\t'*}"); done <<<"$out"
                 fi
                 # readline still breaks the word at "=", so "--flag=" must leave the replies.
-                if [[ $cur == -*=* && $COMP_WORDBREAKS == *=* ]]; then
-                    local i prefix=${cur%%=*}=
+                local i prefix=""
+                [[ $cur == -*=* ]] && prefix=${cur%%=*}=
+                if [[ -n $prefix && $COMP_WORDBREAKS == *=* ]]; then
                     for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=${COMPREPLY[i]#"$prefix"}; done
                 fi
                 (( directive & 2 )) && compopt -o nospace 2>/dev/null
                 if (( ${#COMPREPLY[@]} == 0 )) && ! (( directive & 4 )); then
+                    # The file name is what follows "--flag=": the filedir helpers read cur.
+                    cur=${cur#"$prefix"}
                     if declare -F _comp_compgen_filedir >/dev/null 2>&1; then
                         _comp_compgen_filedir
                     elif declare -F _filedir >/dev/null 2>&1; then
                         _filedir
                     elif ! compopt -o default 2>/dev/null; then
-                        mapfile -t COMPREPLY < <(compgen -f -- "$cur")
+                        # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
+                        while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen -f -- "$cur")
+                    fi
+                    if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
+                        for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done
                     fi
                 fi
             }
@@ -150,9 +157,21 @@ module Slipway
                 and test (math "bitand($__#{program}_directive, 4)") -eq 0
             end
 
+            # fish replaces the whole token, so a --flag= value has its path completed and the flag
+            # put back in front of each one.
+            function __#{program}_complete_path
+                set -l token (commandline -ct)
+                if string match -qr -- '^-[^=]*=' $token
+                    set -l flag (string replace -r -- '=.*' '=' $token)
+                    __fish_complete_path (string replace -r -- '^[^=]*=' '' $token) | string replace -r -- '^' $flag
+                else
+                    __fish_complete_path $token
+                end
+            end
+
             complete -c #{program} -e
             complete -c #{program} -n '__#{program}_complete' -f -a '$__#{program}_results'
-            complete -c #{program} -n '__#{program}_wants_files' -a '(__fish_complete_path (commandline -ct))'
+            complete -c #{program} -n '__#{program}_wants_files' -a '(__#{program}_complete_path)'
           FISH
         end
       end
