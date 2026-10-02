@@ -44,21 +44,38 @@ class ManpageTest < Minitest::Test
 
     assert_includes group, ".SH COMMANDS\n.TP 6\n\\fBview\\fR\nPrint the effective configuration\n"
     refute_includes group, '.SS'
-    assert_includes group, ".SH SYNOPSIS\n.SY \"slipway config\"\n.I COMMAND\n.RI [ flags ]\n.YS\n"
+    assert_includes group, ".SH SYNOPSIS\n.SY \"slipway config\"\n.RI [ OPTIONS ]\n.I COMMAND\n.YS\n"
     assert_equal ".SH \"SEE ALSO\"\n.BR slipway (1),\n.BR slipway\\-config\\-view (1),\n" \
                  ".BR slipway\\-config\\-path (1)\n", group[/\.SH "SEE ALSO".*/m]
     assert_equal ".SH \"SEE ALSO\"\n.BR slipway (1),\n.BR slipway\\-config (1)\n", nested[/\.SH "SEE ALSO".*/m]
   end
 
-  def test_option_notes_and_escaping
+  def test_option_values_defaults_and_escaping
     page = @manpage.page(%w[create])
 
-    assert_includes page, "\\fB\\-\\-path\\fR \\fIDIR\\fR\nDirectory of the repository. (required)\n"
+    assert_includes page, "\\fB\\-\\-path\\fR \\fIDIR\\fR\nDirectory of the repository.\n"
     assert_includes page, "\\fB\\-\\-output\\fR \\fIFORMAT\\fR\nOutput format. One of: table, yaml, json. " \
-                          "(default \"table\")\n"
-    assert_includes page, ".SH SYNOPSIS\n.SY \"slipway create\"\n.B \\-\\-path\n.I DIR\n.I TYPE\\&\n.I NAME\\&\n" \
-                          ".RI [ flags ]\n.YS\n"
+                          "Default: table.\n"
+    assert_includes page, ".SH SYNOPSIS\n.SY \"slipway create\"\n.RI [ OPTIONS ]\n.B \\-\\-path\n.I DIR\n" \
+                          ".I TYPE\\&\n.I NAME\\&\n.YS\n"
     assert_includes page, '\fB\-\-label\fR \fIKEY=VALUE\fR'
+  end
+
+  def test_arguments_list_the_documented_positionals_in_italics
+    page = @manpage.page(%w[completion])
+
+    assert_includes page, ".SH ARGUMENTS\n.TP\n\\fISHELL\\fR\nThe shell to output completion code for. " \
+                          "One of: bash, zsh, fish.\n.SH EXAMPLES\n"
+    refute_includes @manpage.page(%w[create]), '.SH ARGUMENTS'
+  end
+
+  def test_a_usage_written_for_help_loses_its_angle_brackets
+    own = Slipway::CLI::Command.new(name: 'x', summary: 'X', usage: '(<A> [B]... | <A/B>)')
+    registry = Slipway::CLI::Registry.new(program: 'slipway', version: '0', description: 'D', globals: [],
+                                          commands: [own], builtins: false)
+
+    assert_includes Slipway::CLI::Manpage.new(registry, date: DATE).page(%w[x]),
+                    ".RI [ OPTIONS ]\n.I \"(A [B]... | A/B)\"\\&\n.YS\n"
   end
 
   def test_environment_files_configuration_and_exit_statuses_come_from_the_caller

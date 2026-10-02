@@ -23,6 +23,7 @@ module Slipway
                        "Type #{program} help [path to command] for full details.",
           examples: [Example.new(comment: 'Show the help of a nested command', command: 'help config view')],
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
+                                       description: 'The command to describe, such as config view.',
                                        completer: ->(given, _current) { subcommand_names(resolve.call, given) })],
           handler: HelpCommand.new(resolve)
         )
@@ -46,7 +47,8 @@ module Slipway
                        'The shell code must be evaluated to provide interactive completion of commands, ' \
                        'resource types and names.',
           examples: completion_examples(program),
-          positionals: [Positional.new(name: 'SHELL', enum: CompletionScripts::SHELLS)],
+          positionals: [Positional.new(name: 'SHELL', enum: CompletionScripts::SHELLS,
+                                       description: 'The shell to output completion code for.')],
           handler: ->(context, args, _opts) { context.print(CompletionScripts.render(args.first, program)) }
         )
       end
@@ -74,6 +76,7 @@ module Slipway
                        'says how man(1) finds them.',
           examples: man_examples,
           positionals: [Positional.new(name: 'COMMAND', required: false, variadic: true,
+                                       description: 'The command whose page to show, such as rollout undo.',
                                        completer: ->(given, _current) { subcommand_names(resolve.call, given) })],
           options: man_options,
           handler: ManCommand.new(resolve, man_dir:, exec:, paths:)
@@ -93,6 +96,7 @@ module Slipway
           Option.new(long: 'path', description: 'Print the directory of the bundled pages and exit.'),
           Option.new(long: 'install', argument: 'DIR', optional: true, implicit: true,
                      completer: ->(_given, _current) { Completer::DIRS },
+                     summary: 'Copy every page into a man1 directory',
                      description: 'Copy every page into DIR, a man1 directory, or into ' \
                                   '${XDG_DATA_HOME:-~/.local/share}/man/man1.')
         ]
@@ -119,7 +123,7 @@ module Slipway
 
         def call(context, words, _opts)
           registry = @resolve.call
-          renderer = HelpRenderer.new(registry, context.style)
+          renderer = HelpRenderer.new(registry, context.style, width: context.columns)
           command, path = registry.resolve(words)
           context.print(words.empty? ? renderer.root : renderer.command(command, path))
         end

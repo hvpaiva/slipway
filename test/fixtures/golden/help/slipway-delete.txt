@@ -1,10 +1,31 @@
 Delete resources by type and name.
 
-Every name is resolved before anything is deleted, so a name that does not exist leaves the others untouched unless --ignore-not-found is set. Deleting a group also deletes the registrations of its projects; the default group cannot be deleted.
+Every name is resolved before anything is deleted, so a name that does not exist leaves the others
+untouched unless --ignore-not-found is set. Deleting a group also deletes the registrations of its
+projects; the default group cannot be deleted.
 
 Deleting a project removes its registration only. The repository on disk is not touched.
 
 Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
+Usage: slipway delete [OPTIONS] (<TYPE> <NAME>... | <TYPE/NAME>...)
+
+Arguments:
+  <TYPE>
+          The resource type, by its plural, singular or short name (see api-resources).
+
+  [NAME]...
+          The name of a resource of that type.
+
+Options:
+      --dry-run
+          Print what would change and write nothing.
+
+      --ignore-not-found
+          Treat "resource not found" as a successful delete.
+
+  -h, --help
+          Print help (see a summary with '-h').
 
 Examples:
   # Delete a project from the current group
@@ -18,12 +39,5 @@ Examples:
 
   # Delete a project if it exists, quietly otherwise
   slipway delete project hldr --ignore-not-found
-
-Options:
-      --dry-run            Print what would change and write nothing.
-      --ignore-not-found   Treat "resource not found" as a successful delete.
-
-Usage:
-  slipway delete (TYPE NAME... | TYPE/NAME...) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

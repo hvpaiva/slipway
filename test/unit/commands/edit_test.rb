@@ -207,7 +207,7 @@ class EditTest < Minitest::Test
       assert_equal [0, ''], [status, err]
       assert_includes out, "Edit a resource from the default editor.\n\nThe edit command"
       assert_includes out, "Examples:\n  # Edit the project named 'hldr'\n  slipway edit project hldr\n"
-      assert_includes out, "Usage:\n  slipway edit (TYPE NAME | TYPE/NAME) [flags]\n"
+      assert_includes out, "Usage: slipway edit [OPTIONS] (<TYPE> <NAME> | <TYPE/NAME>)\n"
     end
   end
 

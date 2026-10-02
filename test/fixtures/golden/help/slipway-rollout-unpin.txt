@@ -1,12 +1,21 @@
 Stop holding projects at a revision.
 
-Removes spec.revision from the manifest of each named project, so the next slipway sync fast-forwards its branch onto its upstream again. The repository is left as it is. A project without spec.revision prints not pinned.
+Removes spec.revision from the manifest of each named project, so the next slipway sync
+fast-forwards its branch onto its upstream again. The repository is left as it is. A project without
+spec.revision prints not pinned.
+
+Usage: slipway rollout unpin [OPTIONS] (<NAME>... | project/<NAME>...)
+
+Arguments:
+  <NAME>...
+          The name of a project.
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h').
 
 Examples:
   # Let project hldr follow its upstream again
   slipway rollout unpin hldr
-
-Usage:
-  slipway rollout unpin (NAME... | project/NAME...) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

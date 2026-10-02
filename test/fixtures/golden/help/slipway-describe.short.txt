@@ -1,0 +1,15 @@
+Show details of one or many resources
+
+Usage: slipway describe [OPTIONS] (<TYPE> [NAME]... | <TYPE/NAME>...)
+
+Arguments:
+  <TYPE>     The resource type, by its plural, singular or short name (see api-resources)
+  [NAME]...  The name of a resource of that type
+
+Options:
+  -l, --selector <EXPR>        Selector (label query) to filter on
+      --field-selector <EXPR>  Selector (field query) to filter on
+  -A, --all-groups             List the requested objects across all groups
+  -h, --help                   Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

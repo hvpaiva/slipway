@@ -4,8 +4,8 @@
 slipway\-label \- Update the labels on a resource
 .SH SYNOPSIS
 .SY "slipway label"
-.I "(TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY\-...]"\&
-.RI [ flags ]
+.RI [ OPTIONS ]
+.I "(TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY\-]..."\&
 .YS
 .SH DESCRIPTION
 Update the labels on a resource.
@@ -19,6 +19,16 @@ If \-\-overwrite is true, then existing labels can be overwritten, otherwise att
 KEY\- removes the label KEY; removing a label that is not set changes nothing. A change that leaves the labels as they were prints not labeled.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
+.SH ARGUMENTS
+.TP
+\fITYPE\fR
+The resource type, by its plural, singular or short name (see api\-resources).
+.TP
+\fINAME\fR
+The name of a resource of that type.
+.TP
+\fIKEY=VALUE|KEY\-\fR
+A label to set, as KEY=VALUE, or to remove, as KEY\-.
 .SH OPTIONS
 .TP
 \fB\-\-overwrite\fR

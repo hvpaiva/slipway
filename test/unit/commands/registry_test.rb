@@ -66,6 +66,16 @@ class CommandsRegistryTest < Minitest::Test
                          .map { |words, _| words.join(' ') })
   end
 
+  def test_help_text_ends_descriptions_with_a_period_and_summaries_without_one
+    registry = Slipway::Commands.registry(->(_context, _opts) { raise 'unused' })
+    commands = visible(registry.root)
+    options = registry.globals + commands.flat_map(&:options)
+    descriptions = commands.flat_map(&:positionals).map { it.description.to_s } + options.map(&:description)
+
+    assert_empty(descriptions.reject { it.end_with?('.') })
+    assert_empty((commands.map(&:summary) + options.filter_map(&:summary)).select { it.end_with?('.') })
+  end
+
   def test_command_classes_reach_every_descendant_but_abstract_bases
     base = Class.new
     abstract = Class.new(base)
@@ -138,6 +148,8 @@ class CommandsRegistryTest < Minitest::Test
   def handler_classes(command) = [command.handler.class, *command.subcommands.flat_map { handler_classes(it) }]
 
   def leaves(command) = command.group? ? command.subcommands.flat_map { leaves(it) } : [command]
+
+  def visible(command) = command.visible_subcommands.flat_map { [it, *visible(it)] }
 
   def kinds_by_name(commands) = commands.to_h { [it.name, it.handler.kinds.map(&:plural)] }
 

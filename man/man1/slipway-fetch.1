@@ -4,8 +4,8 @@
 slipway\-fetch \- Fetch from the remote of each project
 .SH SYNOPSIS
 .SY "slipway fetch"
+.RI [ OPTIONS ]
 .I "[NAME... | project/NAME...]"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Fetch from the remote of each selected project.
@@ -15,6 +15,10 @@ Runs git fetch in every project of the current group, in the projects named, in 
 Each project prints one line, one of the results listed below, with a reason in parentheses and the details under it. A project whose repository cannot be read, or in which git finds no remote to fetch from, is skipped before git fetch runs. A project whose spec.paused is true is paused: no git command runs in it.
 .PP
 Git never prompts: a fetch that needs a password, a passphrase or a host key is denied, one that runs past the networkTimeout setting is killed, and only the transports in the protocols setting are allowed. The exit status is 1 when any project was denied or failed.
+.SH ARGUMENTS
+.TP
+\fINAME\fR
+The name of a project.
 .SH OPTIONS
 .TP
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR

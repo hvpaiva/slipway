@@ -16,8 +16,8 @@ module Slipway
                     'rollout history lists the revisions, rollout undo returns the branch to one of them and ' \
                     'holds the project there with spec.revision, and rollout unpin lets sync follow the upstream ' \
                     'again. rollout pause keeps fetch and sync away from a project until rollout resume.'
-      SINGLE_USAGE = '(NAME | project/NAME)'
-      MANY_USAGE = '(NAME... | project/NAME...)'
+      SINGLE_USAGE = '(<NAME> | project/<NAME>)'
+      MANY_USAGE = '(<NAME>... | project/<NAME>...)'
 
       def self.command(factory)
         CLI::Command.new(

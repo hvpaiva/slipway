@@ -21,13 +21,14 @@ module Slipway
       UNLABELED = 'unlabeled'
       NOT_LABELED = 'not labeled'
 
-      OVERWRITE = CLI::Option.new(long: 'overwrite',
+      OVERWRITE = CLI::Option.new(long: 'overwrite', summary: 'Allow labels to be overwritten',
                                   description: 'If true, allow labels to be overwritten, otherwise reject label ' \
                                                'updates that overwrite existing labels.')
       LIST = CLI::Option.new(long: 'list',
                              description: 'If true, display the labels for a given resource instead of writing them.')
-      CHANGE = CLI::Positional.new(name: 'KEY=VALUE|KEY-', required: false, variadic: true)
-      USAGE = "(TYPE NAME | TYPE/NAME) #{CHANGE.usage}".freeze
+      CHANGE = CLI::Positional.new(name: 'KEY=VALUE|KEY-', required: false, variadic: true,
+                                   description: 'A label to set, as KEY=VALUE, or to remove, as KEY-.')
+      USAGE = "(<TYPE> <NAME> | <TYPE/NAME>) #{CHANGE.usage}".freeze
 
       Change = Data.define(:sets, :removals) do
         # A malformed, repeated or contradictory word is a usage error.

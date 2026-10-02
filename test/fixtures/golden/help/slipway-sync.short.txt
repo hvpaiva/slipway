@@ -1,0 +1,16 @@
+Fetch projects and fast-forward their branches
+
+Usage: slipway sync [OPTIONS] [NAME... | project/NAME...]
+
+Arguments:
+  [NAME]...  The name of a project
+
+Options:
+  -l, --selector <EXPR>  Selector (label query) to filter on
+  -A, --all-groups       Sync every project across all groups
+      --prune            Before fetching, remove any remote-tracking references that no longer exist
+                         on the remote
+      --dry-run          Print what would change and write nothing
+  -h, --help             Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

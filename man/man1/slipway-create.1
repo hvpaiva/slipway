@@ -4,8 +4,8 @@
 slipway\-create \- Create a resource by name
 .SH SYNOPSIS
 .SY "slipway create"
+.RI [ OPTIONS ]
 .I "(TYPE NAME | project \-\-from\-dir DIR)"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Create a resource by name.
@@ -17,6 +17,13 @@ With \-\-from\-dir DIR in place of NAME, create project registers every git repo
 Use \-\-dry\-run to check the arguments without writing anything, and \-o yaml with it to print the manifest instead, ready for apply \-f.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
+.SH ARGUMENTS
+.TP
+\fITYPE\fR
+The resource type, by its plural, singular or short name (see api\-resources).
+.TP
+\fINAME\fR
+The name of a resource of that type.
 .SH OPTIONS
 .TP
 \fB\-\-path\fR \fIDIR\fR
@@ -38,7 +45,7 @@ The branch the project is expected to have checked out, written to spec.branch.
 Register every git repository at or under DIR as a project, in place of NAME.
 .TP
 \fB\-\-depth\fR \fIN\fR
-How many directory levels under \-\-from\-dir to search, from 1 to 8. The search stops at a repository and never follows a symbolic link under \-\-from\-dir. (default 1)
+How many directory levels under \-\-from\-dir to search, from 1 to 8, 1 by default. The search stops at a repository and never follows a symbolic link under \-\-from\-dir.
 .TP
 \fB\-\-dry\-run\fR
 Print what would change and write nothing.

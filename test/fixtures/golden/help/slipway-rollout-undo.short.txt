@@ -1,0 +1,13 @@
+Undo a previous rollout
+
+Usage: slipway rollout undo [OPTIONS] (<NAME> | project/<NAME>)
+
+Arguments:
+  <NAME>  The name of a project
+
+Options:
+      --to-revision <N>  The revision to roll back to
+      --dry-run          Print what would change and write nothing
+  -h, --help             Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

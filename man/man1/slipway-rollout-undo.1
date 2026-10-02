@@ -4,8 +4,8 @@
 slipway\-rollout\-undo \- Undo a previous rollout
 .SH SYNOPSIS
 .SY "slipway rollout undo"
+.RI [ OPTIONS ]
 .I "(NAME | project/NAME)"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Roll back a project to a previous revision.
@@ -17,6 +17,10 @@ A project whose HEAD is detached, whose branch has no commits or no upstream tha
 The project prints one line, one of the results listed below, with a reason in parentheses and the details under it.
 .PP
 With \-\-dry\-run nothing is moved or written, and the line ends in (dry run).
+.SH ARGUMENTS
+.TP
+\fINAME\fR
+The name of a project.
 .SH OPTIONS
 .TP
 \fB\-\-to\-revision\fR \fIN\fR
@@ -49,7 +53,7 @@ The project was rolled back, or already stood at the revision and was held there
 Runtime error, such as a missing resource or an unreadable manifest, or a project that was skipped or whose move was denied or failed.
 .TP
 \fB2\fR
-Usage error: unknown command, unknown flag or invalid argument.
+Usage error: missing or unknown command, unknown flag or invalid argument.
 .TP
 \fB130\fR
 Interrupted by SIGINT.

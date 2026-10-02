@@ -4,12 +4,16 @@
 slipway\-man \- Show the manual page of a command
 .SH SYNOPSIS
 .SY "slipway man"
+.RI [ OPTIONS ]
 .RI [ COMMAND... ]\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Show the manual page of slipway or of one of its commands with man(1).
 The pages ship with the gem; \-\-install copies them into a man1 directory and says how man(1) finds them.
+.SH ARGUMENTS
+.TP
+\fICOMMAND\fR
+The command whose page to show, such as rollout undo.
 .SH OPTIONS
 .TP
 \fB\-\-path\fR

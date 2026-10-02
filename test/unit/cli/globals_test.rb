@@ -25,7 +25,7 @@ class GlobalsTest < Minitest::Test
   def test_color_takes_an_optional_mode_and_has_no_default
     color = Slipway::CLI::Globals::COLOR
 
-    assert_equal '--color[=WHEN]', color.label
+    assert_equal '--color[=<WHEN>]', color.label
     assert_equal 'always', color.implicit
     assert_nil color.default
     assert_equal Slipway::CLI::Style::MODES, color.enum

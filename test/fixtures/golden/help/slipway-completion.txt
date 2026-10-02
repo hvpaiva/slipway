@@ -1,5 +1,18 @@
 Output shell completion code for the specified shell (bash, zsh, fish).
-The shell code must be evaluated to provide interactive completion of commands, resource types and names.
+The shell code must be evaluated to provide interactive completion of commands, resource types and
+names.
+
+Usage: slipway completion [OPTIONS] <SHELL>
+
+Arguments:
+  <SHELL>
+          The shell to output completion code for.
+
+          [possible values: bash, zsh, fish]
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h').
 
 Examples:
   # Install bash completions where bash-completion loads them
@@ -10,8 +23,5 @@ Examples:
 
   # Install fish completions
   slipway completion fish > ~/.config/fish/completions/slipway.fish
-
-Usage:
-  slipway completion SHELL [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

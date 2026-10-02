@@ -189,7 +189,7 @@ class GetTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Display one or many resources.\n\nPrints a table"
-      assert_includes out, "Usage:\n  slipway get (TYPE [NAME...] | TYPE/NAME...) [flags]\n"
+      assert_includes out, "Usage: slipway get [OPTIONS] (<TYPE> [NAME]... | <TYPE/NAME>...)\n"
       assert_includes out, '  -A, --all-groups'
       assert_equal [2, '', "error: missing required argument \"TYPE\"\nSee 'slipway get --help' for usage.\n"], missing
     end

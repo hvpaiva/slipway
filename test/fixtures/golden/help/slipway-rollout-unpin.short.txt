@@ -1,0 +1,11 @@
+Stop holding a project at a revision
+
+Usage: slipway rollout unpin [OPTIONS] (<NAME>... | project/<NAME>...)
+
+Arguments:
+  <NAME>...  The name of a project
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

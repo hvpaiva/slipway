@@ -8,9 +8,9 @@ module Slipway
     # takes its value only attached (--long=VALUE) and stores `implicit` when it is omitted.
     # `completer` is called with the positional words typed so far and the word being completed;
     # see Completer for what it returns.
-    Option = Data.define(:long, :short, :argument, :enum, :default, :description,
+    Option = Data.define(:long, :short, :argument, :enum, :default, :description, :summary,
                          :repeatable, :required, :optional, :implicit, :completer) do
-      def initialize(long:, description:, short: nil, argument: nil, enum: nil, default: nil,
+      def initialize(long:, description:, summary: nil, short: nil, argument: nil, enum: nil, default: nil,
                      repeatable: false, required: false, optional: false, implicit: nil, completer: nil)
         super
       end
@@ -33,15 +33,14 @@ module Slipway
         text = switches.join(', ')
         return text if flag?
 
-        optional ? "#{text}[=#{argument}]" : "#{text} #{argument}"
+        optional ? "#{text}[=<#{argument}>]" : "#{text} <#{argument}>"
       end
 
-      def description_parts
-        parts = [description]
-        parts << "One of: #{enum.join(', ')}." if enum
-        parts << "(default #{default.inspect})" unless default.nil? || default == false
-        parts << '(required)' if required
-        parts
+      def short_description = summary || description.delete_suffix('.')
+
+      def notes
+        [("[default: #{default}]" unless default.nil? || default == false),
+         ("[possible values: #{enum.join(', ')}]" if enum)].compact
       end
 
       def accept(current, raw)
@@ -55,15 +54,19 @@ module Slipway
       def candidates(given = [], current = '') = enum || completer&.call(given, current) || []
     end
 
-    Positional = Data.define(:name, :required, :variadic, :enum, :completer) do
-      def initialize(name:, required: true, variadic: false, enum: nil, completer: nil)
+    Positional = Data.define(:name, :description, :required, :variadic, :enum, :completer) do
+      def initialize(name:, description: nil, required: true, variadic: false, enum: nil, completer: nil)
         super
       end
 
       def usage
-        token = variadic ? "#{name}..." : name
-        required ? token : "[#{token}]"
+        token = required ? "<#{name}>" : "[#{name}]"
+        variadic ? "#{token}..." : token
       end
+
+      def short_description = description&.delete_suffix('.')
+
+      def notes = enum ? ["[possible values: #{enum.join(', ')}]"] : []
 
       def candidates(given = [], current = '') = enum || completer&.call(given, current) || []
     end
@@ -81,8 +84,8 @@ module Slipway
     # with no option parsing, which is what the completion endpoint needs. `usage` replaces
     # the positional list in the Usage line when the accepted forms cannot be read off them.
     # `exit_statuses` maps each status to its meaning, for a command whose statuses differ from
-    # the ones every command shares. `glossaries` are the Glossary sections help prints under the
-    # description and the man page renders after the options.
+    # the ones every command shares. `glossaries` are the Glossary sections `--help` and the man
+    # page print after the options.
     Command = Data.define(:name, :aliases, :summary, :description, :section, :examples, :positionals, :options,
                           :subcommands, :hidden, :raw, :handler, :usage, :exit_statuses, :glossaries) do
       def initialize(name:, summary:, description: nil, aliases: [], section: 'Available Commands', examples: [],
@@ -113,7 +116,7 @@ module Slipway
       def max_args = positionals.last&.variadic ? nil : positionals.size
 
       def usage_args
-        return 'COMMAND' if group?
+        return '<COMMAND>' if group?
 
         usage || positionals.map(&:usage).join(' ')
       end
@@ -123,15 +126,17 @@ module Slipway
     class Registry
       attr_reader :program, :version, :description, :globals, :root
 
-      # `long_description` replaces `description` on the root help and man page. A Hash
-      # `builtins` is passed on as options to the man builtin.
-      def initialize(program:, version:, description:, globals:, commands:, long_description: nil, builtins: true)
+      # `long_description` replaces `description` on the root `--help` and man page. `glossaries`
+      # go to the root `--help` only, since the root man page has its own sections for them.
+      # A Hash `builtins` is passed on as options to the man builtin.
+      def initialize(program:, version:, description:, globals:, commands:, long_description: nil, glossaries: [],
+                     builtins: true)
         @program = program
         @version = version
         @description = description
         @globals = globals
         extra = builtins ? Builtins.all(program:, version:, resolve: -> { self }, **man_options(builtins)) : []
-        @root = Command.new(name: program, summary: description, description: long_description,
+        @root = Command.new(name: program, summary: description, description: long_description, glossaries:,
                             subcommands: commands + extra)
       end
 

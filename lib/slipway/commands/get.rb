@@ -15,7 +15,7 @@ module Slipway
                     'each project: the ways its repository differs from its manifest and what keeps sync from ' \
                     "converging it. Use -o json or -o yaml for the full object with its status.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
-      USAGE = '(TYPE [NAME...] | TYPE/NAME...)'
+      USAGE = '(<TYPE> [NAME]... | <TYPE/NAME>...)'
       COLUMNS = {
         'GROUP' => 'The group of the project.',
         'NAME' => 'The name of the resource.',

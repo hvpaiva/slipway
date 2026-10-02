@@ -62,7 +62,8 @@ module Slipway
                                            'reason (Unknown).'
         }
       )
-      ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, fetch every project across all groups. The ' \
+      ALL_GROUPS = Options::ALL_GROUPS.with(summary: 'Fetch every project across all groups',
+                                            description: 'If present, fetch every project across all groups. The ' \
                                                          'group in the current configuration is ignored even if ' \
                                                          'specified with --group.')
       PRUNE = CLI::Option.new(long: 'prune', description: 'Before fetching, remove any remote-tracking references ' \

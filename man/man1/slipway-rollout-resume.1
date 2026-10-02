@@ -4,13 +4,17 @@
 slipway\-rollout\-resume \- Resume a paused project
 .SH SYNOPSIS
 .SY "slipway rollout resume"
+.RI [ OPTIONS ]
 .I "(NAME... | project/NAME...)"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Resume paused projects.
 .PP
 Removes spec.paused from the manifest of each named project, so slipway fetch and slipway sync act on it again. A project that is not paused prints not paused.
+.SH ARGUMENTS
+.TP
+\fINAME\fR
+The name of a project.
 .SH EXAMPLES
 .EX
 # Resume the paused project dots

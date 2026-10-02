@@ -6,6 +6,21 @@ class ConfigIntegrationTest < Minitest::Test
   include IntegrationHelper
 
   NETWORK = "networkTimeout: 60\nparallel: 4\nprotocols:\n- ssh\n- https\n"
+  SUMMARY = <<~TEXT
+    Inspect the configuration in effect
+
+    Usage: slipway config [OPTIONS] <COMMAND>
+
+    Available Commands:
+      view  Display the configuration in effect
+      path  Display the path of the configuration file
+
+    Options:
+      -h, --help  Print help (see more with '--help')
+
+    Use "slipway config <COMMAND> --help" for more information about a given command.
+    Use "slipway --help" for a list of global options (applies to all commands).
+  TEXT
 
   def test_view_shows_the_defaults_and_says_the_file_is_missing
     with_home do |env|
@@ -129,24 +144,9 @@ class ConfigIntegrationTest < Minitest::Test
     end
   end
 
-  def test_the_group_alone_prints_its_help_and_rejects_unknown_subcommands
+  def test_the_group_alone_prints_its_summary_and_rejects_unknown_subcommands
     with_home do |env|
-      status, out, err = slipway('config', env:)
-
-      assert_equal [0, ''], [status, err]
-      assert_equal <<~TEXT, out
-        Inspect the configuration that slipway resolved from flags, environment variables and the configuration file.
-
-        Available Commands:
-          view            Display the configuration in effect
-          path            Display the path of the configuration file
-
-        Usage:
-          slipway config COMMAND [flags]
-
-        Use "slipway config <command> --help" for more information about a given command.
-        Use "slipway --help" for a list of global options (applies to all commands).
-      TEXT
+      assert_equal [2, '', SUMMARY], slipway('config', env:)
       assert_equal [2, '', "error: unknown command \"bogus\" for \"slipway config\"\n" \
                            "Run 'slipway config --help' for usage.\n"], slipway('config', 'bogus', env:)
     end

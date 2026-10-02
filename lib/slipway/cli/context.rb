@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'io/console'
 require_relative 'style'
 require_relative 'theme'
 
@@ -45,6 +46,17 @@ module Slipway
       def paint_err(role, text) = err_style.paint(role, text)
 
       def color? = style.enabled?
+
+      def columns
+        from_env = Integer(env['COLUMNS'].to_s, 10, exception: false)
+        return from_env if from_env&.positive?
+        return nil unless tty && out.respond_to?(:winsize)
+
+        width = out.winsize[1]
+        width.positive? ? width : nil
+      rescue SystemCallError
+        nil
+      end
 
       protected
 

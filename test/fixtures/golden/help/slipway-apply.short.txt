@@ -1,0 +1,10 @@
+Apply a configuration to a resource by file name or stdin
+
+Usage: slipway apply [OPTIONS] -f <FILE>
+
+Options:
+  -f, --filename <FILE>  The file that contains the manifests to apply
+      --dry-run          Print what would change and write nothing
+  -h, --help             Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

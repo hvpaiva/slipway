@@ -4,7 +4,10 @@ module GoldenFixtures
   module_function
 
   def expected(registry, shells)
-    help = command_paths(registry.root).map { File.join('help', "#{[registry.program, *it].join('-')}.txt") }
+    help = command_paths(registry.root).flat_map do |path|
+      name = [registry.program, *path].join('-')
+      [File.join('help', "#{name}.txt"), File.join('help', "#{name}.short.txt")]
+    end
     completion = shells.map { File.join('completion', "#{registry.program}.#{it}") }
     help + completion
   end

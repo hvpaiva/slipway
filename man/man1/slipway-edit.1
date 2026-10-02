@@ -4,8 +4,8 @@
 slipway\-edit \- Edit a resource from the default editor
 .SH SYNOPSIS
 .SY "slipway edit"
+.RI [ OPTIONS ]
 .I "(TYPE NAME | TYPE/NAME)"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Edit a resource from the default editor.
@@ -15,6 +15,13 @@ The edit command allows you to directly edit any resource in the registry. It wi
 The kind, name, group and creation timestamp of a resource cannot be changed. If an error occurs while saving, the file is reopened with the relevant failures as comments at the top; saving it again without changes cancels the edit.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
+.SH ARGUMENTS
+.TP
+\fITYPE\fR
+The resource type, by its plural, singular or short name (see api\-resources).
+.TP
+\fINAME\fR
+The name of a resource of that type.
 .SH EXAMPLES
 .EX
 # Edit the project named 'hldr'
