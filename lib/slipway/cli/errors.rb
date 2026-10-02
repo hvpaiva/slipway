@@ -5,6 +5,8 @@ require_relative '../error'
 module Slipway
   module CLI
     class UsageError < Slipway::Error
+      STATUS = 2
+
       # A nil hint is filled in by the Runner from the resolved command path.
       attr_reader :hint
 
@@ -13,7 +15,7 @@ module Slipway
         @hint = hint
       end
 
-      def exit_status = 2
+      def exit_status = STATUS
     end
   end
 end

@@ -125,15 +125,15 @@ class ConfigTest < Minitest::Test
     end
   end
 
-  def test_the_group_alone_prints_its_summary
+  def test_the_group_alone_prints_its_summary_as_a_usage_error
     with_sandbox do |env|
       status, out, err = run_config('config', env:)
 
-      assert_equal [0, ''], [status, err]
-      assert_includes out, "Inspect the configuration in effect\n\nUsage: slipway config [OPTIONS] <COMMAND>\n\n" \
+      assert_equal [2, ''], [status, out]
+      assert_includes err, "Inspect the configuration in effect\n\nUsage: slipway config [OPTIONS] <COMMAND>\n\n" \
                            "Available Commands:\n  view  Display the configuration in effect\n  path  Display the " \
                            "path of the configuration file\n"
-      assert_includes out, 'Use "slipway config <COMMAND> --help" for more information about a given command.'
+      assert_includes err, 'Use "slipway config <COMMAND> --help" for more information about a given command.'
       assert_includes run_config('config', '--help', env:)[1],
                       "Inspect the configuration that slipway resolved from flags, environment variables and the\n" \
                       'configuration file.'

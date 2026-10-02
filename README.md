@@ -985,7 +985,7 @@ man slipway-get
 | --- | --- |
 | `0` | Success. |
 | `1` | Runtime error, such as a missing resource or an unreadable manifest. |
-| `2` | Usage error: unknown command, unknown flag or invalid argument. |
+| `2` | Usage error: missing or unknown command, unknown flag or invalid argument. |
 | `130` | Interrupted by SIGINT. |
 
 `slipway diff` also exits with 3 when a project differs from its manifest. The man pages of

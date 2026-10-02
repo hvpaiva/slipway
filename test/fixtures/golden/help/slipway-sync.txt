@@ -77,7 +77,7 @@ Exit Status:
   0    Every selected project was fast-forwarded, fetched, left unchanged, skipped or paused.
   1    Runtime error, such as a missing resource or an unreadable manifest, or a project whose fetch
        or fast-forward was denied or failed.
-  2    Usage error: unknown command, unknown flag or invalid argument.
+  2    Usage error: missing or unknown command, unknown flag or invalid argument.
   130  Interrupted by SIGINT.
 
 Examples:

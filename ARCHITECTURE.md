@@ -75,8 +75,8 @@ fails on an edge that breaks these rules and on a file that belongs to no layer 
    in the parse is painted the way the user asked. It then walks the command tree. Global
    options may appear before the verb, between a group and its subcommand, and after the verb
    (`Parser#order!` while walking, `#permute!` on the leaf). `-h`, `--help`, `--version` and a
-   missing command return early: `--help` prints the whole page, and `-h` and a bare `slipway`
-   or group print the summary.
+   missing command return early: `--help` prints the whole page and `-h` the summary, and a
+   bare `slipway` or group prints the summary on stderr and exits with status 2.
 4. `Validator` checks arity, positional enums, required options and option enums, raising
    `UsageError` (exit 2) with a `See 'slipway get --help' for usage.` hint.
 5. The command's handler is an instance of `Commands::Base`. `call` asks the factory for a

@@ -71,7 +71,7 @@ module Slipway
         opts = defaults(command, values)
         return show_help(command, path, long: @long_help) if opts[:help]
         return show_version if opts[:version]
-        return show_help(command, path, long: false) if command.group?
+        return missing_command(command, path) if command.group?
 
         Validator.new(command, path, @registry).call(args, opts)
         invoke(command, path, args, opts)
@@ -163,9 +163,18 @@ module Slipway
       end
 
       def show_help(command, path, long:)
-        renderer = HelpRenderer.new(@registry, @context.style, width: @context.columns)
-        @context.print(command.equal?(@registry.root) ? renderer.root(long:) : renderer.command(command, path, long:))
+        @context.print(help(command, path, long:, style: @context.style))
         0
+      end
+
+      def missing_command(command, path)
+        @context.warn(help(command, path, long: false, style: @context.err_style))
+        UsageError::STATUS
+      end
+
+      def help(command, path, long:, style:)
+        renderer = HelpRenderer.new(@registry, style, width: @context.columns)
+        command.equal?(@registry.root) ? renderer.root(long:) : renderer.command(command, path, long:)
       end
 
       def show_version

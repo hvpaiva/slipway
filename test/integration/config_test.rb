@@ -146,7 +146,7 @@ class ConfigIntegrationTest < Minitest::Test
 
   def test_the_group_alone_prints_its_summary_and_rejects_unknown_subcommands
     with_home do |env|
-      assert_equal [0, SUMMARY, ''], slipway('config', env:)
+      assert_equal [2, '', SUMMARY], slipway('config', env:)
       assert_equal [2, '', "error: unknown command \"bogus\" for \"slipway config\"\n" \
                            "Run 'slipway config --help' for usage.\n"], slipway('config', 'bogus', env:)
     end

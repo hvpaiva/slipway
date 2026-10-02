@@ -63,7 +63,7 @@ Exit Status:
   0    The project was rolled back, or already stood at the revision and was held there.
   1    Runtime error, such as a missing resource or an unreadable manifest, or a project that was
        skipped or whose move was denied or failed.
-  2    Usage error: unknown command, unknown flag or invalid argument.
+  2    Usage error: missing or unknown command, unknown flag or invalid argument.
   130  Interrupted by SIGINT.
 
 Examples:

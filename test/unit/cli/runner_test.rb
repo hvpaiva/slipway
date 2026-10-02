@@ -7,9 +7,10 @@ class RunnerTest < Minitest::Test
     @fixture = FixtureRegistry.new
   end
 
-  def test_a_missing_command_prints_the_summary
-    assert_equal [0, renderer.root(long: false), ''], @fixture.run
-    assert_equal [0, renderer.command(*resolve('config'), long: false), ''], @fixture.run('config')
+  def test_a_missing_command_prints_the_summary_on_stderr_as_a_usage_error
+    assert_equal [2, '', renderer.root(long: false)], @fixture.run
+    assert_equal [2, '', renderer.command(*resolve('config'), long: false)], @fixture.run('config')
+    assert_includes @fixture.run(err_tty: true)[2], "\e[1mUsage:\e[0m slipway [OPTIONS] <COMMAND>\n"
     assert_equal [0, renderer.root, ''], @fixture.run('--help')
     assert_empty @fixture.calls
   end

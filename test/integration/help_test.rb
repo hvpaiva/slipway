@@ -13,7 +13,7 @@ class HelpIntegrationTest < Minitest::Test
       root = page('slipway')
       summary = page('slipway.short')
 
-      assert_equal [0, summary, ''], slipway(env:)
+      assert_equal [2, '', summary], slipway(env:)
       assert_equal [0, summary, ''], slipway('-h', env:)
       assert_equal [0, root, ''], slipway('--help', env:)
       assert_equal [0, root, ''], slipway('help', env:)

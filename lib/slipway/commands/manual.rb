@@ -12,7 +12,7 @@ module Slipway
       EXIT_STATUSES = {
         '0' => 'Success.',
         '1' => 'Runtime error, such as a missing resource or an unreadable manifest.',
-        '2' => 'Usage error: unknown command, unknown flag or invalid argument.',
+        '2' => 'Usage error: missing or unknown command, unknown flag or invalid argument.',
         '130' => 'Interrupted by SIGINT.'
       }.freeze
       CONFIG_FILE = '$XDG_CONFIG_HOME/slipway/config.yaml'

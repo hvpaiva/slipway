@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `create project --from-dir` completes directory names only, no longer every file name.
 - `-h` prints a summary of a command and `--help` the whole page, with the Usage line under the description, the default and possible values of each option, and the text wrapped to the terminal, at most 100 columns.
-- A bare `slipway` or command group prints the summary instead of the whole page.
+- A bare `slipway` or command group prints the summary on stderr and exits with status 2, as a usage error does; it printed the whole page and exited with 0.
 - Help and the README write a required value as `<NAME>`, an optional one as `[NAME]` and the options as `[OPTIONS]`.
 - The root description no longer repeats the commands listed under it.
 
