@@ -161,6 +161,9 @@ Each of these fails `rake check` or CI when it is broken.
   result the reasons its `--help` gives, the table of a project's spec gives every field with
   the meaning and default `Schema` holds, and the README configuration example sets every
   config key and no other.
+- The description of every option and positional ends with a period, and the summary of a
+  command or an option does not, since `-h` prints the summary, or the description without its
+  period (`test_help_text_ends_descriptions_with_a_period_and_summaries_without_one`).
 - Every console example in the README prints what the executable prints
   ([README examples](#readme-examples)).
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
