@@ -4,13 +4,17 @@
 slipway\-rollout\-unpin \- Stop holding a project at a revision
 .SH SYNOPSIS
 .SY "slipway rollout unpin"
+.RI [ OPTIONS ]
 .I "(NAME... | project/NAME...)"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Stop holding projects at a revision.
 .PP
 Removes spec.revision from the manifest of each named project, so the next slipway sync fast\-forwards its branch onto its upstream again. The repository is left as it is. A project without spec.revision prints not pinned.
+.SH ARGUMENTS
+.TP
+\fINAME\fR
+The name of a project.
 .SH EXAMPLES
 .EX
 # Let project hldr follow its upstream again

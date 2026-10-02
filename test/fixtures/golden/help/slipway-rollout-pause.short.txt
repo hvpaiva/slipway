@@ -1,0 +1,11 @@
+Mark the provided project as paused
+
+Usage: slipway rollout pause [OPTIONS] (<NAME>... | project/<NAME>...)
+
+Arguments:
+  <NAME>...  The name of a project
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

@@ -4,12 +4,16 @@
 slipway\-completion \- Output shell completion code for the specified shell (bash, zsh, fish)
 .SH SYNOPSIS
 .SY "slipway completion"
+.RI [ OPTIONS ]
 .I SHELL\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Output shell completion code for the specified shell (bash, zsh, fish).
 The shell code must be evaluated to provide interactive completion of commands, resource types and names.
+.SH ARGUMENTS
+.TP
+\fISHELL\fR
+The shell to output completion code for. One of: bash, zsh, fish.
 .SH EXAMPLES
 .EX
 # Install bash completions where bash\-completion loads them

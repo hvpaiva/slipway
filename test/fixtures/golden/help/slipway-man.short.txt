@@ -1,0 +1,13 @@
+Show the manual page of a command
+
+Usage: slipway man [OPTIONS] [COMMAND]...
+
+Arguments:
+  [COMMAND]...  The command whose page to show, such as rollout undo
+
+Options:
+      --path             Print the directory of the bundled pages and exit
+      --install[=<DIR>]  Copy every page into a man1 directory
+  -h, --help             Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

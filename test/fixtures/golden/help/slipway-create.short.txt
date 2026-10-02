@@ -1,0 +1,23 @@
+Create a resource by name
+
+Usage: slipway create [OPTIONS] (<TYPE> <NAME> | project --from-dir <DIR>)
+
+Arguments:
+  <TYPE>  The resource type, by its plural, singular or short name (see api-resources)
+  [NAME]  The name of a resource of that type
+
+Options:
+      --path <DIR>          Directory of the git repository to register
+      --description <TEXT>  A short description of the resource
+      --label <KEY=VALUE>   A label to set on the new resource; may be repeated
+      --remote <URL>        The URL the origin remote is expected to have
+      --branch <NAME>       The branch the project is expected to have checked out, written to
+                            spec.branch
+      --from-dir <DIR>      Register every git repository at or under DIR as a project, in place of
+                            NAME
+      --depth <N>           How many directory levels under --from-dir to search, 1 by default
+      --dry-run             Print what would change and write nothing
+  -o, --output <FORMAT>     Output format [possible values: json, yaml, name]
+  -h, --help                Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

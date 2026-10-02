@@ -18,9 +18,9 @@ module Slipway
                     'rule its value follows and its default; --recursive prints the whole tree of names and ' \
                     "types instead.\n\n" \
                     "#{Options::TYPES_SENTENCE} Field names are case-sensitive, as in a manifest.".freeze
-      USAGE = 'TYPE[.FIELD...]'
+      USAGE = '<TYPE>[.FIELD]...'
       SEPARATOR = '.'
-      RECURSIVE = CLI::Option.new(long: 'recursive',
+      RECURSIVE = CLI::Option.new(long: 'recursive', summary: 'Print the name of all the fields recursively',
                                   description: 'If present, print the name of all the fields recursively. ' \
                                                'Otherwise, print the available fields with their description.')
 
@@ -28,7 +28,9 @@ module Slipway
         CLI::Command.new(
           name: 'explain', summary: 'Get documentation for a resource', section: 'Basic Commands',
           description: DESCRIPTION, examples:, usage: USAGE, options: [RECURSIVE], handler: new,
-          positionals: [CLI::Positional.new(name: 'TYPE', completer: ->(_given, current) { paths(current) })]
+          positionals: [CLI::Positional.new(name: 'TYPE', completer: ->(_given, current) { paths(current) },
+                                            description: 'The resource type, then the dotted path of a field, ' \
+                                                         'such as project.spec.syncPolicy.')]
         )
       end
 

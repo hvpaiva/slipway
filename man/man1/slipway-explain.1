@@ -4,8 +4,8 @@
 slipway\-explain \- Get documentation for a resource
 .SH SYNOPSIS
 .SY "slipway explain"
-.I TYPE[.FIELD...]\&
-.RI [ flags ]
+.RI [ OPTIONS ]
+.I TYPE[.FIELD]...\&
 .YS
 .SH DESCRIPTION
 Describe fields and structure of the resource types.
@@ -13,6 +13,10 @@ Describe fields and structure of the resource types.
 This command describes the fields of each resource type, as a manifest holds them. Fields are identified by a dotted path after the type word, such as project.spec.syncPolicy. Each field shows its type, \-required\- when a manifest must have it, and a description with the rule its value follows and its default; \-\-recursive prints the whole tree of names and types instead.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive. Field names are case\-sensitive, as in a manifest.
+.SH ARGUMENTS
+.TP
+\fITYPE\fR
+The resource type, then the dotted path of a field, such as project.spec.syncPolicy.
 .SH OPTIONS
 .TP
 \fB\-\-recursive\fR

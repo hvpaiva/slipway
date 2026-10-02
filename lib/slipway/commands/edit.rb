@@ -16,7 +16,7 @@ module Slipway
                     'occurs while saving, the file is reopened with the relevant failures as comments at the ' \
                     "top; saving it again without changes cancels the edit.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
-      USAGE = '(TYPE NAME | TYPE/NAME)'
+      USAGE = '(<TYPE> <NAME> | <TYPE/NAME>)'
       HEADER = <<~TEXT
         # Please edit the object below. Lines beginning with a '#' will be ignored,
         # and an empty file will abort the edit. If an error occurs while saving this

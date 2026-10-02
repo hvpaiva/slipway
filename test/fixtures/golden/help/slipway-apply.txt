@@ -1,8 +1,26 @@
 Apply a configuration to a resource by file name or stdin.
 
-The resource name must be specified in the manifest. A resource is created when it does not exist yet, configured when its manifest differs from the one stored, and reported unchanged otherwise. A directory applies every *.yaml and *.yml file it holds, sorted by name and without descending into subdirectories. A project manifest without metadata.group lands in the current group.
+The resource name must be specified in the manifest. A resource is created when it does not exist
+yet, configured when its manifest differs from the one stored, and reported unchanged otherwise. A
+directory applies every *.yaml and *.yml file it holds, sorted by name and without descending into
+subdirectories. A project manifest without metadata.group lands in the current group.
 
-YAML is accepted, with several documents per file, and a document of kind List stands for each of its items. Documents are applied in order, so a group may be created by the document before the projects that use it.
+YAML is accepted, with several documents per file, and a document of kind List stands for each of
+its items. Documents are applied in order, so a group may be created by the document before the
+projects that use it.
+
+Usage: slipway apply [OPTIONS] -f <FILE>
+
+Options:
+  -f, --filename <FILE>
+          The file that contains the manifests to apply; may be repeated. A directory reads its
+          *.yaml and *.yml files, '-' reads stdin.
+
+      --dry-run
+          Print what would change and write nothing.
+
+  -h, --help
+          Print help (see a summary with '-h').
 
 Examples:
   # Apply the configuration in hldr.yaml to a project
@@ -16,12 +34,5 @@ Examples:
 
   # Show what would change without writing anything
   slipway apply -f hldr.yaml --dry-run
-
-Options:
-  -f, --filename FILE   The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '-' reads stdin. (required)
-      --dry-run         Print what would change and write nothing.
-
-Usage:
-  slipway apply -f FILE [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

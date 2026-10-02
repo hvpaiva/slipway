@@ -11,10 +11,12 @@ module Slipway
       OUTPUT = CLI::Option.new(long: 'output', short: 'o', argument: 'FORMAT', enum: Output::FORMATS,
                                default: Output::TABLE, description: 'Output format.')
       SELECTOR = CLI::Option.new(long: 'selector', short: 'l', argument: 'EXPR',
+                                 summary: 'Selector (label query) to filter on',
                                  description: "Selector (label query) to filter on, supports '=', '==', '!=', 'in', " \
                                               "'notin' (e.g. -l key1=value1,key2=value2,key3 in (value3)). " \
                                               'Matching objects must satisfy all of the specified label constraints.')
       FIELD_SELECTOR = CLI::Option.new(long: 'field-selector', argument: 'EXPR',
+                                       summary: 'Selector (field query) to filter on',
                                        description: "Selector (field query) to filter on, supports '=', '==', and " \
                                                     "'!=' (e.g. --field-selector key1=value1,key2=value2). Projects " \
                                                     "support #{Views::Project::FIELDS.keys.join(', ')}; groups " \
@@ -26,6 +28,7 @@ module Slipway
                                                     'A backslash escapes a backslash, a comma or an equals sign in ' \
                                                     'a value.')
       ALL_GROUPS = CLI::Option.new(long: 'all-groups', short: 'A',
+                                   summary: 'List the requested objects across all groups',
                                    description: 'If present, list the requested object(s) across all groups. ' \
                                                 'The group in the current configuration is ignored even if ' \
                                                 'specified with --group.')
@@ -44,16 +47,18 @@ module Slipway
       TYPES_SENTENCE = "Resource types: #{TYPES}. Type words are case-insensitive.".freeze
 
       # Unknown words are reported by Resources.resolve at run time.
-      TYPE = CLI::Positional.new(name: 'TYPE', completer: ->(_given, _current) { TYPE_DESCRIPTIONS })
+      TYPE = CLI::Positional.new(name: 'TYPE', completer: ->(_given, _current) { TYPE_DESCRIPTIONS },
+                                 description: 'The resource type, by its plural, singular or short name ' \
+                                              '(see api-resources).')
 
       def self.name_positional(factory, variadic: true, required: false)
-        CLI::Positional.new(name: 'NAME', variadic:, required:,
+        CLI::Positional.new(name: 'NAME', variadic:, required:, description: 'The name of a resource of that type.',
                             completer: ->(given, _current) { names(factory, given) })
       end
 
       # No TYPE word comes first, so completion always offers project names.
       def self.project_positional(factory, variadic: true, required: false)
-        CLI::Positional.new(name: 'NAME', variadic:, required:,
+        CLI::Positional.new(name: 'NAME', variadic:, required:, description: 'The name of a project.',
                             completer: ->(_given, _current) { names(factory, [Resources::PROJECTS.plural]) })
       end
 

@@ -21,6 +21,7 @@ module Slipway
       DEBUG_VARIABLE = 'SLIPWAY_DEBUG'
       COLOR_FLAG = "--#{Globals::COLOR.long}".freeze
       COLOR_INLINE = "#{COLOR_FLAG}=".freeze
+      HELP_FLAG = "--#{Globals::HELP.long}".freeze
 
       # `color` and `theme` are the fallbacks used when neither a flag nor the environment
       # decides, which is where the configuration file values arrive.
@@ -45,6 +46,7 @@ module Slipway
       # environment, so even an error in the parse that follows is painted the way the user asked.
       def execute(argv)
         @flag_color = flag_color(argv)
+        @long_help = long_help?(argv)
         colorize({})
         dispatch(argv)
       rescue Errno::EPIPE
@@ -67,9 +69,9 @@ module Slipway
 
         args = parse(@registry.globals + command.options, path, values) { it.permute!(rest) }
         opts = defaults(command, values)
-        return show_help(command, path) if opts[:help]
+        return show_help(command, path, long: @long_help) if opts[:help]
         return show_version if opts[:version]
-        return show_help(command, path) if command.group?
+        return show_help(command, path, long: false) if command.group?
 
         Validator.new(command, path, @registry).call(args, opts)
         invoke(command, path, args, opts)
@@ -121,6 +123,10 @@ module Slipway
         nil
       end
 
+      # `-h` and `--help` set the same value; only `--help` is looked for, since `-h` can sit in a
+      # cluster such as `-Ah`.
+      def long_help?(argv) = argv.take_while { it != '--' }.include?(HELP_FLAG)
+
       def colorize(values)
         @context = @context.with_color(values.fetch(:color) { @flag_color || fallback_color }, theme:)
       end
@@ -156,9 +162,9 @@ module Slipway
         0
       end
 
-      def show_help(command, path)
-        renderer = HelpRenderer.new(@registry, @context.style)
-        @context.print(command.equal?(@registry.root) ? renderer.root : renderer.command(command, path))
+      def show_help(command, path, long:)
+        renderer = HelpRenderer.new(@registry, @context.style, width: @context.columns)
+        @context.print(command.equal?(@registry.root) ? renderer.root(long:) : renderer.command(command, path, long:))
         0
       end
 

@@ -7,24 +7,26 @@ class RunnerTest < Minitest::Test
     @fixture = FixtureRegistry.new
   end
 
-  def test_empty_invocation_prints_root_help_and_succeeds
-    status, out, err = @fixture.run
-
-    assert_equal 0, status
-    assert_equal FixtureRegistry::DESCRIPTION, out.lines.first.chomp
-    assert_includes out, "Basic Commands:\n"
-    assert_empty err
+  def test_a_missing_command_prints_the_summary
+    assert_equal [0, renderer.root(long: false), ''], @fixture.run
+    assert_equal [0, renderer.command(*resolve('config'), long: false), ''], @fixture.run('config')
+    assert_equal [0, renderer.root, ''], @fixture.run('--help')
     assert_empty @fixture.calls
   end
 
-  def test_help_flags_render_the_command_page
-    long = @fixture.run('get', '--help')
-    short = @fixture.run('-h', 'get')
+  def test_short_help_prints_the_summary_and_long_help_the_page
+    summary = [0, renderer.command(*resolve('get'), long: false), '']
 
-    assert_equal [0, ''], [long[0], long[2]]
-    assert_equal long, short
-    assert_includes long[1], "Usage:\n  slipway get TYPE [NAME...] [flags]\n"
+    assert_equal [0, renderer.command(*resolve('get')), ''], @fixture.run('get', '--help')
+    assert_equal summary, @fixture.run('-h', 'get')
+    assert_equal summary, @fixture.run('get', '-hV')
+    assert_equal summary, @fixture.run('get', '-h', '--', '--help')
     assert_empty @fixture.calls
+  end
+
+  def test_help_wraps_at_the_width_columns_gives
+    assert_equal [0, renderer(width: 60).command(*resolve('get'), long: false), ''],
+                 @fixture.run('get', '-h', env: { 'COLUMNS' => '60' })
   end
 
   def test_version_flags_print_the_version_line
@@ -34,14 +36,6 @@ class RunnerTest < Minitest::Test
     assert_equal "slipway 0.1.0 (ruby #{RUBY_VERSION}) [#{Gem::Platform.local}]\n", out
     assert_empty err
     assert_equal out, @fixture.run('-V')[1]
-  end
-
-  def test_group_without_subcommand_prints_its_help
-    status, out, = @fixture.run('config')
-
-    assert_equal 0, status
-    assert_includes out, "Available Commands:\n  view "
-    assert_empty @fixture.calls
   end
 
   def test_success_dispatches_args_and_defaulted_opts_to_the_handler
@@ -258,4 +252,10 @@ class RunnerTest < Minitest::Test
     assert_equal "error: SLIPWAY_THEME: must be one of dark, light\n", err
     assert_empty @fixture.calls
   end
+
+  private
+
+  def renderer(width: nil) = Slipway::CLI::HelpRenderer.new(@fixture.registry, Slipway::CLI::Style.disabled, width:)
+
+  def resolve(*words) = @fixture.registry.resolve(words)
 end

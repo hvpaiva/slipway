@@ -1,52 +1,86 @@
 A kubectl-style registry of the git repositories on your machine.
 
- A project is a registered git repository. get and describe show where each one
- stands, and fetch fetches them all without prompting. Its manifest can also
- declare where the repository should be: the remote, the branch and a commit to
- hold it at. diff shows where a repository differs from that, sync fast-forwards
- the branches that can move without losing work, and rollout undo takes such a
- move back.
+A project is a registered git repository. Its manifest can declare where the repository should be:
+the remote, the branch and a commit to hold it at.
 
- Projects live in groups the way pods live in namespaces. The group is
- "default", or the one SLIPWAY_GROUP or the group key sets, unless -n
- is given, and -A covers every group.
+Projects live in groups the way pods live in namespaces. The group is "default", or the one
+SLIPWAY_GROUP or the group key sets, unless -n is given, and -A covers every group.
 
- Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
+Usage: slipway [OPTIONS] <COMMAND>
 
 Basic Commands:
-  get             Display one or many resources
-  describe        Show details of one or many resources
-  create          Create a resource by name
-  apply           Apply a configuration to a resource by file name or stdin
-  delete          Delete resources by type and name
-  edit            Edit a resource from the default editor
-  label           Update the labels on a resource
-  explain         Get documentation for a resource
+  get            Display one or many resources
+  describe       Show details of one or many resources
+  create         Create a resource by name
+  apply          Apply a configuration to a resource by file name or stdin
+  delete         Delete resources by type and name
+  edit           Edit a resource from the default editor
+  label          Update the labels on a resource
+  explain        Get documentation for a resource
 
 Repository Commands:
-  fetch           Fetch from the remote of each project
-  diff            Show where projects differ from their manifests
-  sync            Fetch projects and fast-forward their branches
-  rollout         Manage the rollout of a project
+  fetch          Fetch from the remote of each project
+  diff           Show where projects differ from their manifests
+  sync           Fetch projects and fast-forward their branches
+  rollout        Manage the rollout of a project
 
 Settings Commands:
-  config          Inspect the configuration in effect
-  completion      Output shell completion code for the specified shell (bash, zsh, fish)
-  man             Show the manual page of a command
+  config         Inspect the configuration in effect
+  completion     Output shell completion code for the specified shell (bash, zsh, fish)
+  man            Show the manual page of a command
 
 Other Commands:
-  api-resources   Print the supported resource types
-  help            Help about any command
-  version         Print the version of slipway
+  api-resources  Print the supported resource types
+  help           Help about any command
+  version        Print the version of slipway
 
 Options:
-      --color[=WHEN]   When to use color in the output; a bare --color means always. One of: auto, always, never.
-  -n, --group NAME     The group scope for this request.
-      --config PATH    Path to the configuration file.
-  -h, --help           Print help and exit.
-  -V, --version        Print the version and exit.
+      --color[=<WHEN>]
+          When to use color in the output; a bare --color means always.
 
-Usage:
-  slipway [flags] COMMAND [ARGS...]
+          [possible values: auto, always, never]
 
-Use "slipway <command> --help" for more information about a given command.
+  -n, --group <NAME>
+          The group scope for this request.
+
+      --config <PATH>
+          Path to the configuration file.
+
+  -h, --help
+          Print help (see a summary with '-h').
+
+  -V, --version
+          Print the version and exit.
+
+Environment Variables:
+  slipway man lists the other variables slipway reads, such as NO_COLOR.
+
+  SLIPWAY_CONFIG           Path of the configuration file; overridden by --config.
+  SLIPWAY_DATA_HOME        Directory holding the registry: group and project manifests.
+  SLIPWAY_COLOR            Outranks the color key (see Configuration File); --color outranks both.
+  SLIPWAY_THEME            Outranks the theme key (see Configuration File).
+  SLIPWAY_EDITOR           Outranks the editor key (see Configuration File), VISUAL and EDITOR.
+  SLIPWAY_GROUP            Outranks the group key (see Configuration File); --group outranks both.
+  SLIPWAY_NETWORK_TIMEOUT  Outranks the networkTimeout key (see Configuration File).
+  SLIPWAY_PARALLEL         Outranks the parallel key (see Configuration File).
+  SLIPWAY_PROTOCOLS        Outranks the protocols key (see Configuration File); the names are
+                           separated by colons, as in ssh:https.
+  SLIPWAY_DEBUG            When non-empty, unexpected errors also print their class and backtrace.
+
+Configuration File:
+  $XDG_CONFIG_HOME/slipway/config.yaml, or the file --config or SLIPWAY_CONFIG names, sets these
+  keys.
+
+  color           When to color output: auto, always or never. Default: auto.
+  editor          Command line of the editor that slipway edit opens.
+  group           Group used when -n is not given. Default: default.
+  networkTimeout  Seconds, from 1 to 86400, a git network command may run before it is killed with
+                  the processes it started. Default: 60.
+  parallel        How many git network commands run at once, from 1 to 16. Default: 4.
+  protocols       Transports git may use in network commands, as a list; any other transport is
+                  refused, and so are ext and fd. Add file for local mirrors. Default: ssh, https.
+  theme           Color theme: dark or light. Default: dark.
+
+Use "slipway <COMMAND> --help" for more information about a given command.

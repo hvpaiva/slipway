@@ -1,0 +1,14 @@
+Delete resources by type and name
+
+Usage: slipway delete [OPTIONS] (<TYPE> <NAME>... | <TYPE/NAME>...)
+
+Arguments:
+  <TYPE>     The resource type, by its plural, singular or short name (see api-resources)
+  [NAME]...  The name of a resource of that type
+
+Options:
+      --dry-run           Print what would change and write nothing
+      --ignore-not-found  Treat "resource not found" as a successful delete
+  -h, --help              Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

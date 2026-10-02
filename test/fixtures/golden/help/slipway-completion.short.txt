@@ -1,0 +1,11 @@
+Output shell completion code for the specified shell (bash, zsh, fish)
+
+Usage: slipway completion [OPTIONS] <SHELL>
+
+Arguments:
+  <SHELL>  The shell to output completion code for [possible values: bash, zsh, fish]
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

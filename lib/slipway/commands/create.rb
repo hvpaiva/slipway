@@ -35,13 +35,14 @@ module Slipway
       DEPTHS = 1..Scanner::MAX_DEPTH
       DEPTH_INVALID = "invalid argument %p for --depth: must be an integer from #{DEPTHS.min} to #{DEPTHS.max}".freeze
       DEPTH_WITHOUT_FROM_DIR = 'flag --depth requires --from-dir'
-      USAGE = '(TYPE NAME | project --from-dir DIR)'
+      USAGE = '(<TYPE> <NAME> | project --from-dir <DIR>)'
 
       # The resource as written, or as it would be on a dry run, and the word and role of its result line.
       Result = Data.define(:resource, :word, :role)
 
       PATH = CLI::Option.new(long: 'path', argument: 'DIR',
                              completer: ->(_given, _current) { CLI::Completer::DIRS },
+                             summary: 'Directory of the git repository to register',
                              description: 'Directory of the git repository to register; required for a project ' \
                                           'given by NAME. ' \
                                           'A relative directory is stored resolved against the current ' \
@@ -51,6 +52,7 @@ module Slipway
       LABEL = CLI::Option.new(long: 'label', argument: 'KEY=VALUE', repeatable: true,
                               description: 'A label to set on the new resource; may be repeated.')
       REMOTE = CLI::Option.new(long: 'remote', argument: 'URL',
+                               summary: 'The URL the origin remote is expected to have',
                                description: 'The URL the origin remote is expected to have, written to spec.remote. ' \
                                             'A URL that embeds credentials is refused; use a credential helper.')
       BRANCH = CLI::Option.new(long: 'branch', argument: 'NAME',
@@ -62,11 +64,13 @@ module Slipway
                                               'place of NAME.')
       # No option default: one would hide whether --depth was typed without --from-dir.
       DEPTH = CLI::Option.new(long: 'depth', argument: 'N',
+                              summary: 'How many directory levels under --from-dir to search, ' \
+                                       "#{Scanner::DEFAULT_DEPTH} by default",
                               description: "How many directory levels under --from-dir to search, from #{DEPTHS.min} " \
-                                           "to #{DEPTHS.max}. The search stops at a repository and never follows " \
-                                           "a symbolic link under --from-dir. (default #{Scanner::DEFAULT_DEPTH})")
+                                           "to #{DEPTHS.max}, #{Scanner::DEFAULT_DEPTH} by default. The search stops " \
+                                           'at a repository and never follows a symbolic link under --from-dir.')
       OUTPUT = CLI::Option.new(long: 'output', short: 'o', argument: 'FORMAT',
-                               enum: [*Output::Serializer::STRUCTURED, Output::NAME],
+                               enum: [*Output::Serializer::STRUCTURED, Output::NAME], summary: 'Output format',
                                description: 'Output format; without it, each resource prints a result line such as ' \
                                             'project/hldr created.')
 

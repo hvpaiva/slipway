@@ -1,0 +1,12 @@
+Get documentation for a resource
+
+Usage: slipway explain [OPTIONS] <TYPE>[.FIELD]...
+
+Arguments:
+  <TYPE>  The resource type, then the dotted path of a field, such as project.spec.syncPolicy
+
+Options:
+      --recursive  Print the name of all the fields recursively
+  -h, --help       Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

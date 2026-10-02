@@ -4,8 +4,8 @@
 slipway\-sync \- Fetch projects and fast\-forward their branches
 .SH SYNOPSIS
 .SY "slipway sync"
+.RI [ OPTIONS ]
 .I "[NAME... | project/NAME...]"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Fetch each selected project and fast\-forward its branch.
@@ -17,6 +17,10 @@ A project whose spec.syncPolicy is FetchOnly is only fetched, and one whose spec
 Each project prints one line, one of the results listed below, with a reason in parentheses and the details under it. The parallel setting caps how many projects fetch at once, fast\-forwards run one at a time, and the results print in the order the projects are listed.
 .PP
 With \-\-dry\-run nothing is fetched or written: the plan is made from the last fetch.
+.SH ARGUMENTS
+.TP
+\fINAME\fR
+The name of a project.
 .SH OPTIONS
 .TP
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR
