@@ -1,0 +1,11 @@
+Help about any command
+
+Usage: slipway help [OPTIONS] [COMMAND]...
+
+Arguments:
+  [COMMAND]...  The command to describe, such as config view
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

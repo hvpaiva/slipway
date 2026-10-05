@@ -1,12 +1,64 @@
 Create a resource by name.
 
-A project registers the git repository at --path in the current group, which must exist unless it is the default group. A group is created empty and holds the projects you register with --group later.
+A project registers the git repository at --path in the current group, which must exist unless it is
+the default group. A group is created empty and holds the projects you register with --group later.
 
-With --from-dir DIR in place of NAME, create project registers every git repository at DIR or under it, down to --depth levels. Each project is named after its directory, lowercased with each run of characters other than ASCII letters, digits and dashes made one dash, and records its path and the URL of its origin without any credentials; the checked-out branch is not recorded. A path the group already holds is reported unchanged, so running it again adds only new clones.
+With --from-dir DIR in place of NAME, create project registers every git repository at DIR or under
+it, down to --depth levels. Each project is named after its directory, lowercased with each run of
+characters other than ASCII letters, digits and dashes made one dash, and records its path and the
+URL of its origin without any credentials; the checked-out branch is not recorded. A path the group
+already holds is reported unchanged, so running it again adds only new clones.
 
-Use --dry-run to check the arguments without writing anything, and -o yaml with it to print the manifest instead, ready for apply -f.
+Use --dry-run to check the arguments without writing anything, and -o yaml with it to print the
+manifest instead, ready for apply -f.
 
 Resource types: projects (project, proj) and groups (group). Type words are case-insensitive.
+
+Usage: slipway create [OPTIONS] (<TYPE> <NAME> | project --from-dir <DIR>)
+
+Arguments:
+  <TYPE>
+          The resource type, by its plural, singular or short name (see api-resources).
+
+  [NAME]
+          The name of a resource of that type.
+
+Options:
+      --path <DIR>
+          Directory of the git repository to register; required for a project given by NAME. A
+          relative directory is stored resolved against the current directory, a ~ path as written.
+
+      --description <TEXT>
+          A short description of the resource.
+
+      --label <KEY=VALUE>
+          A label to set on the new resource; may be repeated.
+
+      --remote <URL>
+          The URL the origin remote is expected to have, written to spec.remote. A URL that embeds
+          credentials is refused; use a credential helper.
+
+      --branch <NAME>
+          The branch the project is expected to have checked out, written to spec.branch.
+
+      --from-dir <DIR>
+          Register every git repository at or under DIR as a project, in place of NAME.
+
+      --depth <N>
+          How many directory levels under --from-dir to search, from 1 to 8, 1 by default. The
+          search stops at a repository and never follows a symbolic link under --from-dir.
+
+      --dry-run
+          Print what would change and write nothing.
+
+  -o, --output <FORMAT>
+          Output format; without it, each resource prints a result line such as project/hldr
+          created.
+
+          [possible values: json, yaml, name]
+
+  -h, --help
+          Print help (see a summary with '-h').
 
 Examples:
   # Register the repository at ~/dev/hldr as a project in the current group
@@ -32,19 +84,5 @@ Examples:
 
   # Write the manifests of the repositories two levels under ~/work to a file
   slipway create project --from-dir ~/work --depth 2 --dry-run -o yaml > work.yaml
-
-Options:
-      --path DIR           Directory of the git repository to register; required for a project given by NAME. A relative directory is stored resolved against the current directory, a ~ path as written.
-      --description TEXT   A short description of the resource.
-      --label KEY=VALUE    A label to set on the new resource; may be repeated.
-      --remote URL         The URL the origin remote is expected to have, written to spec.remote. A URL that embeds credentials is refused; use a credential helper.
-      --branch NAME        The branch the project is expected to have checked out, written to spec.branch.
-      --from-dir DIR       Register every git repository at or under DIR as a project, in place of NAME.
-      --depth N            How many directory levels under --from-dir to search, from 1 to 8. The search stops at a repository and never follows a symbolic link under --from-dir. (default 1)
-      --dry-run            Print what would change and write nothing.
-  -o, --output FORMAT      Output format; without it, each resource prints a result line such as project/hldr created. One of: json, yaml, name.
-
-Usage:
-  slipway create (TYPE NAME | project --from-dir DIR) [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

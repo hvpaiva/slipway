@@ -174,8 +174,8 @@ class ApplyTest < Minitest::Test
       option = Slipway::Commands::Apply::FILENAME
 
       assert_equal [0, ''], [status, err]
-      assert_includes out, "Usage:\n  slipway apply -f FILE [flags]\n"
-      assert_includes out, '  -f, --filename FILE'
+      assert_includes out, "Usage: slipway apply [OPTIONS] -f <FILE>\n"
+      assert_includes out, '  -f, --filename <FILE>'
       assert_equal [2, '', "error: required flag(s) \"--filename\" not set\nSee 'slipway apply --help' for usage.\n"],
                    run_apply(runtime:)
       assert_equal Slipway::CLI::Completer::FILES, option.candidates([])

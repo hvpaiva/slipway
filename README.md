@@ -120,40 +120,40 @@ To run slipway from a checkout instead, see [Development](#development).
 
 | Verb | What it does |
 | --- | --- |
-| `get TYPE [NAME...]` | List resources as a table, or as wide, json, yaml or name output. |
-| `describe TYPE [NAME...]` | Print every field of the selected resources, including the repository state. |
-| `create TYPE NAME` | Register a project (`--path DIR`, `--description`, `--label`, `--remote`, `--branch`) or create a group; `-o yaml` prints the manifest. |
-| `create project --from-dir DIR` | Register every git repository at or under a directory, with its origin URL. |
-| `apply -f FILE` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
-| `delete TYPE NAME...` | Remove registrations, a deleted group's projects included, never the repositories on disk; prints `project "hldr" deleted from personal group`. `--ignore-not-found` makes an unknown name a success. |
-| `edit TYPE NAME` | Open the manifest in your editor and save what comes back. |
-| `label TYPE NAME KEY=VALUE...` | Set or remove labels on a resource. |
-| `explain TYPE[.FIELD...]` | Print the fields of a manifest, or of one field, with the type, rule and default of each; `--recursive` prints the whole tree. |
-| `fetch [NAME...]` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
-| `diff [NAME...]` | Show where projects differ from their manifests, without contacting a remote; exit status 3 when any does. |
-| `sync [NAME...]` | Fetch the selected projects and fast-forward each clean branch that is behind; prints `fast-forwarded`, `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
-| `rollout history NAME` | List the revisions slipway moved a project's branch to, read from the branch reflog. |
-| `rollout undo NAME` | Move the branch back to the previous revision, or to `--to-revision=N`, and hold it there with `spec.revision`. |
-| `rollout unpin NAME...` | Remove `spec.revision`, so `sync` follows the upstream again. |
-| `rollout pause NAME...`, `rollout resume NAME...` | Set or remove `spec.paused`, which keeps `fetch` and `sync` away from a project. |
+| `get <TYPE> [NAME]...` | List resources as a table, or as wide, json, yaml or name output. |
+| `describe <TYPE> [NAME]...` | Print every field of the selected resources, including the repository state. |
+| `create <TYPE> <NAME>` | Register a project (`--path <DIR>`, `--description`, `--label`, `--remote`, `--branch`) or create a group; `-o yaml` prints the manifest. |
+| `create project --from-dir <DIR>` | Register every git repository at or under a directory, with its origin URL. |
+| `apply -f <FILE>` | Create or update resources from manifests; prints `created`, `configured` or `unchanged`. |
+| `delete <TYPE> <NAME>...` | Remove registrations, a deleted group's projects included, never the repositories on disk; prints `project "hldr" deleted from personal group`. `--ignore-not-found` makes an unknown name a success. |
+| `edit <TYPE> <NAME>` | Open the manifest in your editor and save what comes back. |
+| `label <TYPE> <NAME> [KEY=VALUE\|KEY-]...` | Set or remove labels on a resource. |
+| `explain <TYPE>[.FIELD]...` | Print the fields of a manifest, or of one field, with the type, rule and default of each; `--recursive` prints the whole tree. |
+| `fetch [NAME]...` | Run `git fetch` in the selected projects, without prompts; prints `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
+| `diff [NAME]...` | Show where projects differ from their manifests, without contacting a remote; exit status 3 when any does. |
+| `sync [NAME]...` | Fetch the selected projects and fast-forward each clean branch that is behind; prints `fast-forwarded`, `fetched`, `unchanged`, `skipped`, `paused`, `denied` or `failed`. |
+| `rollout history <NAME>` | List the revisions slipway moved a project's branch to, read from the branch reflog. |
+| `rollout undo <NAME>` | Move the branch back to the previous revision, or to `--to-revision=<N>`, and hold it there with `spec.revision`. |
+| `rollout unpin <NAME>...` | Remove `spec.revision`, so `sync` follows the upstream again. |
+| `rollout pause <NAME>...`, `rollout resume <NAME>...` | Set or remove `spec.paused`, which keeps `fetch` and `sync` away from a project. |
 | `config view`, `config path` | Show the configuration in effect and the file it came from. |
-| `completion SHELL` | Print the completion script for bash, zsh or fish. |
-| `man [COMMAND]` | Open the bundled manual page of a command. |
+| `completion <SHELL>` | Print the completion script for bash, zsh or fish. |
+| `man [COMMAND]...` | Open the bundled manual page of a command. |
 | `api-resources` | List the resource types with their short names and kind, and whether they live in a group; `-o wide` adds the verbs that act on each. |
 | `version` | Print the version, the Ruby it runs on and the platform, as `slipway 0.1.0 (ruby 4.0.7) [x86_64-linux]`. |
-| `help [COMMAND]` | Print the same text as `--help`. |
+| `help [COMMAND]...` | Print the same page as `--help`. |
 
 Two resource types exist: `projects` (also `project`, `proj`) and `groups` (also `group`), and
 type words are case-insensitive; `slipway api-resources` lists them
 ([Discovering resources](#discovering-resources)). A project is named bare (`hldr`) or as
 `project/hldr`, the form `get -o name` prints. `create`, `apply`, `delete`, `label`, `fetch`,
 `sync` and `rollout undo` accept `--dry-run`, which fetches and writes nothing and ends each
-result line with `(dry run)`. `slipway VERB --help` describes each verb, `-h` prints help and
-`-V` the version.
+result line with `(dry run)`. `slipway <COMMAND> --help` prints the full page of a command and
+`-h` a summary of it; `-V` prints the version.
 
 ### Groups
 
-Projects live in groups the way pods live in namespaces. `-n NAME` (`--group`) selects one,
+Projects live in groups the way pods live in namespaces. `-n <NAME>` (`--group`) selects one,
 `-A` (`--all-groups`) lists across all of them and adds a GROUP column. Without either, the
 `default` group is used, or the one set by `SLIPWAY_GROUP` or the `group` config key. The
 default group is created the first time a write needs it; every other group has to be created
@@ -393,7 +393,7 @@ plans from the last fetch and warns about the projects no fetch has reached.
 
 Slipway undoes its own moves. Each fast-forward of `sync` runs with `GIT_REFLOG_ACTION` set to
 `slipway sync` and each move of `rollout undo` with `slipway rollout undo`, so the branch's reflog
-records them and slipway keeps no history of its own. `slipway rollout history NAME` lists them as
+records them and slipway keeps no history of its own. `slipway rollout history <NAME>` lists them as
 revisions, oldest first: every commit slipway moved the checked-out branch to, and the commit the
 branch stood at before such a move.
 
@@ -416,8 +416,8 @@ CHANGE-CAUSE names the move and PINNED marks the revision `spec.revision` holds.
 fetches and writes nothing; a project without history prints
 `No rollout history found for project/NAME.` on stderr and exits with 0.
 
-`slipway rollout undo NAME` moves the checked-out branch to the revision before the current one,
-or to the one `--to-revision=N` names, and then writes that commit to `spec.revision`, so `sync`
+`slipway rollout undo <NAME>` moves the checked-out branch to the revision before the current one,
+or to the one `--to-revision=<N>` names, and then writes that commit to `spec.revision`, so `sync`
 holds the project there. The manifest is written only after git moved the branch. A move back runs
 `git reset --keep`, the one form of reset slipway ever runs, and only when the upstream holds every
 commit the move drops; a move forward, which undoes an undo, runs `git merge --ff-only`. Untracked
@@ -434,9 +434,9 @@ without staged changes, because `reset --keep` resets every index entry.
 
 The exit status is 1 when the project was skipped, denied or failed.
 
-`slipway rollout unpin NAME...` removes `spec.revision` and prints `unpinned`, or `not pinned`
+`slipway rollout unpin <NAME>...` removes `spec.revision` and prints `unpinned`, or `not pinned`
 when there was none; the next `sync` fast-forwards onto the upstream as usual.
-`slipway rollout pause NAME...` sets `spec.paused` and `slipway rollout resume NAME...` removes
+`slipway rollout pause <NAME>...` sets `spec.paused` and `slipway rollout resume <NAME>...` removes
 it, printing `paused` or `already paused` and `resumed` or `not paused`. None of the three runs
 git. A paused project can still be rolled back: pausing keeps only `fetch` and `sync` away.
 
@@ -615,7 +615,7 @@ upstream are as fresh as the last fetch. [Fetching](#fetching) refreshes them.
 
 ## Selectors
 
-`-l EXPR` (`--selector`) filters by labels with kubectl's grammar. Equality:
+`-l <EXPR>` (`--selector`) filters by labels with kubectl's grammar. Equality:
 
 ```console
 $ slipway get projects -A -l lang=rust
@@ -635,7 +635,7 @@ personal   hldr    main     Clean    0s        1s
 `key!=value`, `key notin (a,b)`, `key` (exists) and `!key` (does not exist) work as well, and
 comma-separated terms must all hold.
 
-`--field-selector EXPR` filters `get` and `describe` on the fields of the object `-o json`
+`--field-selector <EXPR>` filters `get` and `describe` on the fields of the object `-o json`
 prints, with kubectl's field grammar: `path=value` (or `path==value`) and `path!=value`,
 comma-separated, all of which must hold. Projects support `metadata.name`, `metadata.group`,
 `spec.path`, `status.state`, `status.branch` and `status.lastFetch`; groups support
@@ -712,7 +712,7 @@ is read, and a value that breaks its rule is refused with that rule, so nothing 
 git as an option or carry a control character is accepted. A file in the registry that cannot
 be read is reported with a `warning:` line and left out of listings.
 
-`slipway apply -f FILE` reads every YAML document in the file, `-f DIR` reads every `*.yaml`
+`slipway apply -f <FILE>` reads every YAML document in the file, `-f <DIR>` reads every `*.yaml`
 and `*.yml` file in the directory sorted by name (without descending), and `-f -` reads stdin.
 `-f` may be repeated. A document of kind `List` stands for each manifest under its `items`, in
 order, and one that fails is named by its position (`FILE:3`). Each document prints
@@ -854,7 +854,7 @@ under it, so you can go on with a dot.
 
 Settings are resolved in this order: command-line flags, then `SLIPWAY_*` environment
 variables, then the config file, then the built-in defaults. The file lives at
-`$XDG_CONFIG_HOME/slipway/config.yaml` (`~/.config/slipway/config.yaml`) unless `--config PATH`
+`$XDG_CONFIG_HOME/slipway/config.yaml` (`~/.config/slipway/config.yaml`) unless `--config <PATH>`
 or `SLIPWAY_CONFIG` names another one. The default file is optional, and so is every key in it;
 a file named by `--config` or `SLIPWAY_CONFIG` must exist.
 
@@ -896,6 +896,7 @@ listed: `ext` runs a command named in the URL, and `fd` reads from file descript
 | `XDG_CONFIG_HOME` | Base of the configuration directory (default `~/.config`). |
 | `XDG_DATA_HOME` | Base of the data directory (default `~/.local/share`). |
 | `TERM` | `dumb` turns color off in `auto` mode. |
+| `COLUMNS` | Width help wraps at in place of the terminal's, at most 100. |
 | `MANPAGER` | When non-empty, `slipway man` leaves the pager palette alone. |
 | `MANROFFOPT` | Same as `MANPAGER`. |
 | `LESS_TERMCAP_md` | Same as `MANPAGER`. |
@@ -928,7 +929,7 @@ colors, green for `Clean`, yellow for the states that ask for a git action (`Det
 
 ## Shell completion
 
-`slipway completion SHELL` prints the script; the header of each script says where it goes.
+`slipway completion <SHELL>` prints the script; the header of each script says where it goes.
 
 ```sh
 # bash: load it in the current session, or add the line to ~/.bashrc
@@ -961,10 +962,10 @@ opens `slipway-get(1)` with `man(1)`, colored like the help page when color is o
 settings win and slipway passes nothing of its own.
 
 `slipway man --install` copies the pages to `${XDG_DATA_HOME:-~/.local/share}/man/man1` (a
-relative `XDG_DATA_HOME` is ignored), and `slipway man --install=DIR` copies them into DIR,
+relative `XDG_DATA_HOME` is ignored), and `slipway man --install=<DIR>` copies them into DIR,
 which must be named `man1`: `man` finds section 1 pages in the `man1` directory under each
 `MANPATH` entry, so any other DIR is refused with exit status 2. DIR is optional, so it must
-follow the `=`; `slipway man --install DIR` is refused as well. When the pages land in
+follow the `=`; `slipway man --install <DIR>` is refused as well. When the pages land in
 `~/.local/share/man/man1`, man-db looks there on its own as long as `~/.local/bin` is on
 `PATH`, and the command ends by saying so. Anywhere else, such as under a custom
 `XDG_DATA_HOME`, it ends with the `MANPATH` line for the parent directory, which makes `man`
@@ -975,7 +976,8 @@ export MANPATH="$(dirname "$(slipway man --path)"):$MANPATH"
 man slipway-get
 ```
 
-`slipway help COMMAND` and `slipway COMMAND --help` print the same content in the terminal.
+`slipway help <COMMAND>` and `slipway <COMMAND> --help` print the same page in the terminal, and
+`slipway <COMMAND> -h` a summary of it.
 
 ## Exit status
 
@@ -983,7 +985,7 @@ man slipway-get
 | --- | --- |
 | `0` | Success. |
 | `1` | Runtime error, such as a missing resource or an unreadable manifest. |
-| `2` | Usage error: unknown command, unknown flag or invalid argument. |
+| `2` | Usage error: missing or unknown command, unknown flag or invalid argument. |
 | `130` | Interrupted by SIGINT. |
 
 `slipway diff` also exits with 3 when a project differs from its manifest. The man pages of

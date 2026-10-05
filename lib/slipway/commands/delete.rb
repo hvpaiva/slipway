@@ -12,7 +12,7 @@ module Slipway
                     "registrations of its projects; the default group cannot be deleted.\n\n" \
                     "Deleting a project removes its registration only. The repository on disk is not touched.\n\n" \
                     "#{Options::TYPES_SENTENCE}".freeze
-      USAGE = '(TYPE NAME... | TYPE/NAME...)'
+      USAGE = '(<TYPE> <NAME>... | <TYPE/NAME>...)'
       NO_NAMES = 'resource(s) were provided, but no name was specified'
 
       IGNORE_NOT_FOUND = CLI::Option.new(long: 'ignore-not-found',

@@ -125,26 +125,28 @@ class ConfigTest < Minitest::Test
     end
   end
 
-  def test_the_group_alone_prints_its_help
+  def test_the_group_alone_prints_its_summary_as_a_usage_error
     with_sandbox do |env|
       status, out, err = run_config('config', env:)
 
-      assert_equal [0, ''], [status, err]
-      assert_includes out, 'Inspect the configuration that slipway resolved from flags, environment variables and ' \
-                           "the configuration file.\n\nAvailable Commands:\n  view            Display the " \
-                           "configuration in effect\n  path            Display the path of the configuration file\n"
-      assert_includes out, "Usage:\n  slipway config COMMAND [flags]\n\nUse \"slipway config <command> --help\" for " \
-                           'more information about a given command.'
+      assert_equal [2, ''], [status, out]
+      assert_includes err, "Inspect the configuration in effect\n\nUsage: slipway config [OPTIONS] <COMMAND>\n\n" \
+                           "Available Commands:\n  view  Display the configuration in effect\n  path  Display the " \
+                           "path of the configuration file\n"
+      assert_includes err, 'Use "slipway config <COMMAND> --help" for more information about a given command.'
+      assert_includes run_config('config', '--help', env:)[1],
+                      "Inspect the configuration that slipway resolved from flags, environment variables and the\n" \
+                      'configuration file.'
     end
   end
 
   def test_subcommand_help_and_unknown_subcommands
     with_sandbox do |env|
-      _, view_help, = run_config('config', 'view', '-h', env:)
+      _, view_help, = run_config('config', 'view', '--help', env:)
       _, path_help, = run_config('config', 'path', '--help', env:)
 
       assert_includes view_help, "Display the configuration in effect.\n\nPrints every setting as YAML"
-      assert_includes view_help, "Usage:\n  slipway config view [flags]\n"
+      assert_includes view_help, "Usage: slipway config view [OPTIONS]\n"
       assert_includes path_help, "Examples:\n  # Print the path of the configuration file\n  slipway config path\n"
       assert_equal [2, '', "error: unknown command \"vew\" for \"slipway config\"\n\nDid you mean this?\n\tview\n\n" \
                            "Run 'slipway config --help' for usage.\n"], run_config('config', 'vew', env:)

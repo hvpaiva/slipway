@@ -4,8 +4,8 @@
 slipway\-describe \- Show details of one or many resources
 .SH SYNOPSIS
 .SY "slipway describe"
-.I "(TYPE [NAME...] | TYPE/NAME...)"\&
-.RI [ flags ]
+.RI [ OPTIONS ]
+.I "(TYPE [NAME]... | TYPE/NAME...)"\&
 .YS
 .SH DESCRIPTION
 Show details of one or many resources.
@@ -15,6 +15,13 @@ Print a detailed description of the selected resources, including the state of t
 Status is one of the words listed below. Last Fetch reads <never> when git answered and no fetch is on record, and a field with no value reads <none>. When git cannot read the repository, the Repository block holds git's reason instead of the fields.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
+.SH ARGUMENTS
+.TP
+\fITYPE\fR
+The resource type, by its plural, singular or short name (see api\-resources).
+.TP
+\fINAME\fR
+The name of a resource of that type.
 .SH OPTIONS
 .TP
 \fB\-l\fR, \fB\-\-selector\fR \fIEXPR\fR

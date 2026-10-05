@@ -1,0 +1,12 @@
+Edit a resource from the default editor
+
+Usage: slipway edit [OPTIONS] (<TYPE> <NAME> | <TYPE/NAME>)
+
+Arguments:
+  <TYPE>  The resource type, by its plural, singular or short name (see api-resources)
+  [NAME]  The name of a resource of that type
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

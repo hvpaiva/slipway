@@ -8,13 +8,14 @@ class HelpIntegrationTest < Minitest::Test
   # The pages the golden suite pins; here the question is which invocations reach them.
   def page(name) = File.read(File.join(GoldenHelper::FIXTURES, 'help', "#{name}.txt"))
 
-  def test_the_root_page_answers_an_empty_invocation_and_every_help_spelling
+  def test_the_root_summary_answers_h_and_an_empty_invocation_and_the_page_every_other_spelling
     with_home do |env|
       root = page('slipway')
+      summary = page('slipway.short')
 
-      assert_equal [0, root, ''], slipway(env:)
+      assert_equal [2, '', summary], slipway(env:)
+      assert_equal [0, summary, ''], slipway('-h', env:)
       assert_equal [0, root, ''], slipway('--help', env:)
-      assert_equal [0, root, ''], slipway('-h', env:)
       assert_equal [0, root, ''], slipway('help', env:)
       assert_equal 'A kubectl-style registry of the git repositories on your machine.', root.lines.first.chomp
     end
@@ -25,7 +26,7 @@ class HelpIntegrationTest < Minitest::Test
       get = page('slipway-get')
 
       assert_equal [0, get, ''], slipway('get', '--help', env:)
-      assert_equal [0, get, ''], slipway('get', '-h', env:)
+      assert_equal [0, page('slipway-get.short'), ''], slipway('get', '-h', env:)
       assert_equal [0, get, ''], slipway('help', 'get', env:)
       assert_equal [0, get, ''], slipway('get', 'projects', '-o', 'wide', '--help', env:)
       assert_equal [0, get, ''], slipway('--color=never', 'get', '--help', env:)

@@ -4,8 +4,8 @@
 slipway\-delete \- Delete resources by type and name
 .SH SYNOPSIS
 .SY "slipway delete"
+.RI [ OPTIONS ]
 .I "(TYPE NAME... | TYPE/NAME...)"\&
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Delete resources by type and name.
@@ -15,6 +15,13 @@ Every name is resolved before anything is deleted, so a name that does not exist
 Deleting a project removes its registration only. The repository on disk is not touched.
 .PP
 Resource types: projects (project, proj) and groups (group). Type words are case\-insensitive.
+.SH ARGUMENTS
+.TP
+\fITYPE\fR
+The resource type, by its plural, singular or short name (see api\-resources).
+.TP
+\fINAME\fR
+The name of a resource of that type.
 .SH OPTIONS
 .TP
 \fB\-\-dry\-run\fR

@@ -110,7 +110,7 @@ class LabelTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Update the labels on a resource.\n\n  *  A label key and value"
-      assert_includes out, "Usage:\n  slipway label (TYPE NAME | TYPE/NAME) [KEY=VALUE|KEY-...] [flags]\n"
+      assert_includes out, "Usage: slipway label [OPTIONS] (<TYPE> <NAME> | <TYPE/NAME>) [KEY=VALUE|KEY-]...\n"
       assert_includes out, '      --overwrite'
       assert_equal [2, '', "error: missing required argument \"NAME\"\n#{HINT}"], run_label('project', runtime:)
       assert_equal [1, '', "error: unknown resource type \"pods\" (known types: projects, groups)\n"],

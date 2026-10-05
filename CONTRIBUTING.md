@@ -161,6 +161,9 @@ Each of these fails `rake check` or CI when it is broken.
   result the reasons its `--help` gives, the table of a project's spec gives every field with
   the meaning and default `Schema` holds, and the README configuration example sets every
   config key and no other.
+- The description of every option and positional ends with a period, and the summary of a
+  command or an option does not, since `-h` prints the summary, or the description without its
+  period (`test_help_text_ends_descriptions_with_a_period_and_summaries_without_one`).
 - Every console example in the README prints what the executable prints
   ([README examples](#readme-examples)).
 - `CHANGELOG.md` keeps the Keep a Changelog shape: `## [Unreleased]` first, one heading per
@@ -199,7 +202,10 @@ No tool checks these; a reviewer does.
 - User-visible text follows kubectl's wording: `project/hldr created`, `No resources found in
   work group.`, `error: projects "hldr" not found`. When kubectl has a phrase for the situation,
   use it. Everything is in English. The golden fixtures freeze that wording, so every change to
-  a fixture is reviewed as an interface change.
+  a fixture is reviewed as an interface change. Help pages do not copy kubectl's layout: `-h`
+  prints a summary and `--help` the whole page, with the Usage line under the description and a
+  required value written `<NAME>`, an optional one `[NAME]`. Man pages keep the man convention,
+  with placeholders in italics.
 - One change per commit and one subject per pull request; what counts as one change is
   judgment.
 
@@ -207,7 +213,8 @@ No tool checks these; a reviewer does.
 
 Two kinds of generated text are committed: the man pages under `man/man1`, rendered from the
 command definitions, and the golden fixtures. Those under `test/fixtures/golden` freeze the
-text of every help page and of the three completion scripts; the two under `test/fixtures/man`
+text of every help page, as `-h` and as `--help` prints it, and of the three completion scripts;
+the two under `test/fixtures/man`
 freeze the roff the man page builder writes for the test registry. After changing a command, an
 option, a description or an example, run
 

@@ -1,0 +1,16 @@
+Update the labels on a resource
+
+Usage: slipway label [OPTIONS] (<TYPE> <NAME> | <TYPE/NAME>) [KEY=VALUE|KEY-]...
+
+Arguments:
+  <TYPE>               The resource type, by its plural, singular or short name (see api-resources)
+  [NAME]               The name of a resource of that type
+  [KEY=VALUE|KEY-]...  A label to set, as KEY=VALUE, or to remove, as KEY-
+
+Options:
+      --overwrite  Allow labels to be overwritten
+      --list       If true, display the labels for a given resource instead of writing them
+      --dry-run    Print what would change and write nothing
+  -h, --help       Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

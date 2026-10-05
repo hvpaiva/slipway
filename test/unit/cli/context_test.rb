@@ -101,4 +101,27 @@ class ContextTest < Minitest::Test
     assert_equal $stdout.tty?, context.tty
     assert_equal $stderr.tty?, context.err_tty
   end
+
+  def test_columns_reads_columns_before_the_terminal
+    terminal = Terminal.new([24, 132])
+
+    assert_equal 60, context(env: { 'COLUMNS' => '60' }, out: terminal, tty: true).columns
+    assert_equal 132, context(env: { 'COLUMNS' => 'wide' }, out: terminal, tty: true).columns
+    assert_equal 132, context(env: { 'COLUMNS' => '0' }, out: terminal, tty: true).columns
+  end
+
+  def test_columns_is_unknown_without_a_terminal_that_answers
+    assert_nil context.columns
+    assert_nil context(out: Terminal.new([24, 132])).columns
+    assert_nil context(out: Terminal.new([0, 0]), tty: true).columns
+    assert_nil context(out: Terminal.new(Errno::ENOTTY), tty: true).columns
+  end
+
+  Terminal = Struct.new(:answer) do
+    def winsize = answer.is_a?(Array) ? answer : raise(answer)
+  end
+
+  private
+
+  def context(env: {}, out: @out, tty: false) = Slipway::CLI::Context.new(out:, err: @err, env:, tty:)
 end

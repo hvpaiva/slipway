@@ -56,7 +56,8 @@ module Slipway
       ].freeze
       INDENT = '  '
       COMMAND_INDENT = '    '
-      ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, compare every project across all groups with ' \
+      ALL_GROUPS = Options::ALL_GROUPS.with(summary: 'Compare every project across all groups with its manifest',
+                                            description: 'If present, compare every project across all groups with ' \
                                                          'its manifest. The group in the current configuration is ' \
                                                          'ignored even if specified with --group.')
 

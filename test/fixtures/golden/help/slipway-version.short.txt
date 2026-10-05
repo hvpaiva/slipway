@@ -1,0 +1,8 @@
+Print the version of slipway
+
+Usage: slipway version [OPTIONS]
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway --help" for a list of global options (applies to all commands).

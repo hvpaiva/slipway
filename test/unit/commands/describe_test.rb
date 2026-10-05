@@ -170,11 +170,11 @@ class DescribeTest < Minitest::Test
 
   def test_help_follows_the_registry
     with_runtime do |runtime|
-      status, out, err = run_commands('describe', '-h', runtime:)
+      status, out, err = run_commands('describe', '--help', runtime:)
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Show details of one or many resources.\n\nPrint a detailed"
-      assert_includes out, "Usage:\n  slipway describe (TYPE [NAME...] | TYPE/NAME...) [flags]\n"
+      assert_includes out, "Usage: slipway describe [OPTIONS] (<TYPE> [NAME]... | <TYPE/NAME>...)\n"
       refute_includes out, '--output'
     end
   end

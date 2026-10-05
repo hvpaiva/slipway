@@ -74,14 +74,13 @@ class RegistryTest < Minitest::Test
     assert_equal FixtureRegistry::DESCRIPTION, @registry.root.description
   end
 
-  def test_description_parts_spell_the_enum_the_default_and_the_requirement
+  def test_notes_spell_the_default_then_the_possible_values
     output, no_headers = @registry.resolve(%w[get]).first.options
     path = @registry.resolve(%w[create]).first.options.first
 
-    assert_equal ['Output format.', 'One of: table, wide, json, yaml, name.', '(default "table")'],
-                 output.description_parts
-    assert_equal ["When using the default output format, don't print headers."], no_headers.description_parts
-    assert_equal ['Directory of the repository.', '(required)'], path.description_parts
+    assert_equal ['[default: table]', '[possible values: table, wide, json, yaml, name]'], output.notes
+    assert_empty no_headers.notes
+    assert_empty path.notes
   end
 
   def test_builtins_can_be_left_out
@@ -124,14 +123,19 @@ class OptionTest < Minitest::Test
     refute_predicate valued, :flag?
     assert_equal %w[-o --output], valued.switches
     assert_equal ['-o', '--output FORMAT'], valued.switch_spec
-    assert_equal '-o, --output FORMAT', valued.label
+    assert_equal '-o, --output <FORMAT>', valued.label
   end
 
   def test_optional_argument_is_spelled_with_brackets
     color = option(long: 'color', argument: 'WHEN', optional: true, implicit: 'always')
 
     assert_equal ['--color[=WHEN]'], color.switch_spec
-    assert_equal '--color[=WHEN]', color.label
+    assert_equal '--color[=<WHEN>]', color.label
+  end
+
+  def test_short_description_is_the_summary_or_the_description_without_its_period
+    assert_equal 'Short', option(long: 'x', summary: 'Short', description: 'Long. More.').short_description
+    assert_equal 'Long. More', option(long: 'x', description: 'Long. More.').short_description
   end
 
   def test_accept_folds_one_occurrence_into_the_stored_value
@@ -160,9 +164,18 @@ end
 
 class PositionalTest < Minitest::Test
   def test_usage_marks_optional_and_variadic_arguments
-    assert_equal 'TYPE', Slipway::CLI::Positional.new(name: 'TYPE').usage
-    assert_equal '[NAME...]', Slipway::CLI::Positional.new(name: 'NAME', required: false, variadic: true).usage
-    assert_equal 'FILE...', Slipway::CLI::Positional.new(name: 'FILE', variadic: true).usage
+    assert_equal '<TYPE>', Slipway::CLI::Positional.new(name: 'TYPE').usage
+    assert_equal '[NAME]...', Slipway::CLI::Positional.new(name: 'NAME', required: false, variadic: true).usage
+    assert_equal '<FILE>...', Slipway::CLI::Positional.new(name: 'FILE', variadic: true).usage
+  end
+
+  def test_notes_name_the_possible_values
+    shell = Slipway::CLI::Positional.new(name: 'SHELL', enum: %w[bash zsh], description: 'The shell.')
+
+    assert_equal ['[possible values: bash, zsh]'], shell.notes
+    assert_equal 'The shell', shell.short_description
+    assert_empty Slipway::CLI::Positional.new(name: 'X').notes
+    assert_nil Slipway::CLI::Positional.new(name: 'X').short_description
   end
 end
 
@@ -194,9 +207,9 @@ class CommandTest < Minitest::Test
     root = @fixture.registry.root
 
     assert_predicate root, :group?
-    assert_equal 'COMMAND', root.usage_args
+    assert_equal '<COMMAND>', root.usage_args
     refute_includes root.visible_subcommands.map(&:name), 'raw'
-    assert_equal 'TYPE [NAME...]', @fixture.command('get').usage_args
+    assert_equal '<TYPE> [NAME]...', @fixture.command('get').usage_args
   end
 
   def test_description_defaults_to_the_summary

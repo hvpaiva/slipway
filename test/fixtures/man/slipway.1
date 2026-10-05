@@ -4,9 +4,8 @@
 slipway \- Slipway keeps a registry of the development projects on your machine
 .SH SYNOPSIS
 .SY slipway
-.RI [ flags ]
+.RI [ OPTIONS ]
 .I COMMAND
-.RI [ ARGS... ]\&
 .YS
 .SH DESCRIPTION
 Slipway keeps a registry of the development projects on your machine.
@@ -50,7 +49,7 @@ The group scope for this request.
 Path to the configuration file.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-Print help and exit.
+Print help (see a summary with '\-h').
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print the version and exit.
@@ -110,6 +109,9 @@ Base of the data directory (default ~/.local/share).
 \fBTERM\fR
 When dumb, disables color in auto mode.
 .TP
+\fBCOLUMNS\fR
+Width help wraps at in place of the terminal's, at most 100.
+.TP
 \fBMANPAGER\fR
 When non\-empty, slipway man leaves the pager palette alone.
 .TP
@@ -162,7 +164,7 @@ Success.
 Runtime error, such as a missing resource or an unreadable manifest.
 .TP
 \fB2\fR
-Usage error: unknown command, unknown flag or invalid argument.
+Usage error: missing or unknown command, unknown flag or invalid argument.
 .TP
 \fB130\fR
 Interrupted by SIGINT.

@@ -161,8 +161,8 @@ class FetchSelectionTest < Minitest::Test
       status, out, = run_fetch('--help', runtime:)
 
       assert_equal 0, status
-      assert_includes out, "Usage:\n  slipway fetch [NAME... | project/NAME...] [flags]\n"
-      assert_includes out, '      --prune           Before fetching, remove any remote-tracking references'
+      assert_includes out, "Usage: slipway fetch [OPTIONS] [NAME... | project/NAME...]\n"
+      assert_includes out, "      --prune\n          Before fetching, remove any remote-tracking references"
     end
   end
 

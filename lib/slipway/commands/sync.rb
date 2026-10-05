@@ -77,7 +77,8 @@ module Slipway
                 Outcome::UNCHANGED => :result_unchanged, Outcome::SKIPPED => :result_skipped,
                 Outcome::PAUSED => :result_paused, Outcome::DENIED => :result_denied,
                 Outcome::FAILED => :result_failed }.freeze
-      ALL_GROUPS = Options::ALL_GROUPS.with(description: 'If present, sync every project across all groups. The ' \
+      ALL_GROUPS = Options::ALL_GROUPS.with(summary: 'Sync every project across all groups',
+                                            description: 'If present, sync every project across all groups. The ' \
                                                          'group in the current configuration is ignored even if ' \
                                                          'specified with --group.')
 

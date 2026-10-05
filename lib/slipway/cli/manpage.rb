@@ -115,6 +115,7 @@ module Slipway
           *synopsis(command, path),
           '.SH DESCRIPTION', *Roff.paragraphs(command.description),
           *commands_section(command),
+          *arguments_section(command.positionals),
           *options_section(command.options),
           *command.glossaries.flat_map { glossary_section(it) },
           *tagged_section('EXIT STATUS', command.exit_statuses),
@@ -124,8 +125,7 @@ module Slipway
       end
 
       def root_synopsis
-        ['.SH SYNOPSIS', ".SY #{Roff.argument(@registry.program)}", '.RI [ flags ]', '.I COMMAND', '.RI [ ARGS... ]\\&',
-         '.YS']
+        ['.SH SYNOPSIS', ".SY #{Roff.argument(@registry.program)}", '.RI [ OPTIONS ]', '.I COMMAND', '.YS']
       end
 
       def name_section(path, summary)
@@ -139,12 +139,13 @@ module Slipway
       def synopsis_args(command)
         required = command.options.select(&:required)
         options = required.flat_map { [".B #{Roff.text(it.switches.first)}", ".I #{it.argument}"] }
-        [*options, *positional_args(command), '.RI [ flags ]']
+        ['.RI [ OPTIONS ]', *options, *positional_args(command)]
       end
 
+      # Help writes a required value as <NAME>; a man page sets it in italics instead.
       def positional_args(command)
         return ['.I COMMAND'] if command.group?
-        return [".I #{Roff.argument(command.usage)}\\&"] if command.usage
+        return [".I #{Roff.argument(command.usage.delete('<>'))}\\&"] if command.usage
 
         command.positionals.map { positional_arg(it) }
       end
@@ -167,10 +168,22 @@ module Slipway
         ['.SH COMMANDS', *entries]
       end
 
+      def arguments_section(positionals)
+        documented = positionals.select(&:description)
+        return [] if documented.empty?
+
+        ['.SH ARGUMENTS',
+         *documented.flat_map { Roff.tagged(Roff.italic(it.name), prose(it.description, enum: it.enum)) }]
+      end
+
       def options_section(options)
         return [] if options.empty?
 
-        ['.SH OPTIONS', *options.flat_map { Roff.tagged(option_label(it), it.description_parts.join(' ')) }]
+        entries = options.flat_map do |option|
+          default = option.default unless option.default == false
+          Roff.tagged(option_label(option), prose(option.description, enum: option.enum, default:))
+        end
+        ['.SH OPTIONS', *entries]
       end
 
       def option_label(option)
@@ -179,6 +192,10 @@ module Slipway
 
         argument = Roff.italic(option.argument)
         option.optional ? "#{switches}[=#{argument}]" : "#{switches} #{argument}"
+      end
+
+      def prose(description, enum: nil, default: nil)
+        [description, enum && "One of: #{enum.join(', ')}.", default && "Default: #{default}."].compact.join(' ')
       end
 
       def examples_section(examples)

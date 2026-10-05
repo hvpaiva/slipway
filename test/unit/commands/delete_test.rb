@@ -115,7 +115,7 @@ class DeleteTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Delete resources by type and name.\n\n"
-      assert_includes out, "Usage:\n  slipway delete (TYPE NAME... | TYPE/NAME...) [flags]\n"
+      assert_includes out, "Usage: slipway delete [OPTIONS] (<TYPE> <NAME>... | <TYPE/NAME>...)\n"
       assert_includes out, '      --ignore-not-found'
       assert_equal [2, '', "error: resource(s) were provided, but no name was specified\n#{HINT}"],
                    run_delete('projects', runtime:)

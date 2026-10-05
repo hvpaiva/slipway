@@ -4,9 +4,9 @@
 slipway\-apply \- Apply a configuration to a resource by file name or stdin
 .SH SYNOPSIS
 .SY "slipway apply"
+.RI [ OPTIONS ]
 .B \-f
 .I FILE
-.RI [ flags ]
 .YS
 .SH DESCRIPTION
 Apply a configuration to a resource by file name or stdin.
@@ -17,7 +17,7 @@ YAML is accepted, with several documents per file, and a document of kind List s
 .SH OPTIONS
 .TP
 \fB\-f\fR, \fB\-\-filename\fR \fIFILE\fR
-The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '\-' reads stdin. (required)
+The file that contains the manifests to apply; may be repeated. A directory reads its *.yaml and *.yml files, '\-' reads stdin.
 .TP
 \fB\-\-dry\-run\fR
 Print what would change and write nothing.

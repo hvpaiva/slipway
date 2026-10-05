@@ -37,7 +37,7 @@ module Slipway
           '1' => 'Runtime error, such as a missing resource or an unreadable manifest, or a project that was ' \
                  'skipped or whose move was denied or failed.'
         ).freeze
-        TO_REVISION = CLI::Option.new(long: 'to-revision', argument: 'N',
+        TO_REVISION = CLI::Option.new(long: 'to-revision', argument: 'N', summary: 'The revision to roll back to',
                                       description: 'The revision to roll back to, as slipway rollout history ' \
                                                    'numbers it. 0, the default, is the revision before the ' \
                                                    'current one.')

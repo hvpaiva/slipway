@@ -155,8 +155,8 @@ class CreateTest < Minitest::Test
 
       assert_equal [0, ''], [status, err]
       assert_includes out, "Create a resource by name.\n\n"
-      assert_includes out, "Usage:\n  slipway create (TYPE NAME | project --from-dir DIR) [flags]\n"
-      assert_includes out, '      --label KEY=VALUE'
+      assert_includes out, "Usage: slipway create [OPTIONS] (<TYPE> <NAME> | project --from-dir <DIR>)\n"
+      assert_includes out, '      --label <KEY=VALUE>'
       assert_equal [2, '', "error: missing required argument \"NAME\"\n#{HINT}"], run_create('group', runtime:)
       assert_equal [2, '', "error: unexpected argument \"extra\"\n#{HINT}"],
                    run_create('project', 'hldr', 'extra', runtime:)

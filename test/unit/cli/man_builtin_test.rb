@@ -13,7 +13,7 @@ class ManBuiltinTest < Minitest::Test
 
     assert_equal 'Settings Commands', man.section
     assert_equal %w[path install], man.options.map(&:long)
-    assert_equal ['--path', '--install[=DIR]'], man.options.map(&:label)
+    assert_equal ['--path', '--install[=<DIR>]'], man.options.map(&:label)
     candidates, = Slipway::CLI::Completer.new(fixture.registry).complete(['man', ''])
 
     assert_equal %w[get create explain config], candidates.map(&:first).first(4)

@@ -1,12 +1,17 @@
 Display the path of the configuration file.
 
-Prints the file that slipway reads: --config, then SLIPWAY_CONFIG, then $XDG_CONFIG_HOME/slipway/config.yaml. When the default file does not exist, its path is still printed and a note on stderr says so; a file named by --config or SLIPWAY_CONFIG must exist.
+Prints the file that slipway reads: --config, then SLIPWAY_CONFIG, then
+$XDG_CONFIG_HOME/slipway/config.yaml. When the default file does not exist, its path is still
+printed and a note on stderr says so; a file named by --config or SLIPWAY_CONFIG must exist.
+
+Usage: slipway config path [OPTIONS]
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h').
 
 Examples:
   # Print the path of the configuration file
   slipway config path
-
-Usage:
-  slipway config path [flags]
 
 Use "slipway --help" for a list of global options (applies to all commands).

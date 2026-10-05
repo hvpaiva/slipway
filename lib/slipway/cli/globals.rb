@@ -15,7 +15,8 @@ module Slipway
       GROUP = Option.new(long: 'group', short: 'n', argument: 'NAME', description: 'The group scope for this request.')
       CONFIG = Option.new(long: 'config', argument: 'PATH', completer: ->(_given, _current) { Completer::FILES },
                           description: 'Path to the configuration file.')
-      HELP = Option.new(long: 'help', short: 'h', description: 'Print help and exit.')
+      HELP = Option.new(long: 'help', short: 'h', summary: "Print help (see more with '--help')",
+                        description: "Print help (see a summary with '-h').")
       VERSION = Option.new(long: 'version', short: 'V', description: 'Print the version and exit.')
 
       ALL = [COLOR, GROUP, CONFIG, HELP, VERSION].freeze

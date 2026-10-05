@@ -1,0 +1,16 @@
+Manage the rollout of a project
+
+Usage: slipway rollout [OPTIONS] <COMMAND>
+
+Available Commands:
+  history  View rollout history
+  undo     Undo a previous rollout
+  unpin    Stop holding a project at a revision
+  pause    Mark the provided project as paused
+  resume   Resume a paused project
+
+Options:
+  -h, --help  Print help (see more with '--help')
+
+Use "slipway rollout <COMMAND> --help" for more information about a given command.
+Use "slipway --help" for a list of global options (applies to all commands).
