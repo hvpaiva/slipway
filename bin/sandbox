@@ -22,7 +22,7 @@ EOF
 
 home=false
 keep=false
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
   case $1 in
     --home) home=true ;;
     --keep) keep=true ;;
@@ -50,7 +50,7 @@ tmp=${TMPDIR:-/tmp}
 sandbox=$(mktemp -d "${tmp%/}/slipway-sandbox.XXXXXX") || exit 1
 
 finish() {
-  if [ "$keep" = true ]; then
+  if [[ "$keep" = true ]]; then
     printf 'Sandbox kept: %s\n' "$sandbox" >&2
   else
     rm -rf -- "$sandbox"
@@ -65,7 +65,7 @@ export SLIPWAY_DATA_HOME=$sandbox/data
 export SLIPWAY_CONFIG=$sandbox/config.yaml
 export PATH="$root/exe:$PATH"
 
-if [ "$home" = true ]; then
+if [[ "$home" = true ]]; then
   export HOME=$sandbox/home
   export XDG_CONFIG_HOME=$HOME/.config
   export XDG_DATA_HOME=$HOME/.local/share
@@ -74,10 +74,10 @@ if [ "$home" = true ]; then
   mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME" || exit 1
 fi
 
-if [ $# -gt 0 ]; then
+if [[ $# -gt 0 ]]; then
   "$@"
 else
-  if [ "$keep" = true ]; then
+  if [[ "$keep" = true ]]; then
     afterwards='the directory is kept'
   else
     afterwards='the directory is removed then'

@@ -7,11 +7,11 @@ bundle install || exit 1
 pinned_tools=()
 while IFS= read -r tool; do
   pinned_tools+=("$tool")
-done < <(ruby -Irakelib/support -rtools -e 'puts Tools.pinned.keys - %w[ruby]')
+done < <(ruby -Irakelib/support -rtools -e 'puts Tools.pinned.keys - %w[ruby]' || true)
 
 mise=$(command -v mise)
 # An empty list would make mise install every tool mise.toml pins, Ruby included.
-if [ -n "$mise" ] && [ "${#pinned_tools[@]}" -gt 0 ]; then
+if [[ -n "$mise" ]] && [[ "${#pinned_tools[@]}" -gt 0 ]]; then
   printf '\nInstalling %s with mise, at the versions mise.toml pins\n' "${pinned_tools[*]}"
   mise install "${pinned_tools[@]}" || printf 'mise install failed; the report below names what is missing\n'
 fi
@@ -20,24 +20,24 @@ printf '\nTools:\n'
 
 wanted_ruby=$(sed -n 's/^ruby = "\(.*\)"$/\1/p' mise.toml)
 current_ruby=$(ruby -e 'print RUBY_VERSION')
-if [ "$current_ruby" = "$wanted_ruby" ]; then
+if [[ "$current_ruby" = "$wanted_ruby" ]]; then
   printf '  ruby        %s, as pinned in mise.toml\n' "$current_ruby"
 else
   printf '  ruby        %s, while mise.toml pins %s; the gem supports >= 3.4, CI runs 3.4 and 4.0\n' \
     "$current_ruby" "$wanted_ruby"
 fi
 
-git_version=$(git --version 2>/dev/null | sed -n 's/^git version \([0-9]*\.[0-9]*\).*/\1/p')
+git_version=$(git --version 2>/dev/null | sed -n 's/^git version \([0-9]*\.[0-9]*\).*/\1/p' || true)
 git_major=${git_version%%.*}
 git_minor=${git_version#*.}
-if [ -z "$git_version" ]; then
+if [[ -z "$git_version" ]]; then
   printf '  git         missing: slipway and its tests need git 2.35 or later\n'
   exit 1
-elif [ "$git_major" -lt 2 ] || { [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 35 ]; }; then
+elif [[ "$git_major" -lt 2 ]] || { [[ "$git_major" -eq 2 ]] && [[ "$git_minor" -lt 35 ]]; }; then
   printf '  git         %s is too old: slipway and its tests need git 2.35 or later\n' "$git_version"
   exit 1
 fi
-if [ "$git_major" -eq 2 ] && [ "$git_minor" -lt 41 ]; then
+if [[ "$git_major" -eq 2 ]] && [[ "$git_minor" -lt 41 ]]; then
   printf '  git         %s: the fetch tests and the README fetch and sync examples skip before 2.41\n' \
     "$git_version"
 else
@@ -47,7 +47,7 @@ fi
 pinned() {
   local name
   for name in "${pinned_tools[@]}"; do
-    [ "$name" = "$1" ] && return 0
+    [[ "$name" = "$1" ]] && return 0
   done
   return 1
 }
@@ -58,7 +58,7 @@ report() {
     printf '  %-11s found\n' "$tool"
   elif ! pinned "$tool"; then
     printf '  %-11s missing: %s\n' "$tool" "$without"
-  elif [ -n "$mise" ] && mise which "$tool" >/dev/null 2>&1; then
+  elif [[ -n "$mise" ]] && mise which "$tool" >/dev/null 2>&1; then
     printf '  %-11s installed by mise, not on PATH: %s until mise is activated in your shell (mise activate --help)\n' \
       "$tool" "$without"
   else

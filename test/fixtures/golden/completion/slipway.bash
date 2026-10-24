@@ -55,6 +55,7 @@ __slipway_handle_completion_types() {
     local listing=""
     case ${COMP_TYPE-} in
         33|63|64) (( ${#cands[@]} > 1 )) && listing=1 ;;
+        *) ;;
     esac
     local cand
     if [[ -z $listing ]]; then
@@ -90,7 +91,7 @@ __slipway_complete_files() {
         _filedir "${filedir[@]}"
     elif ! compopt -o "$readline" 2>/dev/null; then
         # Not mapfile: bash 3.2, macOS's /bin/bash, has neither it nor compopt.
-        while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen "$kind" -- "$cur")
+        while IFS= read -r line; do COMPREPLY+=("$line"); done < <(compgen "$kind" -- "$cur" || true)
     fi
     if [[ -n $prefix && $COMP_WORDBREAKS != *=* ]]; then
         for i in "${!COMPREPLY[@]}"; do COMPREPLY[i]=$prefix${COMPREPLY[i]}; done
