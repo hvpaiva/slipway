@@ -87,14 +87,14 @@ namespace :lint do
   desc 'Run shellcheck on bin/setup, bin/sandbox and the bash completion script'
   task :shell do
     require_tool('shellcheck')
-    sh 'shellcheck', '-s', 'bash', 'bin/setup', 'bin/sandbox'
+    sh 'shellcheck', '--rcfile=.shellcheckrc', '-s', 'bash', 'bin/setup', 'bin/sandbox'
     script, err, status = Open3.capture3(RbConfig.ruby, '-Ilib', 'exe/slipway', 'completion', 'bash')
     abort "lint:shell: slipway completion bash failed: #{err.lines.first&.strip}" unless status.success?
 
     Tempfile.create(['slipway-completion-', '.bash']) do |file|
       file.write(script)
       file.flush
-      sh 'shellcheck', '-s', 'bash', file.path
+      sh 'shellcheck', '--rcfile=.shellcheckrc', '-s', 'bash', file.path
     end
   end
 

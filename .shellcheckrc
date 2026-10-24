@@ -1,0 +1,9 @@
+# Optional checks the shell scripts follow. rake lint:shell passes this file with --rcfile,
+# so a shellcheckrc elsewhere on the machine cannot change the local result or drift from CI.
+enable=add-default-case
+enable=avoid-nullary-conditions
+enable=check-extra-masked-returns
+enable=check-set-e-suppressed
+enable=check-unassigned-uppercase
+enable=deprecate-which
+enable=require-double-brackets
