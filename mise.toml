@@ -1,5 +1,5 @@
 [tools]
-ruby = "4.0.7"
+ruby = "4.0.9"
 lychee = "0.24.2"
 shellcheck = "0.11.0"
 typos = "1.50.3"

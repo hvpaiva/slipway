@@ -56,7 +56,7 @@ jobs:
           exit 1
       # No bundler cache in this workflow: a cache written by another run must never feed a
       # release. BUNDLE_FROZEN installs exactly Gemfile.lock.
-      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
       - name: Install the bundle
         env:
           BUNDLE_FROZEN: 'true'
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
       - name: Install the bundle
         env:
           BUNDLE_FROZEN: 'true'
@@ -124,7 +124,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
       # RubyGems builds reproducibly (every timestamp is pinned to SOURCE_DATE_EPOCH, 1980 unless
       # set), so the gem rebuilt from the tag is byte for byte the one publish pushed.
       - run: gem build slipway.gemspec
